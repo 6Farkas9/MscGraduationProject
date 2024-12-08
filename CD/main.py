@@ -19,7 +19,7 @@ parser.add_argument('--batch_size',type=int,default=32,help='number of batch siz
 parser.add_argument('--epochs',type=int,default=32,help='number of epochs to train (defauly 32 )')
 parser.add_argument('--lr',type=float,default=0.01,help='number of learning rate')
 parser.add_argument('--embedding_dim',type=int,default=16,help='number of embedding dim')
-parser.add_argument('--path',type=str,default='./Data/JunYi/',help='path of data file')
+parser.add_argument('--path',type=str,default='../Data/CD/JunYi/',help='path of data file')
 parser.add_argument('--lamda_kcge',type=int,default=1,help='lamda used in kCGE')
 parser.add_argument('--num_workers',type=int,default=3,help='num of workers')
 
