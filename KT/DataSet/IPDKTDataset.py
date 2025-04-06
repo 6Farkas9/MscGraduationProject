@@ -42,22 +42,6 @@ class IPDKTDataset(Dataset):
             for i in range(self.data_len):
                 kc.insert(0,kc_[current_len - i - 1])
                 cor_rate.insert(0,np.array(cor_rate_[current_len - i - 1]))
-
-        # if current_len <= self.data_len:
-        #     que[:current_len] = que_
-        #     cor[:current_len] = cor_
-        #     for i in range(current_len):
-        #         kc.append(kc_[i])
-        #         cor_rate.append(cor_rate_[i])
-        #     for i in range(self.data_len - current_len):
-        #         kc.append([0] * self.kc_num)
-        #         cor_rate.append([0.0] * self.kc_num)
-        # else:
-        #     que[:] = que_[:self.data_len]
-        #     cor[:] = cor_[:self.data_len]
-        #     for i in range(self.data_len):
-        #         kc.append(kc_[i])
-        #         cor_rate.append(cor_rate_[i])
         
         onehot = self.onehot(kc.copy(),cor.copy())
         que = que[1:]
