@@ -223,7 +223,8 @@ if __name__ == '__main__':
     if os.path.exists(IPDKT_pt_temp_path):
         os.remove(IPDKT_pt_temp_path)
 
-    if not isaddupdate or np.average(loss_all) < lastloss :
+    loss = np.average(loss_all)
+    if not isaddupdate or loss < lastloss :
         torch.save({
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
