@@ -57,11 +57,11 @@ if __name__ == '__main__':
     train_file_path = ''
     master_file_path = ''
 
-    if(parsers.data_dir != '../Data/CD'):
+    if(parsers.data_dir != '../Data/CD/'):
         train_file_path = os.path.join(parsers.data_dir, parsers.train_file)
         master_file_path = os.path.join(parsers.data_dir, parsers.master_file)
     else:
-        data_dir_path = os.path.join('..', 'Data', 'KT')
+        data_dir_path = os.path.join('..', 'Data', 'CD')
         train_file_path = os.path.join(data_dir_path, parsers.train_file)
         master_file_path = os.path.join(data_dir_path, parsers.master_file)
     
@@ -97,10 +97,6 @@ if __name__ == '__main__':
     optimizer_cd = torch.optim.Adam([{'params':model_dtr.parameters()},
                                     {'params':model_mirt.parameters()}], lr= parsers.lr)
     optimizer_kcge = torch.optim.Adam([{'params':model_kcge.parameters()},], lr= parsers.lr)
-    
-    
-    # state = optimizer.state_dict()
-    # print(state)
 
     criterion = nn.BCELoss().to(device)
 
@@ -175,9 +171,6 @@ if __name__ == '__main__':
 
             z_star, z_sharp = model_kcge(data_relation)
 
-            print(z_star)
-            exit(0)
-
             h_u, h_v, h_c = get_H_Data(train_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
             p_u, d_v, beta_v = get_PDBeta_Data(h_u, h_v, h_c, model_dtr, parsers.embedding_dim)
             
@@ -186,13 +179,15 @@ if __name__ == '__main__':
             beta_v_temp = beta_v[exer_id]
 
             output = model_mirt(p_u_temp, d_v_temp, beta_v_temp).squeeze()
-            loss = criterion(output,correct)
+            loss = criterion(output, correct)
 
             optimizer_cd.zero_grad()
             optimizer_kcge.zero_grad()
             loss.backward()
             optimizer_cd.step()
             optimizer_kcge.step()
+
+            print("KCGE grad:", [p.grad for p in model_kcge.parameters() if p.grad is not None])
 
             num_correct += ((output >= 0.5).long() == correct).sum().item()
             num_total += len(output)
