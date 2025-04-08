@@ -43,13 +43,17 @@ class KCGEDataReader():
             start_points.extend([e_1,e_2])
             end_points.extend([e_2,e_1])
             edge_type.extend([e_type,e_type])
+            print('e_weight : {}'.format(e_weight))
             edge_weight.extend([e_weight,e_weight])
-        
+            
         for node in entity_all.keys():
             start_points.append(node)
             end_points.append(node)
             edge_type.append(0)  # 假设自环边的类型是0
             edge_weight.append(1)  # 自环边的权重设为1
+
+        # if 0 in edge_weight:
+        #     print('edge_weight has 0')
         
         # print(f"总实体数量: {len(entity_all.keys())}")
         # print(f"exer_all 列表的长度: {len(exer_all)}")
