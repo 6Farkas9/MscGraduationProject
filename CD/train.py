@@ -94,9 +94,12 @@ if __name__ == '__main__':
     model_dtr = Model_PDBeta(parsers.embedding_dim).to(device)
     model_mirt = MIRT().to(device)
 
-    optimizer_cd = torch.optim.Adam([{'params':model_dtr.parameters()},
-                                    {'params':model_mirt.parameters()}], lr= parsers.lr)
-    optimizer_kcge = torch.optim.Adam([{'params':model_kcge.parameters()},], lr= parsers.lr)
+    # optimizer_cd = torch.optim.Adam([{'params':model_dtr.parameters()},
+    #                                 {'params':model_mirt.parameters()}], lr= parsers.lr)
+    # optimizer_kcge = torch.optim.Adam([{'params':model_kcge.parameters()},], lr= parsers.lr)
+    optimizer = torch.optim.Adam([{'params':model_dtr.parameters()},
+                                {'params':model_mirt.parameters()},
+                                {'params':model_kcge.parameters()}], lr= parsers.lr)
 
     criterion = nn.BCELoss().to(device)
 
@@ -110,8 +113,8 @@ if __name__ == '__main__':
 
     kcge_pt_path = os.path.join('..', 'KCGE', 'PT')
     kcge_pt_path = os.path.normpath(kcge_pt_path)
-    kcge_pt_train_path = os.path.join(kcge_pt_path, 'kcge_train.pt')
-    kcge_pt_train_path = os.path.normpath(kcge_pt_train_path)
+    # kcge_pt_train_path = os.path.join(kcge_pt_path, 'kcge_train.pt')
+    # kcge_pt_train_path = os.path.normpath(kcge_pt_train_path)
     kcge_pt_use_path = os.path.join(kcge_pt_path, 'kcge_use.pt')
     kcge_pt_use_path = os.path.normpath(kcge_pt_use_path)
 
@@ -125,17 +128,17 @@ if __name__ == '__main__':
         checkpoint_cd = torch.load(cd_pt_train_path,  map_location=device)
         model_dtr.load_state_dict(checkpoint_cd['model_state_dict_dtr'])
         model_mirt.load_state_dict(checkpoint_cd['model_state_dict_mirt'])
-        optimizer_cd.load_state_dict(checkpoint_cd['optimizer_state_dict_cd'])
+        # optimizer_cd.load_state_dict(checkpoint_cd['optimizer_state_dict_cd'])
         lastloss = checkpoint_cd['loss']
     else:
         print('CD初始训练')
         cd_add_update = False
 
-    if os.path.exists(kcge_pt_train_path):
+    if os.path.exists(kcge_pt_use_path):
         print('KCGE增量训练')
-        checkpoint_kcge = torch.load(kcge_pt_train_path, map_location=device)
+        checkpoint_kcge = torch.load(kcge_pt_use_path, map_location=device)
         model_kcge.load_state_dict(checkpoint_kcge['model_state_dict_kcge'])
-        optimizer_kcge.load_state_dict(checkpoint_kcge['optimizer_state_dict_kcge'])
+        # optimizer_kcge.load_state_dict(checkpoint_kcge['optimizer_state_dict_kcge'])
     else:
         print('KCGE初始训练')
         kcge_add_update = False
@@ -147,8 +150,9 @@ if __name__ == '__main__':
         model_dtr.load_state_dict(check_point['model_state_dict_dtr'])
         model_mirt.load_state_dict(check_point['model_state_dict_mirt'])
         model_kcge.load_state_dict(check_point['model_state_dict_kcge'])
-        optimizer_cd.load_state_dict(check_point['optimizer_state_dict_cd'])
-        optimizer_kcge.load_state_dict(check_point['optimizer_state_dict_kcge'])
+        # optimizer_cd.load_state_dict(check_point['optimizer_state_dict_cd'])
+        # optimizer_kcge.load_state_dict(check_point['optimizer_state_dict_kcge'])
+        optimizer.load_state_dict(check_point['optimizer_state_dict'])
         epoch_start = check_point['epoch'] + 1
         loss_all = check_point['loss all']
 
@@ -181,11 +185,13 @@ if __name__ == '__main__':
             output = model_mirt(p_u_temp, d_v_temp, beta_v_temp).squeeze()
             loss = criterion(output, correct)
 
-            optimizer_cd.zero_grad()
-            optimizer_kcge.zero_grad()
+            # optimizer_cd.zero_grad()
+            # optimizer_kcge.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
-            optimizer_cd.step()
-            optimizer_kcge.step()
+            optimizer.step()
+            # optimizer_cd.step()
+            # optimizer_kcge.step()
 
             print("KCGE grad:", [p.grad for p in model_kcge.parameters() if p.grad is not None])
 
@@ -239,8 +245,9 @@ if __name__ == '__main__':
                 'model_state_dict_dtr': model_dtr.state_dict(),
                 'model_state_dict_mirt': model_mirt.state_dict(),
                 'model_state_dict_kcge': model_kcge.state_dict(),
-                'optimizer_state_dict_cd': optimizer_cd.state_dict(),
-                'optimizer_state_dict_kcge': optimizer_kcge.state_dict(),
+                # 'optimizer_state_dict_cd': optimizer_cd.state_dict(),
+                # 'optimizer_state_dict_kcge': optimizer_kcge.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
                 'epoch': epoch,
                 'loss all': loss_all
             }, cd_pt_temp_path)
@@ -253,14 +260,14 @@ if __name__ == '__main__':
         torch.save({
             'model_state_dict_dtr': model_dtr.state_dict(),
             'model_state_dict_mirt': model_mirt.state_dict(),
-            'optimizer_state_dict_cd': optimizer_cd.state_dict(),
+            # 'optimizer_state_dict_cd': optimizer_cd.state_dict(),
             'loss': loss
         }, cd_pt_train_path)
 
         torch.save({
             'model_state_dict_kcge': model_kcge.state_dict(),
-            'optimizer_state_dict_kcge': optimizer_kcge.state_dict(),
-        }, kcge_pt_train_path)
+            # 'optimizer_state_dict_kcge': optimizer_kcge.state_dict(),
+        }, kcge_pt_use_path)
 
     torch.save({
         'model_state_dict_dtr': model_dtr.state_dict(),

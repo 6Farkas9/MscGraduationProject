@@ -167,7 +167,7 @@ if __name__ == '__main__':
         print('增量训练')
         check_point = torch.load(IPDKT_pt_train_path, map_location=device)
         model.load_state_dict(check_point['model_state_dict'])
-        optimizer.load_state_dict(check_point['optimizer_state_dict'])
+        # optimizer.load_state_dict(check_point['optimizer_state_dict'])
         lastloss = check_point['loss']
     else:
         print('初始训练')
@@ -227,7 +227,7 @@ if __name__ == '__main__':
     if not isaddupdate or loss < lastloss :
         torch.save({
             'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
+            # 'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss
         }, IPDKT_pt_train_path)
     
