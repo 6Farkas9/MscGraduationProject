@@ -84,11 +84,16 @@ if __name__ == '__main__':
     reader_relation = KCGEDataReader(relation_file_path, device, parsers.embedding_dim)
     data_relation, exer_all, topic_all = reader_relation.load_Data()
 
+    # print(f"data_relation 的最小值: {data_relation.x.min()}, 最大值: {data_relation.x.max()}")
+
     train_data_loader = DADDataReader(train_file_path, device)
     train_log_data, train_stu_exer = train_data_loader.load_Data()
 
     master_data_loader = DADDataReader(master_file_path, device)
-    master_log_data, test_stu_exer = master_data_loader.load_Data()
+    master_log_data, master_stu_exer = master_data_loader.load_Data()
+
+    # print(f"train_log_data 的最小值: {train_log_data.min()}, 最大值: {train_log_data.max()}")
+    # print(f"master_log_data 的最小值: {master_log_data.min()}, 最大值: {master_log_data.max()}")
 
     model_kcge = KCGE(parsers.embedding_dim, 5, parsers.lamda_kcge).to(device)
     model_dtr = Model_PDBeta(parsers.embedding_dim).to(device)
@@ -166,7 +171,15 @@ if __name__ == '__main__':
 
             z_star, z_sharp = model_kcge(data_relation)
 
+            # print(f"z_sharp 的最小值: {z_sharp.min()}, 最大值: {z_sharp.max()}")
+            # print(f"z_star 的最小值: {z_star.min()}, 最大值: {z_star.max()}")
+
             h_u, h_v, h_c = get_H_Data(train_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
+
+            # print(f"h_u 的最小值: {h_u.min()}, 最大值: {h_u.max()}")
+            # print(f"h_v 的最小值: {h_v.min()}, 最大值: {h_v.max()}")
+            # print(f"h_c 的最小值: {h_c.min()}, 最大值: {h_c.max()}")
+
             p_u, d_v, beta_v = get_PDBeta_Data(h_u, h_v, h_c, model_dtr, parsers.embedding_dim)
             
             p_u_temp = p_u[stu_id]
@@ -178,9 +191,22 @@ if __name__ == '__main__':
 
             optimizer.zero_grad()
             loss.backward()
+
+            # for name, param in model_kcge.named_parameters():
+            #     if param.grad is not None:
+            #         print(f"KCGE - {name} 的最小梯度值: {param.grad.min()}, 最大梯度值: {param.grad.max()}")
+            #     else:
+            #         print(f"KCGE - {name} 没有梯度")
+    
+            # for name, param in model_dtr.named_parameters():
+            #     if param.grad is not None:
+            #         print(f"DTR - {name} 的最小梯度值: {param.grad.min()}, 最大梯度值: {param.grad.max()}")
+            #     else:
+            #         print(f"DTR - {name} 没有梯度")
+
             optimizer.step()
 
-            print("KCGE grad:", [p.grad for p in model_kcge.parameters() if p.grad is not None])
+            # print("KCGE grad:", [p.grad for p in model_kcge.parameters() if p.grad is not None])
 
             num_correct += ((output >= 0.5).long() == correct).sum().item()
             num_total += len(output)
@@ -199,7 +225,7 @@ if __name__ == '__main__':
         num_correct = 0
         num_total = 0
         loss_total = []
-        dad_dataset = DADDataset(exer_all, train_log_data)
+        dad_dataset = DADDataset(exer_all, master_log_data)
         dad_dataloader = DataLoader(dad_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=parsers.num_workers, **dataloader_kwargs)
         batch_tqdm = tqdm(dad_dataloader)
         batch_tqdm.set_description('test batch:')
@@ -209,7 +235,7 @@ if __name__ == '__main__':
             correct = item[2].to(device).float()
             with torch.no_grad():
                 z_star, z_sharp = model_kcge(data_relation)
-            h_u, h_v, h_c = get_H_Data(test_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
+            h_u, h_v, h_c = get_H_Data(master_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
             with torch.no_grad():
                 p_u, d_v, beta_v = get_PDBeta_Data(h_u, h_v, h_c, model_dtr, parsers.embedding_dim)
             p_u_temp = p_u[stu_id]
