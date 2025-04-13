@@ -1,0 +1,10 @@
+^D:\DESKTOP\GRADUATIONDESIGN\GRADUATIONDESIGN\BACKEND\BUILD\CMAKEFILES\0F9B305B1E6417C82B86421FA8FBA098\GENERATE.STAMP.RULE
+setlocal
+D:\Cmake\bin\cmake.exe -SD:/Desktop/GraduationDesign/GraduationDesign/BackEnd -BD:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/BackEnd.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

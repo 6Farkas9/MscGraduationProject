@@ -4,7 +4,9 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/**",
-                "${vcpkgRoot}/x64-windows/include"
+                "${vcpkgRoot}/x64-windows/include",
+                "${workspaceFolder}/BackEnd/libs/libtorch-release/include",
+                "${workspaceFolder}/BackEnd/libs/libtorch-release/include/torch/csrc/api/include"
             ],
             "defines": [
                 "_DEBUG",
@@ -12,7 +14,7 @@
                 "_UNICODE"
             ],
             "windowsSdkVersion": "10.0.22621.0",
-            "compilerPath": "cl.exe",
+            "compilerPath": "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/Hostx64/x64/cl.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "windows-msvc-x64",

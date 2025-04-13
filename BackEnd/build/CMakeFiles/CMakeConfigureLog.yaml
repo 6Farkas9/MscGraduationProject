@@ -1,0 +1,1001 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineSystem.cmake:205 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The system is: Windows - 10.0.22631 - AMD64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a
+      鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:34銆?
+      
+      鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdC\\CompilerIdC.vcxproj鈥?榛樿鐩爣)銆?
+      PrepareForBuild:
+        姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\鈥濄€?
+        宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?
+        姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\CompilerIdC.tlog\\鈥濄€?
+      InitializeBuildStatus:
+        姝ｅ湪鍒涘缓鈥淒ebug\\CompilerIdC.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?
+        姝ｅ湪瀵光€淒ebug\\CompilerIdC.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?
+      VcpkgTripletSelection:
+        Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"
+        Using normalized configuration "Release"
+      ClCompile:
+        D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\CL.exe /c /I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TC /FC /errorReport:queue CMakeCCompilerId.c
+        CMakeCCompilerId.c
+      Link:
+        D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdC.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdC.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdC.lib" /MACHINE:X64 Debug\\CMakeCCompilerId.obj
+        CompilerIdC.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdC\\CompilerIdC.exe
+      AppLocalFromInstalled:
+        pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdC\\CompilerIdC.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin" "Debug\\CompilerIdC.tlog\\CompilerIdC.write.1u.tlog" "Debug\\vcpkg.applocal.log"
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_C_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_C_COMPILER=D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        姝ｅ湪鍒犻櫎鏂囦欢鈥淒ebug\\CompilerIdC.tlog\\unsuccessfulbuild鈥濄€?
+        姝ｅ湪瀵光€淒ebug\\CompilerIdC.tlog\\CompilerIdC.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?
+      宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdC\\CompilerIdC.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+      
+      宸叉垚鍔熺敓鎴愩€?
+          0 涓鍛?
+          0 涓敊璇?
+      
+      宸茬敤鏃堕棿 00:00:01.27
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.vcxproj"
+      
+      The C compiler identification is MSVC, found in:
+        D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdC/CompilerIdC.exe
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler:  
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a
+      鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:36銆?
+      
+      鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCXX\\CompilerIdCXX.vcxproj鈥?榛樿鐩爣)銆?
+      PrepareForBuild:
+        姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\鈥濄€?
+        宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?
+        姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\CompilerIdCXX.tlog\\鈥濄€?
+      InitializeBuildStatus:
+        姝ｅ湪鍒涘缓鈥淒ebug\\CompilerIdCXX.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?
+        姝ｅ湪瀵光€淒ebug\\CompilerIdCXX.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?
+      VcpkgTripletSelection:
+        Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"
+        Using normalized configuration "Release"
+      ClCompile:
+        D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\CL.exe /c /I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" /nologo /W0 /WX- /diagnostics:column /Od /D _MBCS /Gm- /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"Debug\\\\" /Fd"Debug\\vc143.pdb" /external:W0 /Gd /TP /FC /errorReport:queue CMakeCXXCompilerId.cpp
+        CMakeCXXCompilerId.cpp
+      Link:
+        D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCXX.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCXX.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCXX.lib" /MACHINE:X64 Debug\\CMakeCXXCompilerId.obj
+        CompilerIdCXX.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCXX\\CompilerIdCXX.exe
+      AppLocalFromInstalled:
+        pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCXX\\CompilerIdCXX.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin" "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.write.1u.tlog" "Debug\\vcpkg.applocal.log"
+      PostBuildEvent:
+        for %%i in (cl.exe) do @echo CMAKE_CXX_COMPILER=%%~$PATH:i
+        :VCEnd
+        CMAKE_CXX_COMPILER=D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\Hostx64\\x64\\cl.exe
+      FinalizeBuildStatus:
+        姝ｅ湪鍒犻櫎鏂囦欢鈥淒ebug\\CompilerIdCXX.tlog\\unsuccessfulbuild鈥濄€?
+        姝ｅ湪瀵光€淒ebug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?
+      宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCXX\\CompilerIdCXX.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+      
+      宸叉垚鍔熺敓鎴愩€?
+          0 涓鍛?
+          0 涓敊璇?
+      
+      宸茬敤鏃堕棿 00:00:01.30
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
+      
+      The CXX compiler identification is MSVC, found in:
+        D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCXX/CompilerIdCXX.exe
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-cwj3ds"
+      binary: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-cwj3ds"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS /W3"
+      CMAKE_C_FLAGS_DEBUG: "/MDd /Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-cwj3ds'
+        
+        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_4795c.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a
+        鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:37銆?
+        
+        鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cwj3ds\\cmTC_4795c.vcxproj鈥?榛樿鐩爣)銆?
+        PrepareForBuild:
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_4795c.dir\\Debug\\鈥濄€?
+          宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?
+          姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cwj3ds\\Debug\\鈥濄€?
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_4795c.dir\\Debug\\cmTC_4795c.tlog\\鈥濄€?
+        InitializeBuildStatus:
+          姝ｅ湪鍒涘缓鈥渃mTC_4795c.dir\\Debug\\cmTC_4795c.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?
+          姝ｅ湪瀵光€渃mTC_4795c.dir\\Debug\\cmTC_4795c.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?
+        VcpkgTripletSelection:
+          Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"
+          Using normalized configuration "Debug"
+        ClCompile:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\CL.exe /c /I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_4795c.dir\\Debug\\\\" /Fd"cmTC_4795c.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TC /errorReport:queue "D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCCompilerABI.c"
+          鐢ㄤ簬 x64 鐨?Microsoft (R) C/C++ 浼樺寲缂栬瘧鍣?19.43.34810 鐗?
+          鐗堟潈鎵€鏈?C) Microsoft Corporation銆備繚鐣欐墍鏈夋潈鍒┿€?
+          cl /c /I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /Fo"cmTC_4795c.dir\\Debug\\\\" /Fd"cmTC_4795c.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TC /errorReport:queue "D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCCompilerABI.c"
+          CMakeCCompilerABI.c
+        Link:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cwj3ds\\Debug\\cmTC_4795c.exe" /INCREMENTAL /ILK:"cmTC_4795c.dir\\Debug\\cmTC_4795c.ilk" /NOLOGO /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib\\manual-link" kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-cwj3ds/Debug/cmTC_4795c.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-cwj3ds/Debug/cmTC_4795c.lib" /MACHINE:X64  /machine:x64 cmTC_4795c.dir\\Debug\\CMakeCCompilerABI.obj
+          cmTC_4795c.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cwj3ds\\Debug\\cmTC_4795c.exe
+        AppLocalFromInstalled:
+          pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cwj3ds\\Debug\\cmTC_4795c.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\bin" "cmTC_4795c.dir\\Debug\\cmTC_4795c.tlog\\cmTC_4795c.write.1u.tlog" "cmTC_4795c.dir\\Debug\\vcpkg.applocal.log"
+        FinalizeBuildStatus:
+          姝ｅ湪鍒犻櫎鏂囦欢鈥渃mTC_4795c.dir\\Debug\\cmTC_4795c.tlog\\unsuccessfulbuild鈥濄€?
+          姝ｅ湪瀵光€渃mTC_4795c.dir\\Debug\\cmTC_4795c.tlog\\cmTC_4795c.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?
+        宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cwj3ds\\cmTC_4795c.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+        
+        宸叉垚鍔熺敓鎴愩€?
+            0 涓鍛?
+            0 涓敊璇?
+        
+        宸茬敤鏃堕棿 00:00:01.42
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:227 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'C': D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:264 (cmake_determine_linker_id)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Running the C compiler's linker: "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.43.34810.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-wftyy8"
+      binary: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-wftyy8"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /W3 /GR /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/MDd /Zi /Ob0 /Od /RTC1"
+      CMAKE_CXX_SCAN_FOR_MODULES: "OFF"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-wftyy8'
+        
+        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_d6ea8.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a
+        鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:39銆?
+        
+        鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wftyy8\\cmTC_d6ea8.vcxproj鈥?榛樿鐩爣)銆?
+        PrepareForBuild:
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_d6ea8.dir\\Debug\\鈥濄€?
+          宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?
+          姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wftyy8\\Debug\\鈥濄€?
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_d6ea8.dir\\Debug\\cmTC_d6ea8.tlog\\鈥濄€?
+        InitializeBuildStatus:
+          姝ｅ湪鍒涘缓鈥渃mTC_d6ea8.dir\\Debug\\cmTC_d6ea8.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?
+          姝ｅ湪瀵光€渃mTC_d6ea8.dir\\Debug\\cmTC_d6ea8.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?
+        VcpkgTripletSelection:
+          Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"
+          Using normalized configuration "Debug"
+        ClCompile:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\CL.exe /c /I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_d6ea8.dir\\Debug\\\\" /Fd"cmTC_d6ea8.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TP /errorReport:queue "D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCXXCompilerABI.cpp"
+          鐢ㄤ簬 x64 鐨?Microsoft (R) C/C++ 浼樺寲缂栬瘧鍣?19.43.34810 鐗?
+          鐗堟潈鎵€鏈?C) Microsoft Corporation銆備繚鐣欐墍鏈夋潈鍒┿€?
+          cl /c /I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /Fo"cmTC_d6ea8.dir\\Debug\\\\" /Fd"cmTC_d6ea8.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TP /errorReport:queue "D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCXXCompilerABI.cpp"
+          CMakeCXXCompilerABI.cpp
+        Link:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wftyy8\\Debug\\cmTC_d6ea8.exe" /INCREMENTAL /ILK:"cmTC_d6ea8.dir\\Debug\\cmTC_d6ea8.ilk" /NOLOGO /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib\\manual-link" kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-wftyy8/Debug/cmTC_d6ea8.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-wftyy8/Debug/cmTC_d6ea8.lib" /MACHINE:X64  /machine:x64 cmTC_d6ea8.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_d6ea8.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wftyy8\\Debug\\cmTC_d6ea8.exe
+        AppLocalFromInstalled:
+          pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wftyy8\\Debug\\cmTC_d6ea8.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\bin" "cmTC_d6ea8.dir\\Debug\\cmTC_d6ea8.tlog\\cmTC_d6ea8.write.1u.tlog" "cmTC_d6ea8.dir\\Debug\\vcpkg.applocal.log"
+        FinalizeBuildStatus:
+          姝ｅ湪鍒犻櫎鏂囦欢鈥渃mTC_d6ea8.dir\\Debug\\cmTC_d6ea8.tlog\\unsuccessfulbuild鈥濄€?
+          姝ｅ湪瀵光€渃mTC_d6ea8.dir\\Debug\\cmTC_d6ea8.tlog\\cmTC_d6ea8.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?
+        宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wftyy8\\cmTC_d6ea8.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+        
+        宸叉垚鍔熺敓鎴愩€?
+            0 涓鍛?
+            0 涓敊璇?
+        
+        宸茬敤鏃堕棿 00:00:01.42
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:227 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        linker tool for 'CXX': D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/link.exe
+        implicit libs: []
+        implicit objs: []
+        implicit dirs: []
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:264 (cmake_determine_linker_id)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Running the CXX compiler's linker: "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.43.34810.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerId.cmake:53 (__determine_compiler_id_test)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCUDACompiler.cmake:131 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:8 (enable_language)"
+    message: |
+      Compiling the CUDA compiler identification source file "CMakeCUDACompilerId.cu" succeeded.
+      Compiler: C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/bin/nvcc.exe 
+      Build flags: 
+      Id flags: --keep;--keep-dir;tmp -v
+      
+      The output was:
+      0
+      閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a
+      鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:41銆?
+      
+      鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣)銆?
+      PrepareForBuild:
+        姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\鈥濄€?
+        宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?
+        姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\CompilerIdCUDA.tlog\\鈥濄€?
+      InitializeBuildStatus:
+        姝ｅ湪鍒涘缓鈥淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?
+        姝ｅ湪瀵光€淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?
+      AddCudaCompileDeps:
+        D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D__CUDACC_VER_MAJOR__=12 /D__CUDACC_VER_MINOR__=4 /D_MBCS /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /ID:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /I. /FIcuda_runtime.h /c D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu 
+      椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?1)姝ｅ湪鑺傜偣 1 涓婄敓鎴愨€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?1:2) (CudaBuildCore 涓洰鏍?銆?
+      CudaBuildCore:
+        Compiling CUDA source file CMakeCUDACompilerId.cu...
+        姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug鈥濄€?
+        cmd.exe /C "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmp157e9434ffd4479f8be707c9bb5dfb6b.cmd"
+        "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe" -gencode=arch=compute_52,code=\\"sm_52,compute_52\\" --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu   -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" -I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"  -G   --keep-dir CompilerIdCUDA\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -v -allow-unsupported-compiler -g  -D_MBCS -Xcompiler "/EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/FdDebug\\vc143.pdb" -o D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu"
+        
+        (D:\\Anaconda\\Envs\\pyt240cu124) D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA>"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe" -gencode=arch=compute_52,code=\\"sm_52,compute_52\\" --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu   -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" -I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"  -G   --keep-dir CompilerIdCUDA\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -v -allow-unsupported-compiler -g  -D_MBCS -Xcompiler "/EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/FdDebug\\vc143.pdb" -o D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" 
+        #$ _NVVM_BRANCH_=nvvm
+        #$ _NVVM_BRANCH_SUFFIX_=
+        #$ _SPACE_= 
+        #$ _CUDART_=cudart
+        #$ _HERE_=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin
+        #$ _THERE_=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin
+        #$ _TARGET_SIZE_=
+        #$ _TARGET_DIR_=
+        #$ _TARGET_SIZE_=64
+        #$ _WIN_PLATFORM_=x64
+        #$ TOP=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/..
+        #$ NVVMIR_LIBRARY_DIR=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../nvvm/libdevice
+        #$ PATH=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../nvvm/bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../lib;D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64;C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64;;C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x86;;D:\\VisualStudio\\Common7\\tools;D:\\VisualStudio\\Common7\\ide;C:\\Program Files (x86)\\HTML Help Workshop;;D:\\VisualStudio\\MSBuild\\Current\\Bin\\amd64;C:\\WINDOWS\\Microsoft.NET\\Framework64\\v4.0.30319\\;C:\\WINDOWS\\Microsoft.NET\\Framework\\v4.0.30319\\;D:\\VisualStudio\\MSBuild\\Current\\Bin;C:\\WINDOWS\\Microsoft.NET\\Framework\\v4.0.30319\\;;D:\\Anaconda\\Envs\\pyt240cu124;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\mingw-w64\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\usr\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Scripts;D:\\Anaconda\\Envs\\pyt240cu124\\bin;D:\\Anaconda\\Anaconda\\condabin;.;C:\\Program Files (x86)\\Razer Chroma SDK\\bin;C:\\Program Files\\Razer Chroma SDK\\bin;C:\\Program Files (x86)\\Razer\\ChromaBroadcast\\bin;C:\\Program Files\\Razer\\ChromaBroadcast\\bin;C:\\windows\\system32;C:\\windows;C:\\windows\\System32\\Wbem;C:\\windows\\System32\\WindowsPowerShell\\v1.0;C:\\windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\dotnet;D:\\Bandzip\\Bandizip;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;D:\\MySql\\MySQL Server 8.0\\bin;D:\\Git\\Git\\cmd;D:\\Julia\\Julia-1.10.2\\bin;C:\\Program Files (x86)\\ZeroTier\\One;D:\\Anaconda\\Anaconda\\Scripts;D:\\Node;D:\\Node\\node_global;C:\\Program Files\\NVIDIA Corporation\\NVSMI;D:\\MingW\\14.2.0\\mingw64\\bin;D:\\MongoDB\\Server\\8.0\\bin;D:\\MySQL\\MySQL Server 8.0\\bin;D:\\Cmake\\bin;D:\\Vcpkg\\vcpkg;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\tools\\drogon;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit;C:\\Program Files\\NVIDIA Corporation\\Nsight Compute 2023.1.0;D:\\MySQL\\MySQL Shell 8.0\\bin;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;.;D:\\Pycharm\\Pycharm\\PyCharm 2023.1.3\\bin;.;D:\\Vscode\\Microsoft VS Code\\bin;C:\\Users\\dgszy\\AppData\\Roaming\\npm;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\libnvvp;C:\\Program Files (x86)\\Razer Chroma SDK\\bin;C:\\Program Files\\Razer Chroma SDK\\bin;C:\\Program Files (x86)\\Razer\\ChromaBroadcast\\bin;C:\\Program Files\\Razer\\ChromaBroadcast\\bin;C:\\windows\\system32;C:\\windows;C:\\windows\\System32\\Wbem;C:\\windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\windows\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\dotnet\\;D:\\Bandzip\\Bandizip\\;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;D:\\MySql\\MySQL Server 8.0\\bin;D:\\Git\\Git\\cmd;D:\\Julia\\Julia-1.10.2\\bin;C:\\Program Files (x86)\\ZeroTier\\One\\;D:\\Anaconda\\Anaconda\\Scripts;D:\\Node\\;D:\\Node\\node_global;C:\\Program Files\\NVIDIA Corporation\\NVSMI;D:\\MingW\\14.2.0\\mingw64\\bin;D:\\MongoDB\\Server\\8.0\\bin;D:\\MySQL\\MySQL Server 8.0\\bin;D:\\Cmake\\bin;D:\\Vcpkg\\vcpkg;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\tools\\drogon;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\;C:\\Program Files\\NVIDIA Corporation\\Nsight Compute 2024.1.0\\;D:\\MySQL\\MySQL Shell 8.0\\bin\\;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;;D:\\Pycharm\\Pycharm\\PyCharm 2023.1.3\\bin;;D:\\Vscode\\Microsoft VS Code\\bin;C:\\Users\\dgszy\\AppData\\Roaming\\npm;
+        #$ INCLUDES="-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"  
+        #$ LIBRARIES=  "/LIBPATH:C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../lib/x64"
+        #$ CUDAFE_FLAGS=--sdk_dir "C:\\Program Files (x86)\\Windows Kits\\10"
+        #$ PTXAS_FLAGS=
+        CMakeCUDACompilerId.cu
+        #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res: [-D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -E -TP -EHsc -D__CUDACC__ -D__NVCC__ -D__CUDACC_DEBUG__  /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"    -D "_MBCS" -D__CUDACC_VER_MAJOR__=12 -D__CUDACC_VER_MINOR__=4 -D__CUDACC_VER_BUILD__=99 -D__CUDA_API_VER_MAJOR__=12 -D__CUDA_API_VER_MINOR__=4 -D__NVCC_DIAG_PRAGMA_SUPPORT__=1 -FI "cuda_runtime.h" -Zi "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" ]
+        #$ cl.exe -D__NV_NO_HOST_COMPILER_CHECK=1 @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res" > "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-6_CMakeCUDACompilerId.cpp4.ii" 
+        CMakeCUDACompilerId.cu
+        #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res
+        #$ cudafe++ --ms_c++14 --microsoft_version=1943 --msvc_target_version=1943 --compiler_bindir "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/../../../../../../.." --display_error_number --orig_src_file_name "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --orig_src_path_name "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" --allow_managed --debug_mode --sdk_dir "C:\\Program Files (x86)\\Windows Kits\\10" --m64 --parse_templates --gen_c_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp" --stub_file_name "tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.stub.c" --gen_module_id_file --module_id_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-5_CMakeCUDACompilerId.module_id" "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-6_CMakeCUDACompilerId.cpp4.ii" 
+        #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res: [-D__CUDA_ARCH__=520 -D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -E -TP  -DCUDA_DOUBLE_MATH_FUNCTIONS -EHsc -D__CUDACC__ -D__NVCC__ -D__CUDACC_DEBUG__  /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"    -D "_MBCS" -D__CUDACC_VER_MAJOR__=12 -D__CUDACC_VER_MINOR__=4 -D__CUDACC_VER_BUILD__=99 -D__CUDA_API_VER_MAJOR__=12 -D__CUDA_API_VER_MINOR__=4 -D__NVCC_DIAG_PRAGMA_SUPPORT__=1 -FI "cuda_runtime.h" -Zi "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" ]
+        #$ cl.exe -D__NV_NO_HOST_COMPILER_CHECK=1 @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res" > "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-9_CMakeCUDACompilerId.cpp1.ii" 
+        CMakeCUDACompilerId.cu
+        #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res
+        #$ cicc --ms_c++14 --microsoft_version=1943 --msvc_target_version=1943 --compiler_bindir "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/../../../../../../.." --display_error_number --orig_src_file_name "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --orig_src_path_name "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" --allow_managed --debug_mode --sdk_dir "C:\\Program Files (x86)\\Windows Kits\\10"  -arch compute_52 -m64 --no-version-ident -ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 --include_file_name "tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin.c" -g -O0 -tused --module_id_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-5_CMakeCUDACompilerId.module_id" --gen_c_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.c" --stub_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.stub.c" --gen_device_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.gpu"  "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-9_CMakeCUDACompilerId.cpp1.ii" -o "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx"
+        #$ ptxas -arch=sm_52 -m64 -g --dont-merge-basicblocks --return-at-end "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx"  -o "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-11_CMakeCUDACompilerId.sm_52.cubin" 
+        #$ fatbinary -64 --ident="D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --cmdline="-g --dont-merge-basicblocks --return-at-end " --cicc-cmdline="-ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 " -g "--image3=kind=elf,sm=52,file=C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-11_CMakeCUDACompilerId.sm_52.cubin" "--image3=kind=ptx,sm=52,file=C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx" --embedded-fatbin="C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin.c" 
+        #$ erase C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin
+        #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res: [-D__CUDA_ARCH__=520 -D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -c -TP  -DCUDA_DOUBLE_MATH_FUNCTIONS -EHsc /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"   -Zi "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp" ]
+        #$ cl.exe @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res" -Fo"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CompilerIdCUDA/x64/Debug/CMakeCUDACompilerId.cu.obj" 
+        tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp
+        #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res
+      宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?CudaBuildCore 涓洰鏍?鐨勬搷浣溿€?
+      VcpkgTripletSelection:
+        Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"
+        Using normalized configuration "Release"
+      Link:
+        D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCUDA.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCUDA.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCUDA.lib" /MACHINE:X64 D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj
+          姝ｅ湪鍒涘缓搴?.\\CompilerIdCUDA.lib 鍜屽璞?.\\CompilerIdCUDA.exp
+      LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj]
+        CompilerIdCUDA.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.exe
+      AppLocalFromInstalled:
+        pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin" "Debug\\CompilerIdCUDA.tlog\\CompilerIdCUDA.write.1u.tlog" "Debug\\vcpkg.applocal.log"
+      PostBuildEvent:
+        echo CMAKE_CUDA_COMPILER=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe
+        :VCEnd
+        CMAKE_CUDA_COMPILER=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe
+      FinalizeBuildStatus:
+        姝ｅ湪鍒犻櫎鏂囦欢鈥淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濄€?
+        姝ｅ湪瀵光€淒ebug\\CompilerIdCUDA.tlog\\CompilerIdCUDA.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?
+      宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+      
+      宸叉垚鍔熺敓鎴愩€?
+      
+      鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣) (1) ->
+      (Link 鐩爣) -> 
+        LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj]
+      
+          1 涓鍛?
+          0 涓敊璇?
+      
+      宸茬敤鏃堕棿 00:00:02.84
+      
+      
+      Compilation of the CUDA compiler identification source "CMakeCUDACompilerId.cu" produced "CompilerIdCUDA.exe"
+      
+      Compilation of the CUDA compiler identification source "CMakeCUDACompilerId.cu" produced "CompilerIdCUDA.exp"
+      
+      Compilation of the CUDA compiler identification source "CMakeCUDACompilerId.cu" produced "CompilerIdCUDA.lib"
+      
+      Compilation of the CUDA compiler identification source "CMakeCUDACompilerId.cu" produced "CompilerIdCUDA.vcxproj"
+      
+      The CUDA compiler identification is NVIDIA, found in:
+        D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CompilerIdCUDA.exe
+      The host compiler identification is MSVC
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/Internal/CMakeNVCCParseImplicitInfo.cmake:128 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCUDACompiler.cmake:242 (cmake_nvcc_parse_implicit_info)"
+      - "CMakeLists.txt:8 (enable_language)"
+    message: |
+      Parsed CUDA nvcc implicit link information:
+        found 'PATH=' string: [C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../nvvm/bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../lib;D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64;C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64;;C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x86;;D:\\VisualStudio\\Common7\\tools;D:\\VisualStudio\\Common7\\ide;C:\\Program Files (x86)\\HTML Help Workshop;;D:\\VisualStudio\\MSBuild\\Current\\Bin\\amd64;C:\\WINDOWS\\Microsoft.NET\\Framework64\\v4.0.30319\\;C:\\WINDOWS\\Microsoft.NET\\Framework\\v4.0.30319\\;D:\\VisualStudio\\MSBuild\\Current\\Bin;C:\\WINDOWS\\Microsoft.NET\\Framework\\v4.0.30319\\;;D:\\Anaconda\\Envs\\pyt240cu124;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\mingw-w64\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\usr\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Scripts;D:\\Anaconda\\Envs\\pyt240cu124\\bin;D:\\Anaconda\\Anaconda\\condabin;.;C:\\Program Files (x86)\\Razer Chroma SDK\\bin;C:\\Program Files\\Razer Chroma SDK\\bin;C:\\Program Files (x86)\\Razer\\ChromaBroadcast\\bin;C:\\Program Files\\Razer\\ChromaBroadcast\\bin;C:\\windows\\system32;C:\\windows;C:\\windows\\System32\\Wbem;C:\\windows\\System32\\WindowsPowerShell\\v1.0;C:\\windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\dotnet;D:\\Bandzip\\Bandizip;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;D:\\MySql\\MySQL Server 8.0\\bin;D:\\Git\\Git\\cmd;D:\\Julia\\Julia-1.10.2\\bin;C:\\Program Files (x86)\\ZeroTier\\One;D:\\Anaconda\\Anaconda\\Scripts;D:\\Node;D:\\Node\\node_global;C:\\Program Files\\NVIDIA Corporation\\NVSMI;D:\\MingW\\14.2.0\\mingw64\\bin;D:\\MongoDB\\Server\\8.0\\bin;D:\\MySQL\\MySQL Server 8.0\\bin;D:\\Cmake\\bin;D:\\Vcpkg\\vcpkg;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\tools\\drogon;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit;C:\\Program Files\\NVIDIA Corporation\\Nsight Compute 2023.1.0;D:\\MySQL\\MySQL Shell 8.0\\bin;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;.;D:\\Pycharm\\Pycharm\\PyCharm 2023.1.3\\bin;.;D:\\Vscode\\Microsoft VS Code\\bin;C:\\Users\\dgszy\\AppData\\Roaming\\npm;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\libnvvp;C:\\Program Files (x86)\\Razer Chroma SDK\\bin;C:\\Program Files\\Razer Chroma SDK\\bin;C:\\Program Files (x86)\\Razer\\ChromaBroadcast\\bin;C:\\Program Files\\Razer\\ChromaBroadcast\\bin;C:\\windows\\system32;C:\\windows;C:\\windows\\System32\\Wbem;C:\\windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\windows\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\dotnet\\;D:\\Bandzip\\Bandizip\\;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;D:\\MySql\\MySQL Server 8.0\\bin;D:\\Git\\Git\\cmd;D:\\Julia\\Julia-1.10.2\\bin;C:\\Program Files (x86)\\ZeroTier\\One\\;D:\\Anaconda\\Anaconda\\Scripts;D:\\Node\\;D:\\Node\\node_global;C:\\Program Files\\NVIDIA Corporation\\NVSMI;D:\\MingW\\14.2.0\\mingw64\\bin;D:\\MongoDB\\Server\\8.0\\bin;D:\\MySQL\\MySQL Server 8.0\\bin;D:\\Cmake\\bin;D:\\Vcpkg\\vcpkg;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\tools\\drogon;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\;C:\\Program Files\\NVIDIA Corporation\\Nsight Compute 2024.1.0\\;D:\\MySQL\\MySQL Shell 8.0\\bin\\;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;;D:\\Pycharm\\Pycharm\\PyCharm 2023.1.3\\bin;;D:\\Vscode\\Microsoft VS Code\\bin;C:\\Users\\dgszy\\AppData\\Roaming\\npm;]
+        found 'LIBRARIES=' string: ["/LIBPATH:C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../lib/x64"]
+        found 'INCLUDES=' string: ["-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"  ]
+        considering line: [閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a]
+        considering line: [鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:41銆?]
+        considering line: [鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣)銆?]
+        considering line: [PrepareForBuild:]
+        considering line: [  姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\鈥濄€?]
+        considering line: [  宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?]
+        considering line: [  姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\CompilerIdCUDA.tlog\\鈥濄€?]
+        considering line: [InitializeBuildStatus:]
+        considering line: [  姝ｅ湪鍒涘缓鈥淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?]
+        considering line: [  姝ｅ湪瀵光€淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?]
+        considering line: [AddCudaCompileDeps:]
+        considering line: [  D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D__CUDACC_VER_MAJOR__=12 /D__CUDACC_VER_MINOR__=4 /D_MBCS /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /ID:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /I. /FIcuda_runtime.h /c D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu ]
+        considering line: [椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?1)姝ｅ湪鑺傜偣 1 涓婄敓鎴愨€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?1:2) (CudaBuildCore 涓洰鏍?銆?]
+        considering line: [CudaBuildCore:]
+        considering line: [  Compiling CUDA source file CMakeCUDACompilerId.cu...]
+        considering line: [  姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug鈥濄€?]
+        considering line: [  cmd.exe /C "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmp157e9434ffd4479f8be707c9bb5dfb6b.cmd"]
+        considering line: [  "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe" -gencode=arch=compute_52,code=\\"sm_52,compute_52\\" --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu   -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" -I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"  -G   --keep-dir CompilerIdCUDA\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -v -allow-unsupported-compiler -g  -D_MBCS -Xcompiler "/EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/FdDebug\\vc143.pdb" -o D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu"]
+        considering line: [  ]
+        considering line: [  (D:\\Anaconda\\Envs\\pyt240cu124) D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA>"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe" -gencode=arch=compute_52,code=\\"sm_52,compute_52\\" --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu   -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" -I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"  -G   --keep-dir CompilerIdCUDA\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -v -allow-unsupported-compiler -g  -D_MBCS -Xcompiler "/EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/FdDebug\\vc143.pdb" -o D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" ]
+        considering line: [                                    CMakeCUDACompilerId.cu]
+        considering line: [  #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res: [-D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -E -TP -EHsc -D__CUDACC__ -D__NVCC__ -D__CUDACC_DEBUG__  /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"    -D "_MBCS" -D__CUDACC_VER_MAJOR__=12 -D__CUDACC_VER_MINOR__=4 -D__CUDACC_VER_BUILD__=99 -D__CUDA_API_VER_MAJOR__=12 -D__CUDA_API_VER_MINOR__=4 -D__NVCC_DIAG_PRAGMA_SUPPORT__=1 -FI "cuda_runtime.h" -Zi "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" ]]
+        considering line: [  #$ cl.exe -D__NV_NO_HOST_COMPILER_CHECK=1 @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res" > "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-6_CMakeCUDACompilerId.cpp4.ii" ]
+        considering line: [  CMakeCUDACompilerId.cu]
+        considering line: [  #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res]
+        considering line: [  #$ cudafe++ --ms_c++14 --microsoft_version=1943 --msvc_target_version=1943 --compiler_bindir "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/../../../../../../.." --display_error_number --orig_src_file_name "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --orig_src_path_name "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" --allow_managed --debug_mode --sdk_dir "C:\\Program Files (x86)\\Windows Kits\\10" --m64 --parse_templates --gen_c_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp" --stub_file_name "tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.stub.c" --gen_module_id_file --module_id_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-5_CMakeCUDACompilerId.module_id" "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-6_CMakeCUDACompilerId.cpp4.ii" ]
+        considering line: [  #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res: [-D__CUDA_ARCH__=520 -D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -E -TP  -DCUDA_DOUBLE_MATH_FUNCTIONS -EHsc -D__CUDACC__ -D__NVCC__ -D__CUDACC_DEBUG__  /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"    -D "_MBCS" -D__CUDACC_VER_MAJOR__=12 -D__CUDACC_VER_MINOR__=4 -D__CUDACC_VER_BUILD__=99 -D__CUDA_API_VER_MAJOR__=12 -D__CUDA_API_VER_MINOR__=4 -D__NVCC_DIAG_PRAGMA_SUPPORT__=1 -FI "cuda_runtime.h" -Zi "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" ]]
+        considering line: [  #$ cl.exe -D__NV_NO_HOST_COMPILER_CHECK=1 @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res" > "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-9_CMakeCUDACompilerId.cpp1.ii" ]
+        considering line: [  CMakeCUDACompilerId.cu]
+        considering line: [  #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res]
+        considering line: [  #$ cicc --ms_c++14 --microsoft_version=1943 --msvc_target_version=1943 --compiler_bindir "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/../../../../../../.." --display_error_number --orig_src_file_name "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --orig_src_path_name "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" --allow_managed --debug_mode --sdk_dir "C:\\Program Files (x86)\\Windows Kits\\10"  -arch compute_52 -m64 --no-version-ident -ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 --include_file_name "tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin.c" -g -O0 -tused --module_id_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-5_CMakeCUDACompilerId.module_id" --gen_c_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.c" --stub_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.stub.c" --gen_device_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.gpu"  "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-9_CMakeCUDACompilerId.cpp1.ii" -o "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx"]
+        considering line: [  #$ ptxas -arch=sm_52 -m64 -g --dont-merge-basicblocks --return-at-end "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx"  -o "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-11_CMakeCUDACompilerId.sm_52.cubin" ]
+        considering line: [  #$ fatbinary -64 --ident="D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --cmdline="-g --dont-merge-basicblocks --return-at-end " --cicc-cmdline="-ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 " -g "--image3=kind=elf,sm=52,file=C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-11_CMakeCUDACompilerId.sm_52.cubin" "--image3=kind=ptx,sm=52,file=C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx" --embedded-fatbin="C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin.c" ]
+        considering line: [  #$ erase C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin]
+        considering line: [  #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res: [-D__CUDA_ARCH__=520 -D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -c -TP  -DCUDA_DOUBLE_MATH_FUNCTIONS -EHsc /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"   -Zi "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp" ]]
+        considering line: [  #$ cl.exe @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res" -Fo"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CompilerIdCUDA/x64/Debug/CMakeCUDACompilerId.cu.obj" ]
+        considering line: [  tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp]
+        considering line: [  #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res]
+        considering line: [宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?CudaBuildCore 涓洰鏍?鐨勬搷浣溿€?]
+        considering line: [VcpkgTripletSelection:]
+        considering line: [  Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"]
+        considering line: [  Using normalized configuration "Release"]
+        considering line: [Link:]
+        considering line: [  D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCUDA.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCUDA.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCUDA.lib" /MACHINE:X64 D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj]
+          extracted link line: [link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCUDA.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCUDA.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCUDA.lib" /MACHINE:X64 D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj]
+        considering line: [    姝ｅ湪鍒涘缓搴?.\\CompilerIdCUDA.lib 鍜屽璞?.\\CompilerIdCUDA.exp]
+        considering line: [LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj]]
+        considering line: [  CompilerIdCUDA.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.exe]
+        considering line: [AppLocalFromInstalled:]
+        considering line: [  pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin" "Debug\\CompilerIdCUDA.tlog\\CompilerIdCUDA.write.1u.tlog" "Debug\\vcpkg.applocal.log"]
+        considering line: [PostBuildEvent:]
+        considering line: [  echo CMAKE_CUDA_COMPILER=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe]
+        considering line: [  :VCEnd]
+        considering line: [  CMAKE_CUDA_COMPILER=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe]
+        considering line: [FinalizeBuildStatus:]
+        considering line: [  姝ｅ湪鍒犻櫎鏂囦欢鈥淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濄€?]
+        considering line: [  姝ｅ湪瀵光€淒ebug\\CompilerIdCUDA.tlog\\CompilerIdCUDA.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?]
+        considering line: [宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?]
+        considering line: [宸叉垚鍔熺敓鎴愩€?]
+        considering line: [鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣) (1) ->]
+        considering line: [(Link 鐩爣) -> ]
+        considering line: [  LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj]]
+        considering line: [    1 涓鍛?]
+        considering line: [    0 涓敊璇?]
+        considering line: [宸茬敤鏃堕棿 00:00:02.84]
+        considering line: []
+      
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        link line: [cuda-fake-ld link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCUDA.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCUDA.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCUDA.lib" /MACHINE:X64 D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj]
+          arg [cuda-fake-ld] ==> ignore
+          arg [link.exe] ==> ignore
+          arg [/ERRORREPORT:QUEUE] ==> ignore
+          arg [/OUT:.\\CompilerIdCUDA.exe] ==> ignore
+          arg [/INCREMENTAL:NO] ==> ignore
+          arg [/NOLOGO] ==> ignore
+          arg [/LIBPATH:C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64] ==> dir [C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64]
+          arg [/LIBPATH:D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib] ==> dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib]
+          arg [/LIBPATH:D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link] ==> dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link]
+          arg [cudart_static.lib] ==> lib [cudart_static.lib]
+          arg [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib] ==> lib [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib]
+          arg [/MANIFEST] ==> ignore
+          arg [/MANIFESTUAC:level='asInvoker' uiAccess='false'] ==> ignore
+          arg [/manifest:embed] ==> ignore
+          arg [/PDB:.\\CompilerIdCUDA.pdb] ==> ignore
+          arg [/SUBSYSTEM:CONSOLE] ==> ignore
+          arg [/TLBID:1] ==> ignore
+          arg [/DYNAMICBASE] ==> ignore
+          arg [/NXCOMPAT] ==> ignore
+          arg [/IMPLIB:.\\CompilerIdCUDA.lib] ==> ignore MSVC link option
+          arg [/MACHINE:X64] ==> ignore
+          arg [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj] ==> ignore
+        collapse lib [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib/*.lib]
+        collapse library dir [C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64] ==> [C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/lib/x64]
+        collapse library dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib]
+        collapse library dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib/manual-link]
+        implicit libs: [cudart_static.lib;D:/Vcpkg/vcpkg/installed/x64-windows/lib/*.lib]
+        implicit objs: []
+        implicit dirs: [C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/lib/x64;D:/Vcpkg/vcpkg/installed/x64-windows/lib;D:/Vcpkg/vcpkg/installed/x64-windows/lib/manual-link]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/Internal/CMakeNVCCParseImplicitInfo.cmake:146 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCUDACompiler.cmake:242 (cmake_nvcc_parse_implicit_info)"
+      - "CMakeLists.txt:8 (enable_language)"
+    message: |
+      Parsed CUDA nvcc include information:
+        found 'PATH=' string: [C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../nvvm/bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../lib;D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64;C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64;;C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x86;;D:\\VisualStudio\\Common7\\tools;D:\\VisualStudio\\Common7\\ide;C:\\Program Files (x86)\\HTML Help Workshop;;D:\\VisualStudio\\MSBuild\\Current\\Bin\\amd64;C:\\WINDOWS\\Microsoft.NET\\Framework64\\v4.0.30319\\;C:\\WINDOWS\\Microsoft.NET\\Framework\\v4.0.30319\\;D:\\VisualStudio\\MSBuild\\Current\\Bin;C:\\WINDOWS\\Microsoft.NET\\Framework\\v4.0.30319\\;;D:\\Anaconda\\Envs\\pyt240cu124;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\mingw-w64\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\usr\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Library\\bin;D:\\Anaconda\\Envs\\pyt240cu124\\Scripts;D:\\Anaconda\\Envs\\pyt240cu124\\bin;D:\\Anaconda\\Anaconda\\condabin;.;C:\\Program Files (x86)\\Razer Chroma SDK\\bin;C:\\Program Files\\Razer Chroma SDK\\bin;C:\\Program Files (x86)\\Razer\\ChromaBroadcast\\bin;C:\\Program Files\\Razer\\ChromaBroadcast\\bin;C:\\windows\\system32;C:\\windows;C:\\windows\\System32\\Wbem;C:\\windows\\System32\\WindowsPowerShell\\v1.0;C:\\windows\\System32\\OpenSSH;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0;C:\\WINDOWS\\System32\\OpenSSH;C:\\Program Files\\dotnet;D:\\Bandzip\\Bandizip;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;D:\\MySql\\MySQL Server 8.0\\bin;D:\\Git\\Git\\cmd;D:\\Julia\\Julia-1.10.2\\bin;C:\\Program Files (x86)\\ZeroTier\\One;D:\\Anaconda\\Anaconda\\Scripts;D:\\Node;D:\\Node\\node_global;C:\\Program Files\\NVIDIA Corporation\\NVSMI;D:\\MingW\\14.2.0\\mingw64\\bin;D:\\MongoDB\\Server\\8.0\\bin;D:\\MySQL\\MySQL Server 8.0\\bin;D:\\Cmake\\bin;D:\\Vcpkg\\vcpkg;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\tools\\drogon;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.1;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit;C:\\Program Files\\NVIDIA Corporation\\Nsight Compute 2023.1.0;D:\\MySQL\\MySQL Shell 8.0\\bin;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;.;D:\\Pycharm\\Pycharm\\PyCharm 2023.1.3\\bin;.;D:\\Vscode\\Microsoft VS Code\\bin;C:\\Users\\dgszy\\AppData\\Roaming\\npm;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\libnvvp;C:\\Program Files (x86)\\Razer Chroma SDK\\bin;C:\\Program Files\\Razer Chroma SDK\\bin;C:\\Program Files (x86)\\Razer\\ChromaBroadcast\\bin;C:\\Program Files\\Razer\\ChromaBroadcast\\bin;C:\\windows\\system32;C:\\windows;C:\\windows\\System32\\Wbem;C:\\windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\windows\\System32\\OpenSSH\\;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files\\NVIDIA Corporation\\NVIDIA NvDLISR;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\dotnet\\;D:\\Bandzip\\Bandizip\\;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;D:\\MySql\\MySQL Server 8.0\\bin;D:\\Git\\Git\\cmd;D:\\Julia\\Julia-1.10.2\\bin;C:\\Program Files (x86)\\ZeroTier\\One\\;D:\\Anaconda\\Anaconda\\Scripts;D:\\Node\\;D:\\Node\\node_global;C:\\Program Files\\NVIDIA Corporation\\NVSMI;D:\\MingW\\14.2.0\\mingw64\\bin;D:\\MongoDB\\Server\\8.0\\bin;D:\\MySQL\\MySQL Server 8.0\\bin;D:\\Cmake\\bin;D:\\Vcpkg\\vcpkg;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include;D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\tools\\drogon;C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4;C:\\Program Files (x86)\\Windows Kits\\10\\Windows Performance Toolkit\\;C:\\Program Files\\NVIDIA Corporation\\Nsight Compute 2024.1.0\\;D:\\MySQL\\MySQL Shell 8.0\\bin\\;C:\\Users\\dgszy\\AppData\\Local\\Microsoft\\WindowsApps;;D:\\Pycharm\\Pycharm\\PyCharm 2023.1.3\\bin;;D:\\Vscode\\Microsoft VS Code\\bin;C:\\Users\\dgszy\\AppData\\Roaming\\npm;]
+        found 'LIBRARIES=' string: ["/LIBPATH:C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../lib/x64"]
+        found 'INCLUDES=' string: ["-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"  ]
+        considering line: [閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a]
+        considering line: [鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:41銆?]
+        considering line: [鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣)銆?]
+        considering line: [PrepareForBuild:]
+        considering line: [  姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\鈥濄€?]
+        considering line: [  宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?]
+        considering line: [  姝ｅ湪鍒涘缓鐩綍鈥淒ebug\\CompilerIdCUDA.tlog\\鈥濄€?]
+        considering line: [InitializeBuildStatus:]
+        considering line: [  姝ｅ湪鍒涘缓鈥淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?]
+        considering line: [  姝ｅ湪瀵光€淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?]
+        considering line: [AddCudaCompileDeps:]
+        considering line: [  D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D__CUDACC_VER_MAJOR__=12 /D__CUDACC_VER_MINOR__=4 /D_MBCS /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /ID:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /I. /FIcuda_runtime.h /c D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu ]
+        considering line: [椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?1)姝ｅ湪鑺傜偣 1 涓婄敓鎴愨€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?1:2) (CudaBuildCore 涓洰鏍?銆?]
+        considering line: [CudaBuildCore:]
+        considering line: [  Compiling CUDA source file CMakeCUDACompilerId.cu...]
+        considering line: [  姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug鈥濄€?]
+        considering line: [  cmd.exe /C "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmp157e9434ffd4479f8be707c9bb5dfb6b.cmd"]
+        considering line: [  "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe" -gencode=arch=compute_52,code=\\"sm_52,compute_52\\" --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu   -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" -I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"  -G   --keep-dir CompilerIdCUDA\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -v -allow-unsupported-compiler -g  -D_MBCS -Xcompiler "/EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/FdDebug\\vc143.pdb" -o D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu"]
+        considering line: [  ]
+        considering line: [  (D:\\Anaconda\\Envs\\pyt240cu124) D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA>"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe" -gencode=arch=compute_52,code=\\"sm_52,compute_52\\" --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu   -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" -I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"  -G   --keep-dir CompilerIdCUDA\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -v -allow-unsupported-compiler -g  -D_MBCS -Xcompiler "/EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd " -Xcompiler "/FdDebug\\vc143.pdb" -o D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" ]
+        considering line: [                                    CMakeCUDACompilerId.cu]
+        considering line: [  #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res: [-D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -E -TP -EHsc -D__CUDACC__ -D__NVCC__ -D__CUDACC_DEBUG__  /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"    -D "_MBCS" -D__CUDACC_VER_MAJOR__=12 -D__CUDACC_VER_MINOR__=4 -D__CUDACC_VER_BUILD__=99 -D__CUDA_API_VER_MAJOR__=12 -D__CUDA_API_VER_MINOR__=4 -D__NVCC_DIAG_PRAGMA_SUPPORT__=1 -FI "cuda_runtime.h" -Zi "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" ]]
+        considering line: [  #$ cl.exe -D__NV_NO_HOST_COMPILER_CHECK=1 @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res" > "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-6_CMakeCUDACompilerId.cpp4.ii" ]
+        considering line: [  CMakeCUDACompilerId.cu]
+        considering line: [  #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-8.res]
+        considering line: [  #$ cudafe++ --ms_c++14 --microsoft_version=1943 --msvc_target_version=1943 --compiler_bindir "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/../../../../../../.." --display_error_number --orig_src_file_name "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --orig_src_path_name "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" --allow_managed --debug_mode --sdk_dir "C:\\Program Files (x86)\\Windows Kits\\10" --m64 --parse_templates --gen_c_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp" --stub_file_name "tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.stub.c" --gen_module_id_file --module_id_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-5_CMakeCUDACompilerId.module_id" "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-6_CMakeCUDACompilerId.cpp4.ii" ]
+        considering line: [  #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res: [-D__CUDA_ARCH__=520 -D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -E -TP  -DCUDA_DOUBLE_MATH_FUNCTIONS -EHsc -D__CUDACC__ -D__NVCC__ -D__CUDACC_DEBUG__  /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"    -D "_MBCS" -D__CUDACC_VER_MAJOR__=12 -D__CUDACC_VER_MINOR__=4 -D__CUDACC_VER_BUILD__=99 -D__CUDA_API_VER_MAJOR__=12 -D__CUDA_API_VER_MINOR__=4 -D__NVCC_DIAG_PRAGMA_SUPPORT__=1 -FI "cuda_runtime.h" -Zi "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" ]]
+        considering line: [  #$ cl.exe -D__NV_NO_HOST_COMPILER_CHECK=1 @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res" > "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-9_CMakeCUDACompilerId.cpp1.ii" ]
+        considering line: [  CMakeCUDACompilerId.cu]
+        considering line: [  #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-10.res]
+        considering line: [  #$ cicc --ms_c++14 --microsoft_version=1943 --msvc_target_version=1943 --compiler_bindir "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/../../../../../../.." --display_error_number --orig_src_file_name "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --orig_src_path_name "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CMakeCUDACompilerId.cu" --allow_managed --debug_mode --sdk_dir "C:\\Program Files (x86)\\Windows Kits\\10"  -arch compute_52 -m64 --no-version-ident -ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 --include_file_name "tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin.c" -g -O0 -tused --module_id_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-5_CMakeCUDACompilerId.module_id" --gen_c_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.c" --stub_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.stub.c" --gen_device_file_name "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.gpu"  "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-9_CMakeCUDACompilerId.cpp1.ii" -o "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx"]
+        considering line: [  #$ ptxas -arch=sm_52 -m64 -g --dont-merge-basicblocks --return-at-end "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx"  -o "C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-11_CMakeCUDACompilerId.sm_52.cubin" ]
+        considering line: [  #$ fatbinary -64 --ident="D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CMakeCUDACompilerId.cu" --cmdline="-g --dont-merge-basicblocks --return-at-end " --cicc-cmdline="-ftz=0 -prec_div=1 -prec_sqrt=1 -fmad=1 " -g "--image3=kind=elf,sm=52,file=C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-11_CMakeCUDACompilerId.sm_52.cubin" "--image3=kind=ptx,sm=52,file=C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.ptx" --embedded-fatbin="C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin.c" ]
+        considering line: [  #$ erase C:/Users/dgszy/AppData/Local/Temp/tmpxft_000034bc_00000000-4_CMakeCUDACompilerId.fatbin]
+        considering line: [  #$ resource file C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res: [-D__CUDA_ARCH__=520 -D__CUDA_ARCH_LIST__=520 -D__NV_LEGACY_LAUNCH -nologo -c -TP  -DCUDA_DOUBLE_MATH_FUNCTIONS -EHsc /EHsc /W0 /nologo /Od /FS /Zi /RTC1 /MDd /FdDebug\\vc143.pdb -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" -I"D:/Vcpkg/vcpkg/installed/x64-windows/include" -I"C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/include" "-IC:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin/../include"   -Zi "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp" ]]
+        considering line: [  #$ cl.exe @"C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res" -Fo"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/4.0.1/CompilerIdCUDA/CompilerIdCUDA/x64/Debug/CMakeCUDACompilerId.cu.obj" ]
+        considering line: [  tmpxft_000034bc_00000000-7_CMakeCUDACompilerId.cudafe1.cpp]
+        considering line: [  #$ erase C:\\Users\\dgszy\\AppData\\Local\\Temp/tmpxft_000034bc_00000000-12.res]
+        considering line: [宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?CudaBuildCore 涓洰鏍?鐨勬搷浣溿€?]
+        considering line: [VcpkgTripletSelection:]
+        considering line: [  Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"]
+        considering line: [  Using normalized configuration "Release"]
+        considering line: [Link:]
+        considering line: [  D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCUDA.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCUDA.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCUDA.lib" /MACHINE:X64 D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj]
+          extracted link line: [link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCUDA.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCUDA.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCUDA.lib" /MACHINE:X64 D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj]
+        considering line: [    姝ｅ湪鍒涘缓搴?.\\CompilerIdCUDA.lib 鍜屽璞?.\\CompilerIdCUDA.exp]
+        considering line: [LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj]]
+        considering line: [  CompilerIdCUDA.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.exe]
+        considering line: [AppLocalFromInstalled:]
+        considering line: [  pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin" "Debug\\CompilerIdCUDA.tlog\\CompilerIdCUDA.write.1u.tlog" "Debug\\vcpkg.applocal.log"]
+        considering line: [PostBuildEvent:]
+        considering line: [  echo CMAKE_CUDA_COMPILER=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe]
+        considering line: [  :VCEnd]
+        considering line: [  CMAKE_CUDA_COMPILER=C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe]
+        considering line: [FinalizeBuildStatus:]
+        considering line: [  姝ｅ湪鍒犻櫎鏂囦欢鈥淒ebug\\CompilerIdCUDA.tlog\\unsuccessfulbuild鈥濄€?]
+        considering line: [  姝ｅ湪瀵光€淒ebug\\CompilerIdCUDA.tlog\\CompilerIdCUDA.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?]
+        considering line: [宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?]
+        considering line: [宸叉垚鍔熺敓鎴愩€?]
+        considering line: [鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj鈥?榛樿鐩爣) (1) ->]
+        considering line: [(Link 鐩爣) -> ]
+        considering line: [  LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA.vcxproj]]
+        considering line: [    1 涓鍛?]
+        considering line: [    0 涓敊璇?]
+        considering line: [宸茬敤鏃堕棿 00:00:02.84]
+        considering line: []
+      
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        link line: [cuda-fake-ld link.exe /ERRORREPORT:QUEUE /OUT:".\\CompilerIdCUDA.exe" /INCREMENTAL:NO /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /PDB:".\\CompilerIdCUDA.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:".\\CompilerIdCUDA.lib" /MACHINE:X64 D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj]
+          arg [cuda-fake-ld] ==> ignore
+          arg [link.exe] ==> ignore
+          arg [/ERRORREPORT:QUEUE] ==> ignore
+          arg [/OUT:.\\CompilerIdCUDA.exe] ==> ignore
+          arg [/INCREMENTAL:NO] ==> ignore
+          arg [/NOLOGO] ==> ignore
+          arg [/LIBPATH:C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64] ==> dir [C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64]
+          arg [/LIBPATH:D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib] ==> dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib]
+          arg [/LIBPATH:D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link] ==> dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link]
+          arg [cudart_static.lib] ==> lib [cudart_static.lib]
+          arg [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib] ==> lib [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib]
+          arg [/MANIFEST] ==> ignore
+          arg [/MANIFESTUAC:level='asInvoker' uiAccess='false'] ==> ignore
+          arg [/manifest:embed] ==> ignore
+          arg [/PDB:.\\CompilerIdCUDA.pdb] ==> ignore
+          arg [/SUBSYSTEM:CONSOLE] ==> ignore
+          arg [/TLBID:1] ==> ignore
+          arg [/DYNAMICBASE] ==> ignore
+          arg [/NXCOMPAT] ==> ignore
+          arg [/IMPLIB:.\\CompilerIdCUDA.lib] ==> ignore MSVC link option
+          arg [/MACHINE:X64] ==> ignore
+          arg [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\4.0.1\\CompilerIdCUDA\\CompilerIdCUDA\\x64\\Debug\\CMakeCUDACompilerId.cu.obj] ==> ignore
+        collapse lib [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib/*.lib]
+        collapse library dir [C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64] ==> [C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/lib/x64]
+        collapse library dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib]
+        collapse library dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib/manual-link]
+        implicit libs: [cudart_static.lib;D:/Vcpkg/vcpkg/installed/x64-windows/lib/*.lib]
+        implicit objs: []
+        implicit dirs: [C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/lib/x64;D:/Vcpkg/vcpkg/installed/x64-windows/lib;D:/Vcpkg/vcpkg/installed/x64-windows/lib/manual-link]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCUDACompiler.cmake:19 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:8 (enable_language)"
+    checks:
+      - "Detecting CUDA compiler ABI info"
+    directories:
+      source: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs"
+      binary: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs"
+    cmakeVariables:
+      CMAKE_CUDA_FLAGS: "-D_WINDOWS -Xcompiler=\"/W3 /GR /EHsc\""
+      CMAKE_CUDA_FLAGS_DEBUG: "-Xcompiler=\"-MDd  -Zi -Ob0 -Od /RTC1\""
+      CMAKE_CUDA_RUNTIME_LIBRARY: "Static"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+    buildResult:
+      variable: "CMAKE_CUDA_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs'
+        
+        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_b2d05.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a
+        鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:44銆?
+        
+        鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?榛樿鐩爣)銆?
+        PrepareForBuild:
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_b2d05.dir\\Debug\\鈥濄€?
+          宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?
+          姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\Debug\\鈥濄€?
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\鈥濄€?
+        InitializeBuildStatus:
+          姝ｅ湪鍒涘缓鈥渃mTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?
+          姝ｅ湪瀵光€渃mTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?
+        AddCudaCompileDeps:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D__CUDACC_VER_MAJOR__=12 /D__CUDACC_VER_MINOR__=4 /D_WINDOWS /DCMAKE_INTDIR="Debug" /D_MBCS /DCMAKE_INTDIR="Debug" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /I. /FIcuda_runtime.h /c D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCUDACompilerABI.cu 
+        椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?1)姝ｅ湪鑺傜偣 1 涓婄敓鎴愨€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?1:2) (CudaBuildCore 涓洰鏍?銆?
+        CudaBuildCore:
+          Compiling CUDA source file ..\\..\\..\\..\\..\\..\\..\\..\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCUDACompilerABI.cu...
+          cmd.exe /C "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmp3b9e406c61bc4c56a350cc8b89faf244.cmd"
+          "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe"  --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu    -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"     --keep-dir cmTC_b2d05\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -Xcompiler="/EHsc -Zi -Ob0 -v" -g  -D_WINDOWS -D"CMAKE_INTDIR=\\"Debug\\"" -D_MBCS -D"CMAKE_INTDIR=\\"Debug\\"" -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd /GR" -Xcompiler "/FdcmTC_b2d05.dir\\Debug\\vc143.pdb" -o cmTC_b2d05.dir\\Debug\\CMakeCUDACompilerABI.obj "D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCUDACompilerABI.cu"
+          
+          (D:\\Anaconda\\Envs\\pyt240cu124) D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs>"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe"  --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu    -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"     --keep-dir cmTC_b2d05\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -Xcompiler="/EHsc -Zi -Ob0 -v" -g  -D_WINDOWS -D"CMAKE_INTDIR=\\"Debug\\"" -D_MBCS -D"CMAKE_INTDIR=\\"Debug\\"" -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd /GR" -Xcompiler "/FdcmTC_b2d05.dir\\Debug\\vc143.pdb" -o cmTC_b2d05.dir\\Debug\\CMakeCUDACompilerABI.obj "D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCUDACompilerABI.cu" 
+        cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+          CMakeCUDACompilerABI.cu
+        cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+          CMakeCUDACompilerABI.cu
+          CMakeCUDACompilerABI.cu
+        cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+          tmpxft_00005f8c_00000000-7_CMakeCUDACompilerABI.cudafe1.cpp
+        D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCompilerCUDAArch.h(10): warning C4305: 鈥渞eturn鈥? 浠庘€渋nt鈥濆埌鈥渂ool鈥濇埅鏂?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+        宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?CudaBuildCore 涓洰鏍?鐨勬搷浣溿€?
+        VcpkgTripletSelection:
+          Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"
+          Using normalized configuration "Release"
+        Link:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\Debug\\cmTC_b2d05.exe" /INCREMENTAL /ILK:"cmTC_b2d05.dir\\Debug\\cmTC_b2d05.ilk" /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudadevrt.lib cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs/Debug/cmTC_b2d05.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs/Debug/cmTC_b2d05.lib" /MACHINE:X64  /machine:x64 -v cmTC_b2d05.dir\\Debug\\CMakeCUDACompilerABI.obj
+        LINK : warning LNK4044: 鏃犳硶璇嗗埆鐨勯€夐」鈥?v鈥濓紱宸插拷鐣?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+            姝ｅ湪鍒涘缓搴?D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs/Debug/cmTC_b2d05.lib 鍜屽璞?D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs/Debug/cmTC_b2d05.exp
+        LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+          cmTC_b2d05.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\Debug\\cmTC_b2d05.exe
+        AppLocalFromInstalled:
+          pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\Debug\\cmTC_b2d05.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin" "cmTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\cmTC_b2d05.write.1u.tlog" "cmTC_b2d05.dir\\Debug\\vcpkg.applocal.log"
+        FinalizeBuildStatus:
+          姝ｅ湪鍒犻櫎鏂囦欢鈥渃mTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\unsuccessfulbuild鈥濄€?
+          姝ｅ湪瀵光€渃mTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\cmTC_b2d05.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?
+        宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+        
+        宸叉垚鍔熺敓鎴愩€?
+        
+        鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?榛樿鐩爣) (1) ->
+        鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?CudaBuildCore 鐩爣) (1:2) ->
+        (CudaBuildCore 鐩爣) -> 
+          cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+          cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+          cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+          D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCompilerCUDAArch.h(10): warning C4305: 鈥渞eturn鈥? 浠庘€渋nt鈥濆埌鈥渂ool鈥濇埅鏂?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+        
+        
+        鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?榛樿鐩爣) (1) ->
+        (Link 鐩爣) -> 
+          LINK : warning LNK4044: 鏃犳硶璇嗗埆鐨勯€夐」鈥?v鈥濓紱宸插拷鐣?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+          LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]
+        
+            6 涓鍛?
+            0 涓敊璇?
+        
+        宸茬敤鏃堕棿 00:00:03.05
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:191 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCUDACompiler.cmake:19 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:8 (enable_language)"
+    message: |
+      Parsed CUDA implicit include dir info: rv=start
+        warn: unable to parse implicit include dirs!
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:227 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCUDACompiler.cmake:19 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:8 (enable_language)"
+    message: |
+      Parsed CUDA implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|")?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|link\\.exe|lld-link(\\.exe)?))("|,| |$)]
+        ignore line: [Change Dir: 'D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs']
+        ignore line: []
+        ignore line: [Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_b2d05.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n]
+        ignore line: [閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a]
+        ignore line: [鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:44銆?]
+        ignore line: []
+        ignore line: [鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?榛樿鐩爣)銆?]
+        ignore line: [PrepareForBuild:]
+        ignore line: [  姝ｅ湪鍒涘缓鐩綍鈥渃mTC_b2d05.dir\\Debug\\鈥濄€?]
+        ignore line: [  宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?]
+        ignore line: [  姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\Debug\\鈥濄€?]
+        ignore line: [  姝ｅ湪鍒涘缓鐩綍鈥渃mTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\鈥濄€?]
+        ignore line: [InitializeBuildStatus:]
+        ignore line: [  姝ｅ湪鍒涘缓鈥渃mTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?]
+        ignore line: [  姝ｅ湪瀵光€渃mTC_b2d05.dir\\Debug\\cmTC_b2d05.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?]
+        ignore line: [AddCudaCompileDeps:]
+        ignore line: [  D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D__CUDACC_VER_MAJOR__=12 /D__CUDACC_VER_MINOR__=4 /D_WINDOWS /DCMAKE_INTDIR="Debug" /D_MBCS /DCMAKE_INTDIR="Debug" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /I. /FIcuda_runtime.h /c D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCUDACompilerABI.cu ]
+        ignore line: [椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?1)姝ｅ湪鑺傜偣 1 涓婄敓鎴愨€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?1:2) (CudaBuildCore 涓洰鏍?銆?]
+        ignore line: [CudaBuildCore:]
+        ignore line: [  Compiling CUDA source file ..\\..\\..\\..\\..\\..\\..\\..\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCUDACompilerABI.cu...]
+        ignore line: [  cmd.exe /C "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmp3b9e406c61bc4c56a350cc8b89faf244.cmd"]
+        ignore line: [  "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe"  --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu    -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"     --keep-dir cmTC_b2d05\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -Xcompiler="/EHsc -Zi -Ob0 -v" -g  -D_WINDOWS -D"CMAKE_INTDIR=\\"Debug\\"" -D_MBCS -D"CMAKE_INTDIR=\\"Debug\\"" -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd /GR" -Xcompiler "/FdcmTC_b2d05.dir\\Debug\\vc143.pdb" -o cmTC_b2d05.dir\\Debug\\CMakeCUDACompilerABI.obj "D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCUDACompilerABI.cu"]
+        ignore line: [  ]
+        ignore line: [  (D:\\Anaconda\\Envs\\pyt240cu124) D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs>"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe"  --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu    -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"     --keep-dir cmTC_b2d05\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -Xcompiler="/EHsc -Zi -Ob0 -v" -g  -D_WINDOWS -D"CMAKE_INTDIR=\\"Debug\\"" -D_MBCS -D"CMAKE_INTDIR=\\"Debug\\"" -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd /GR" -Xcompiler "/FdcmTC_b2d05.dir\\Debug\\vc143.pdb" -o cmTC_b2d05.dir\\Debug\\CMakeCUDACompilerABI.obj "D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCUDACompilerABI.cu" ]
+        ignore line: [cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]]
+        ignore line: [  CMakeCUDACompilerABI.cu]
+        ignore line: [cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]]
+        ignore line: [  CMakeCUDACompilerABI.cu]
+        ignore line: [  CMakeCUDACompilerABI.cu]
+        ignore line: [cl : 鍛戒护琛?warning D9002: 蹇界暐鏈煡閫夐」鈥?v鈥?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]]
+        ignore line: [  tmpxft_00005f8c_00000000-7_CMakeCUDACompilerABI.cudafe1.cpp]
+        ignore line: [D:\\Cmake\\share\\cmake-4.0\\Modules\\CMakeCompilerCUDAArch.h(10): warning C4305: 鈥渞eturn鈥? 浠庘€渋nt鈥濆埌鈥渂ool鈥濇埅鏂?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj]]
+        ignore line: [宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\cmTC_b2d05.vcxproj鈥?CudaBuildCore 涓洰鏍?鐨勬搷浣溿€?]
+        ignore line: [VcpkgTripletSelection:]
+        ignore line: [  Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"]
+        ignore line: [  Using normalized configuration "Release"]
+        ignore line: [Link:]
+        link line: [  D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\Debug\\cmTC_b2d05.exe" /INCREMENTAL /ILK:"cmTC_b2d05.dir\\Debug\\cmTC_b2d05.ilk" /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudadevrt.lib cudart_static.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs/Debug/cmTC_b2d05.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs/Debug/cmTC_b2d05.lib" /MACHINE:X64  /machine:x64 -v cmTC_b2d05.dir\\Debug\\CMakeCUDACompilerABI.obj]
+          arg [D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe] ==> ignore
+          arg [/ERRORREPORT:QUEUE] ==> ignore
+          arg [/OUT:D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeScratch\\TryCompile-248bbs\\Debug\\cmTC_b2d05.exe] ==> ignore
+          arg [/INCREMENTAL] ==> ignore
+          arg [/ILK:cmTC_b2d05.dir\\Debug\\cmTC_b2d05.ilk] ==> ignore
+          arg [/NOLOGO] ==> ignore
+          arg [/LIBPATH:C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64] ==> dir [C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64]
+          arg [/LIBPATH:D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib] ==> dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib]
+          arg [/LIBPATH:D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link] ==> dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link]
+          arg [cudadevrt.lib] ==> lib [cudadevrt.lib]
+          arg [cudart_static.lib] ==> lib [cudart_static.lib]
+          arg [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib] ==> lib [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib]
+          arg [/MANIFEST] ==> ignore
+          arg [/MANIFESTUAC:level='asInvoker' uiAccess='false'] ==> ignore
+          arg [/manifest:embed] ==> ignore
+          arg [/DEBUG] ==> ignore
+          arg [/PDB:D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs/Debug/cmTC_b2d05.pdb] ==> ignore
+          arg [/SUBSYSTEM:CONSOLE] ==> ignore
+          arg [/TLBID:1] ==> ignore
+          arg [/DYNAMICBASE] ==> ignore
+          arg [/NXCOMPAT] ==> ignore
+          arg [/IMPLIB:D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeScratch/TryCompile-248bbs/Debug/cmTC_b2d05.lib] ==> ignore MSVC link option
+          arg [/MACHINE:X64] ==> ignore
+          arg [/machine:x64] ==> ignore
+          arg [-v] ==> ignore
+          arg [cmTC_b2d05.dir\\Debug\\CMakeCUDACompilerABI.obj] ==> ignore
+        linker tool for 'CUDA': D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/link.exe
+        collapse lib [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib/*.lib]
+        collapse library dir [C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64] ==> [C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/lib/x64]
+        collapse library dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib]
+        collapse library dir [D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link] ==> [D:/Vcpkg/vcpkg/installed/x64-windows/lib/manual-link]
+        implicit libs: [cudadevrt.lib;cudart_static.lib;D:/Vcpkg/vcpkg/installed/x64-windows/lib/*.lib]
+        implicit objs: []
+        implicit dirs: [C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.4/lib/x64;D:/Vcpkg/vcpkg/installed/x64-windows/lib;D:/Vcpkg/vcpkg/installed/x64-windows/lib/manual-link]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "D:/Cmake/share/cmake-4.0/Modules/Internal/CMakeDetermineLinkerId.cmake:36 (message)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeDetermineCompilerABI.cmake:264 (cmake_determine_linker_id)"
+      - "D:/Cmake/share/cmake-4.0/Modules/CMakeTestCUDACompiler.cmake:19 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:8 (enable_language)"
+    message: |
+      Running the CUDA compiler's linker: "D:/VisualStudio/VC/Tools/MSVC/14.43.34808/bin/HostX64/x64/link.exe" "-v"
+      Microsoft (R) Incremental Linker Version 14.43.34810.0
+      Copyright (C) Microsoft Corporation.  All rights reserved.
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "libs/libtorch-release/share/cmake/Caffe2/public/cuda.cmake:103 (try_run)"
+      - "libs/libtorch-release/share/cmake/Caffe2/Caffe2Config.cmake:86 (include)"
+      - "libs/libtorch-release/share/cmake/Torch/TorchConfig.cmake:68 (find_package)"
+      - "CMakeLists.txt:15 (find_package)"
+    directories:
+      source: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/fFxW9/CMakeFiles/CMakeTmp"
+      binary: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/fFxW9/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /W3 /GR /EHsc"
+      CMAKE_CXX_FLAGS_DEBUG: "/MDd /Zi /Ob0 /Od /RTC1"
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/libs/libtorch-release/share/cmake/Caffe2;D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/libs/libtorch-release/share/cmake/Caffe2/public/../Modules_CUDA_fix"
+    buildResult:
+      variable: "compile_result"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/fFxW9/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_19113.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a
+        鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:48銆?
+        
+        鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\cmTC_19113.vcxproj鈥?榛樿鐩爣)銆?
+        PrepareForBuild:
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_19113.dir\\Debug\\鈥濄€?
+          宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?
+          姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\Debug\\鈥濄€?
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_19113.dir\\Debug\\cmTC_19113.tlog\\鈥濄€?
+        InitializeBuildStatus:
+          姝ｅ湪鍒涘缓鈥渃mTC_19113.dir\\Debug\\cmTC_19113.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?
+          姝ｅ湪瀵光€渃mTC_19113.dir\\Debug\\cmTC_19113.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?
+        VcpkgTripletSelection:
+          Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"
+          Using normalized configuration "Debug"
+        ClCompile:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\CL.exe /c /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /std:c++17 /Fo"cmTC_19113.dir\\Debug\\\\" /Fd"cmTC_19113.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TP /errorReport:queue D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\detect_cuda_version.cc
+          鐢ㄤ簬 x64 鐨?Microsoft (R) C/C++ 浼樺寲缂栬瘧鍣?19.43.34810 鐗?
+          鐗堟潈鎵€鏈?C) Microsoft Corporation銆備繚鐣欐墍鏈夋潈鍒┿€?
+          cl /c /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /I"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\include" /Zi /W3 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Zc:inline /GR /std:c++17 /Fo"cmTC_19113.dir\\Debug\\\\" /Fd"cmTC_19113.dir\\Debug\\vc143.pdb" /external:W3 /Gd /TP /errorReport:queue D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\detect_cuda_version.cc
+          detect_cuda_version.cc
+        C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include\\cuda.h(22423,1): warning C4819: 璇ユ枃浠跺寘鍚笉鑳藉湪褰撳墠浠ｇ爜椤?936)涓〃绀虹殑瀛楃銆傝灏嗚鏂囦欢淇濆瓨涓?Unicode 鏍煎紡浠ラ槻姝㈡暟鎹涪澶?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\cmTC_19113.vcxproj]
+          (缂栬瘧婧愭枃浠垛€?./../../detect_cuda_version.cc鈥?
+          
+        Link:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\Debug\\cmTC_19113.exe" /INCREMENTAL /ILK:"cmTC_19113.dir\\Debug\\cmTC_19113.ilk" /NOLOGO /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib\\manual-link" "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64\\cudart_static.lib" kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/fFxW9/CMakeFiles/CMakeTmp/Debug/cmTC_19113.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/fFxW9/CMakeFiles/CMakeTmp/Debug/cmTC_19113.lib" /MACHINE:X64  /machine:x64 cmTC_19113.dir\\Debug\\detect_cuda_version.obj
+          cmTC_19113.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\Debug\\cmTC_19113.exe
+        AppLocalFromInstalled:
+          pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\Debug\\cmTC_19113.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\debug\\bin" "cmTC_19113.dir\\Debug\\cmTC_19113.tlog\\cmTC_19113.write.1u.tlog" "cmTC_19113.dir\\Debug\\vcpkg.applocal.log"
+        FinalizeBuildStatus:
+          姝ｅ湪鍒犻櫎鏂囦欢鈥渃mTC_19113.dir\\Debug\\cmTC_19113.tlog\\unsuccessfulbuild鈥濄€?
+          姝ｅ湪瀵光€渃mTC_19113.dir\\Debug\\cmTC_19113.tlog\\cmTC_19113.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?
+        宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\cmTC_19113.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+        
+        宸叉垚鍔熺敓鎴愩€?
+        
+        鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\cmTC_19113.vcxproj鈥?榛樿鐩爣) (1) ->
+        (ClCompile 鐩爣) -> 
+          C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include\\cuda.h(22423,1): warning C4819: 璇ユ枃浠跺寘鍚笉鑳藉湪褰撳墠浠ｇ爜椤?936)涓〃绀虹殑瀛楃銆傝灏嗚鏂囦欢淇濆瓨涓?Unicode 鏍煎紡浠ラ槻姝㈡暟鎹涪澶?[D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\fFxW9\\CMakeFiles\\CMakeTmp\\cmTC_19113.vcxproj]
+        
+            1 涓鍛?
+            0 涓敊璇?
+        
+        宸茬敤鏃堕棿 00:00:01.46
+        
+      exitCode: 0
+    runResult:
+      variable: "run_result"
+      cached: true
+      stdout: |
+        12.4
+      exitCode: 0
+  -
+    kind: "try_run-v1"
+    backtrace:
+      - "libs/libtorch-release/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA/select_compute_arch.cmake:113 (try_run)"
+      - "libs/libtorch-release/share/cmake/Caffe2/Modules_CUDA_fix/upstream/FindCUDA/select_compute_arch.cmake:173 (CUDA_DETECT_INSTALLED_GPUS)"
+      - "libs/libtorch-release/share/cmake/Caffe2/public/utils.cmake:398 (cuda_select_nvcc_arch_flags)"
+      - "libs/libtorch-release/share/cmake/Caffe2/public/cuda.cmake:300 (torch_cuda_get_nvcc_gencode_flag)"
+      - "libs/libtorch-release/share/cmake/Caffe2/Caffe2Config.cmake:86 (include)"
+      - "libs/libtorch-release/share/cmake/Torch/TorchConfig.cmake:68 (find_package)"
+      - "CMakeLists.txt:15 (find_package)"
+    directories:
+      source: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeTmp"
+      binary: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeTmp"
+    cmakeVariables:
+      CMAKE_CUDA_FLAGS: "-D_WINDOWS -Xcompiler=\"/W3 /GR /EHsc\""
+      CMAKE_CUDA_FLAGS_DEBUG: "-Xcompiler=\"-MDd  -Zi -Ob0 -Od /RTC1\""
+      CMAKE_EXE_LINKER_FLAGS: "/machine:x64"
+      CMAKE_MODULE_PATH: "D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/libs/libtorch-release/share/cmake/Caffe2;D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/libs/libtorch-release/share/cmake/Caffe2/public/../Modules_CUDA_fix"
+    buildResult:
+      variable: "compile_result"
+      cached: true
+      stdout: |
+        Change Dir: 'D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeTmp'
+        
+        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_9c415.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=17.0 /v:n
+        閫傜敤浜?.NET Framework MSBuild 鐗堟湰 17.13.19+0d9f5a35a
+        鐢熸垚鍚姩鏃堕棿涓?2025/4/13 23:00:50銆?
+        
+        鑺傜偣 1 涓婄殑椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\cmTC_9c415.vcxproj鈥?榛樿鐩爣)銆?
+        PrepareForBuild:
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_9c415.dir\\Debug\\鈥濄€?
+          宸插惎鐢ㄧ粨鏋勫寲杈撳嚭銆傜紪璇戝櫒璇婃柇鐨勬牸寮忚缃皢鍙嶆槧閿欒灞傛缁撴瀯銆傛湁鍏宠缁嗕俊鎭紝璇峰弬闃?https://aka.ms/cpp/structured-output銆?
+          姝ｅ湪鍒涘缓鐩綍鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\Debug\\鈥濄€?
+          姝ｅ湪鍒涘缓鐩綍鈥渃mTC_9c415.dir\\Debug\\cmTC_9c415.tlog\\鈥濄€?
+        InitializeBuildStatus:
+          姝ｅ湪鍒涘缓鈥渃mTC_9c415.dir\\Debug\\cmTC_9c415.tlog\\unsuccessfulbuild鈥濓紝鍥犱负宸叉寚瀹氣€淎lwaysCreate鈥濄€?
+          姝ｅ湪瀵光€渃mTC_9c415.dir\\Debug\\cmTC_9c415.tlog\\unsuccessfulbuild鈥濇墽琛?Touch 浠诲姟銆?
+        AddCudaCompileDeps:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\cl.exe /E /nologo /showIncludes /TP /D__CUDACC__ /D__CUDACC_VER_MAJOR__=12 /D__CUDACC_VER_MINOR__=4 /D_WINDOWS /DCMAKE_INTDIR="Debug" /D_MBCS /DCMAKE_INTDIR="Debug" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin" /I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include" /I. /FIcuda_runtime.h /c D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\detect_cuda_compute_capabilities.cu 
+        椤圭洰鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\cmTC_9c415.vcxproj鈥?1)姝ｅ湪鑺傜偣 1 涓婄敓鎴愨€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\cmTC_9c415.vcxproj鈥?1:2) (CudaBuildCore 涓洰鏍?銆?
+        CudaBuildCore:
+          Compiling CUDA source file ..\\..\\detect_cuda_compute_capabilities.cu...
+          cmd.exe /C "C:\\Users\\dgszy\\AppData\\Local\\Temp\\tmpa81daf7da8ad4adebc821878a5e70aae.cmd"
+          "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe"  --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu    -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"     --keep-dir cmTC_9c415\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -std=c++17 -Xcompiler="/EHsc -Zi -Ob0" -g  -D_WINDOWS -D"CMAKE_INTDIR=\\"Debug\\"" -D_MBCS -D"CMAKE_INTDIR=\\"Debug\\"" -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd /GR" -Xcompiler "/FdcmTC_9c415.dir\\Debug\\vc143.pdb" -o cmTC_9c415.dir\\Debug\\detect_cuda_compute_capabilities.obj "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\detect_cuda_compute_capabilities.cu"
+          
+          (D:\\Anaconda\\Envs\\pyt240cu124) D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp>"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\bin\\nvcc.exe"  --use-local-env -ccbin "D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64" -x cu    -I"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\include"     --keep-dir cmTC_9c415\\x64\\Debug  -maxrregcount=0   --machine 64 --compile -cudart static -std=c++17 -Xcompiler="/EHsc -Zi -Ob0" -g  -D_WINDOWS -D"CMAKE_INTDIR=\\"Debug\\"" -D_MBCS -D"CMAKE_INTDIR=\\"Debug\\"" -Xcompiler "/EHsc /W3 /nologo /Od /FS /Zi /RTC1 /MDd /GR" -Xcompiler "/FdcmTC_9c415.dir\\Debug\\vc143.pdb" -o cmTC_9c415.dir\\Debug\\detect_cuda_compute_capabilities.obj "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\detect_cuda_compute_capabilities.cu" 
+          detect_cuda_compute_capabilities.cu
+          tmpxft_00005574_00000000-7_detect_cuda_compute_capabilities.cudafe1.cpp
+        宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\cmTC_9c415.vcxproj鈥?CudaBuildCore 涓洰鏍?鐨勬搷浣溿€?
+        VcpkgTripletSelection:
+          Using triplet "x64-windows" from "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\"
+          Using normalized configuration "Release"
+        Link:
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.43.34808\\bin\\HostX64\\x64\\link.exe /ERRORREPORT:QUEUE /OUT:"D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\Debug\\cmTC_9c415.exe" /INCREMENTAL /ILK:"cmTC_9c415.dir\\Debug\\cmTC_9c415.ilk" /NOLOGO /LIBPATH:"C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v12.4\\lib\\x64" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib" /LIBPATH:"D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\manual-link" cudadevrt.lib cudart_static.lib kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\lib\\*.lib" /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeTmp/Debug/cmTC_9c415.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeTmp/Debug/cmTC_9c415.lib" /MACHINE:X64  /machine:x64 cmTC_9c415.dir\\Debug\\detect_cuda_compute_capabilities.obj
+            姝ｅ湪鍒涘缓搴?D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeTmp/Debug/cmTC_9c415.lib 鍜屽璞?D:/Desktop/GraduationDesign/GraduationDesign/BackEnd/build/CMakeFiles/CMakeTmp/Debug/cmTC_9c415.exp
+        LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\cmTC_9c415.vcxproj]
+          cmTC_9c415.vcxproj -> D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\Debug\\cmTC_9c415.exe
+        AppLocalFromInstalled:
+          pwsh.exe -ExecutionPolicy Bypass -noprofile -File "D:\\Vcpkg\\vcpkg\\scripts\\buildsystems\\msbuild\\applocal.ps1" "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\Debug\\cmTC_9c415.exe" "D:\\Vcpkg\\vcpkg\\installed\\x64-windows\\bin" "cmTC_9c415.dir\\Debug\\cmTC_9c415.tlog\\cmTC_9c415.write.1u.tlog" "cmTC_9c415.dir\\Debug\\vcpkg.applocal.log"
+        FinalizeBuildStatus:
+          姝ｅ湪鍒犻櫎鏂囦欢鈥渃mTC_9c415.dir\\Debug\\cmTC_9c415.tlog\\unsuccessfulbuild鈥濄€?
+          姝ｅ湪瀵光€渃mTC_9c415.dir\\Debug\\cmTC_9c415.tlog\\cmTC_9c415.lastbuildstate鈥濇墽琛?Touch 浠诲姟銆?
+        宸插畬鎴愮敓鎴愰」鐩€淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\cmTC_9c415.vcxproj鈥?榛樿鐩爣)鐨勬搷浣溿€?
+        
+        宸叉垚鍔熺敓鎴愩€?
+        
+        鈥淒:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\cmTC_9c415.vcxproj鈥?榛樿鐩爣) (1) ->
+        (Link 鐩爣) -> 
+          LINK : warning LNK4098: 榛樿搴撯€淟IBCMT鈥濅笌鍏朵粬搴撶殑浣跨敤鍐茬獊锛涜浣跨敤 /NODEFAULTLIB:library [D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\build\\CMakeFiles\\CMakeTmp\\cmTC_9c415.vcxproj]
+        
+            1 涓鍛?
+            0 涓敊璇?
+        
+        宸茬敤鏃堕棿 00:00:03.09
+        
+      exitCode: 0
+    runResult:
+      variable: "run_result"
+      cached: true
+      stdout: |
+        8.6 
+      exitCode: 0
+...
