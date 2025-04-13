@@ -21,6 +21,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(${PROJECT_NAME} main.cc)
 
+add_definitions(-DNOMINMAX)
+
 # ##############################################################################
 # If you include the drogon source code locally in your project, use this method
 # to add drogon 
@@ -58,7 +60,10 @@ drogon_create_views(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/views
 
 target_include_directories(${PROJECT_NAME}
                            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
-                                   ${CMAKE_CURRENT_SOURCE_DIR}/models)
+                                   ${CMAKE_CURRENT_SOURCE_DIR}/models
+                                #    ${CMAKE_CURRENT_SOURCE_DIR}/libs/libtorch-debug/include
+                                   ${CMAKE_CURRENT_SOURCE_DIR}/libs/libtorch-release/include
+                                   ${CMAKE_CURRENT_SOURCE_DIR}/libs/libtorch-release/include/torch/csrc/api/include/torch)
 target_sources(${PROJECT_NAME}
                PRIVATE
                ${SRC_DIR}
@@ -66,6 +71,7 @@ target_sources(${PROJECT_NAME}
                ${FILTER_SRC}
                ${PLUGIN_SRC}
                ${MODEL_SRC})
+
 # ##############################################################################
 # uncomment the following line for dynamically loading views 
 # set_property(TARGET ${PROJECT_NAME} PROPERTY ENABLE_EXPORTS ON)
