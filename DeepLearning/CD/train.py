@@ -176,6 +176,8 @@ if __name__ == '__main__':
 
             h_u, h_v, h_c = get_H_Data(train_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
 
+            print(type(h_u), type(h_v), type(h_c))
+
             # print(f"h_u 的最小值: {h_u.min()}, 最大值: {h_u.max()}")
             # print(f"h_v 的最小值: {h_v.min()}, 最大值: {h_v.max()}")
             # print(f"h_c 的最小值: {h_c.min()}, 最大值: {h_c.max()}")

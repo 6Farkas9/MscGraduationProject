@@ -43,7 +43,7 @@ class KCGEDataReader():
             start_points.extend([e_1,e_2])
             end_points.extend([e_2,e_1])
             edge_type.extend([e_type,e_type])
-            print('e_weight : {}'.format(e_weight))
+            # print('e_weight : {}'.format(e_weight))
             edge_weight.extend([e_weight,e_weight])
             
         for node in entity_all.keys():
