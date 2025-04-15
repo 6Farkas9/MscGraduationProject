@@ -1,2 +1,6 @@
 DeepLearning/Data/
-BackEnd/libs/
+BackEnd/libs/libtorch-debug
+BackEnd/libs/libtorch-release
+BackEnd/.vs/BackEnd/v17/Browse.VC.db
+BackEnd/.vs/BackEnd/v17/ipch/
+BackEnd/BackEnd/
