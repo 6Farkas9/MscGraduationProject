@@ -28,6 +28,7 @@ def train_epoch(model, train_iterator, optim, lamda_kt, criterion_kt, lamda_ik,c
         cor_rate = item[4].to(device).float()
 
         optim.zero_grad()
+        # print(x.shape)
         output_kt,output_ik = model(x)
 
         que_expanded = que.unsqueeze(-1).expand_as(output_kt)
@@ -233,4 +234,5 @@ if __name__ == '__main__':
     
     # torch.save(model.state_dict(), IPDKT_pt_use_path)
     scripted_model = torch.jit.script(model)
+    scripted_model = torch.jit.optimize_for_inference(scripted_model)
     scripted_model.save(IPDKT_pt_use_path)
