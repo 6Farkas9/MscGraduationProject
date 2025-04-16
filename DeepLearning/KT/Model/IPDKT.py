@@ -20,7 +20,7 @@ class IPDKT(nn.Module):
         self.ik_fc1 = nn.Linear(self.hidden_size, self.hidden_size)
         self.ik_fc2 = nn.Linear(self.hidden_size, self.output_size)
     
-    def forward(self, x):
+    def forward(self, x : torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         # device = x.device
         # h0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)).to(device)
         out_lstm, _ = self.lstm(x)

@@ -9,7 +9,8 @@ class Model_PDBeta(nn.Module):
         self.linear_dv = nn.Linear(2 * self.embedding_dim, 1)
         self.linear_bv = nn.Linear(self.embedding_dim, 1)
 
-    def forward(self, x):
+    # def forward(self, x):
+    def forward(self, x: tuple[torch.Tensor, torch.Tensor, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         out_pu = torch.nn.functional.leaky_relu(self.linear_pu(x[0]), negative_slope=0.01)
 
         # print(f"linear_pu 输入的最小值: {x[0].min()}, 最大值: {x[0].max()}")

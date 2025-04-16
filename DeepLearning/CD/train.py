@@ -110,11 +110,19 @@ if __name__ == '__main__':
     cd_pt_train_path = os.path.normpath(cd_pt_train_path)
     cd_pt_temp_path = os.path.join(pt_path, 'cd_temp.pt')
     cd_pt_temp_path = os.path.normpath(cd_pt_temp_path)
-    cd_pt_use_path = os.path.join(pt_path, 'cd_use.pt')
-    cd_pt_use_path = os.path.normpath(cd_pt_use_path)
+
+    dtr_pt_use_path = os.path.join(pt_path, 'dtr_use.pt')
+    dtr_pt_use_path = os.path.normpath(dtr_pt_use_path)
+    mirt_pt_use_path = os.path.join(pt_path, 'mirt_use.pt')
+    mirt_pt_use_path = os.path.normpath(mirt_pt_use_path)
+
+    # cd_pt_use_path = os.path.join(pt_path, 'cd_use.pt')
+    # cd_pt_use_path = os.path.normpath(cd_pt_use_path)
 
     kcge_pt_path = os.path.join('..', 'KCGE', 'PT')
     kcge_pt_path = os.path.normpath(kcge_pt_path)
+    kcge_pt_train_path = os.path.join(kcge_pt_path, 'kcge_train.pt')
+    kcge_pt_train_path = os.path.normpath(kcge_pt_train_path)
     kcge_pt_use_path = os.path.join(kcge_pt_path, 'kcge_use.pt')
     kcge_pt_use_path = os.path.normpath(kcge_pt_use_path)
 
@@ -133,9 +141,9 @@ if __name__ == '__main__':
         print('CD初始训练')
         cd_add_update = False
 
-    if os.path.exists(kcge_pt_use_path):
+    if os.path.exists(kcge_pt_train_path):
         print('KCGE增量训练')
-        checkpoint_kcge = torch.load(kcge_pt_use_path, map_location=device)
+        checkpoint_kcge = torch.load(kcge_pt_train_path, map_location=device)
         model_kcge.load_state_dict(checkpoint_kcge['model_state_dict_kcge'])
     else:
         print('KCGE初始训练')
@@ -169,14 +177,14 @@ if __name__ == '__main__':
             exer_id = item[1]
             correct = item[2].to(device).float()
 
-            z_star, z_sharp = model_kcge(data_relation)
+            z_star, z_sharp = model_kcge(data_relation.x, data_relation.edge_index, data_relation.edge_type, data_relation.edge_weight)
 
             # print(f"z_sharp 的最小值: {z_sharp.min()}, 最大值: {z_sharp.max()}")
             # print(f"z_star 的最小值: {z_star.min()}, 最大值: {z_star.max()}")
 
             h_u, h_v, h_c = get_H_Data(train_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
 
-            print(type(h_u), type(h_v), type(h_c))
+            # print(type(h_u), type(h_v), type(h_c))
 
             # print(f"h_u 的最小值: {h_u.min()}, 最大值: {h_u.max()}")
             # print(f"h_v 的最小值: {h_v.min()}, 最大值: {h_v.max()}")
@@ -236,7 +244,7 @@ if __name__ == '__main__':
             exer_id = item[1]
             correct = item[2].to(device).float()
             with torch.no_grad():
-                z_star, z_sharp = model_kcge(data_relation)
+                z_star, z_sharp = model_kcge(data_relation.x, data_relation.edge_index, data_relation.edge_type, data_relation.edge_weight)
             h_u, h_v, h_c = get_H_Data(master_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
             with torch.no_grad():
                 p_u, d_v, beta_v = get_PDBeta_Data(h_u, h_v, h_c, model_dtr, parsers.embedding_dim)
@@ -277,14 +285,32 @@ if __name__ == '__main__':
         }, cd_pt_train_path)
 
         torch.save({
-            'model_state_dict_kcge': model_kcge.state_dict(),
-        }, kcge_pt_use_path)
+            'model_state_dict_kcge': model_kcge.state_dict()
+        }, kcge_pt_train_path)
 
-    torch.save({
-        'model_state_dict_dtr': model_dtr.state_dict(),
-        'model_state_dict_mirt': model_mirt.state_dict()
-    }, cd_pt_use_path)
+        # torch.save({
+        #     'model_state_dict_kcge': model_kcge.state_dict(),
+        # }, kcge_pt_use_path)
 
-    torch.save({
-        'model_state_dict_kcge': model_kcge.state_dict()
-    }, kcge_pt_use_path)
+        scripted_model_dtr = torch.jit.script(model_dtr)
+        scripted_model_dtr = torch.jit.optimize_for_inference(scripted_model_dtr)
+        scripted_model_dtr.save(dtr_pt_use_path)
+
+        scripted_model_mirt = torch.jit.script(model_mirt)
+        scripted_model_mirt = torch.jit.optimize_for_inference(scripted_model_mirt)
+        scripted_model_mirt.save(mirt_pt_use_path)
+
+        scripted_model_kcge = torch.jit.script(model_kcge)
+        scripted_model_kcge = torch.jit.optimize_for_inference(scripted_model_kcge)
+        scripted_model_kcge.save(kcge_pt_use_path)
+
+
+
+    # torch.save({
+    #     'model_state_dict_dtr': model_dtr.state_dict(),
+    #     'model_state_dict_mirt': model_mirt.state_dict()
+    # }, cd_pt_use_path)
+
+    # torch.save({
+    #     'model_state_dict_kcge': model_kcge.state_dict()
+    # }, kcge_pt_use_path)

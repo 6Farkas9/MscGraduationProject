@@ -231,6 +231,8 @@ if __name__ == '__main__':
             'loss': loss
         }, IPDKT_pt_train_path)
     
-    # torch.save(model.state_dict(), IPDKT_pt_use_path)
-    scripted_model = torch.jit.script(model)
-    scripted_model.save(IPDKT_pt_use_path)
+        # torch.save(model.state_dict(), IPDKT_pt_use_path)
+
+        scripted_model = torch.jit.script(model)
+        scripted_model = torch.jit.optimize_for_inference(scripted_model)
+        scripted_model.save(IPDKT_pt_use_path)
