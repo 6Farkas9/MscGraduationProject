@@ -1,6 +1,5 @@
 DeepLearning/Data/
-BackEnd/libs/libtorch-debug
-BackEnd/libs/libtorch-release
+BackEnd/libs/
 BackEnd/.vs/
 BackEnd/BackEnd/
 BackEnd/x64/
