@@ -1,144 +1,125 @@
+import sys
+sys.path.append('..')
+
 import os
 import torch
 import argparse
 import pandas as pd
 import numpy as np
 import torch.nn as nn
+
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from DataSet.DataReader import DataReader
 from DataSet.IPDKTDataset import IPDKTDataset
 from Model.IPDKT import IPDKT
 
-def train_epoch(model, train_iterator, optim, lamda_kt, criterion_kt, lamda_ik,criterion_ik, device="cpu"):
+def train_epoch(model, train_iterator, optim, criterion, device="cpu"):
     model.train()
 
-    num_correct_kt = 0
-    num_sum_kt = 0
+    num_correct = 0
+    num_sum = 0
     loss_total = []
 
     tbar = tqdm(train_iterator)
 
     for item in tbar:
         x = item[0].to(device).float()
-        que = item[1].to(device).long()
-        kc = item[2].to(device).long()
-        cor = item[3].to(device).float()
-        cor_rate = item[4].to(device).float()
+        cpt = item[1].to(device).long()
+        cor = item[2].to(device).float()
 
         optim.zero_grad()
-        output_kt,output_ik = model(x)
+        output = model(x)
 
-        que_expanded = que.unsqueeze(-1).expand_as(output_kt)
-        cor_expanded = cor.unsqueeze(-1).expand_as(output_kt)
-        mask_kt = kc.bool() & que_expanded.bool()
+        cor_expanded = cor.unsqueeze(-1).expand_as(output)
+        mask = cpt.bool()
 
-        output_kt = torch.masked_select(output_kt, mask_kt).reshape(-1)
-        cor_expanded = torch.masked_select(cor_expanded, mask_kt).reshape(-1)
+        output = torch.masked_select(output, mask).reshape(-1)
+        cor_expanded = torch.masked_select(cor_expanded, mask).reshape(-1)
 
-        loss_kt = criterion_kt(output_kt, cor_expanded)
+        loss = criterion(output, cor_expanded)
 
-        num_correct_kt += ((output_kt >= 0.5).long() == cor_expanded).sum().item()
-        num_sum_kt += len(cor_expanded)
+        num_correct += ((output >= 0.5).long() == cor_expanded).sum().item()
+        num_sum += len(cor_expanded)
 
-        output_ik = output_ik.reshape(-1)
-        cor_rate = cor_rate.reshape(-1)
-
-        loss_ik = criterion_ik(output_ik, cor_rate)
-        loss = lamda_kt * loss_kt + lamda_ik * loss_ik
         loss.backward()
         optim.step()
         loss_total.append(loss.item())
 
         tbar.set_description('loss:{:.4f}'.format(loss))
 
-    acc = num_correct_kt / num_sum_kt
+    acc = num_correct / num_sum
     loss = np.average(loss_total)
-    return loss,acc
+    return loss, acc
 
-def master_epoch(model, train_iterator, lamda_kt, criterion_kt, lamda_ik,criterion_ik, device="cpu"):
-    model.eval()
+def master_epoch(model, train_iterator, criterion, device="cpu"):
+    model.train()
 
-    num_correct_kt = 0
-    num_sum_kt = 0
+    num_correct = 0
+    num_sum = 0
     loss_total = []
 
     tbar = tqdm(train_iterator)
 
     for item in tbar:
         x = item[0].to(device).float()
-        que = item[1].to(device).long()
-        kc = item[2].to(device).long()
-        cor = item[3].to(device).float()
-        cor_rate = item[4].to(device).float()
+        cpt = item[1].to(device).long()
+        cor = item[2].to(device).float()
 
         with torch.no_grad():
-            output_kt,output_ik = model(x)
+            output = model(x)
 
-        que_expanded = que.unsqueeze(-1).expand_as(output_kt)
-        cor_expanded = cor.unsqueeze(-1).expand_as(output_kt)
-        mask_kt = kc.bool() & que_expanded.bool()
+        cor_expanded = cor.unsqueeze(-1).expand_as(output)
+        mask = cpt.bool()
 
-        output_kt = torch.masked_select(output_kt, mask_kt).reshape(-1)
-        cor_expanded = torch.masked_select(cor_expanded, mask_kt).reshape(-1)
+        output = torch.masked_select(output, mask).reshape(-1)
+        cor_expanded = torch.masked_select(cor_expanded, mask).reshape(-1)
 
-        loss_kt = criterion_kt(output_kt, cor_expanded)
+        loss = criterion(output, cor_expanded)
 
-        num_correct_kt += ((output_kt >= 0.5).long() == cor_expanded).sum().item()
-        num_sum_kt += len(cor_expanded)
+        num_correct += ((output >= 0.5).long() == cor_expanded).sum().item()
+        num_sum += len(cor_expanded)
 
-        output_ik = output_ik.reshape(-1)
-        cor_rate = cor_rate.reshape(-1)
-
-        loss_ik = criterion_ik(output_ik, cor_rate)
-        loss = lamda_kt * loss_kt + lamda_ik * loss_ik
         loss_total.append(loss.item())
 
         tbar.set_description('loss:{:.4f}'.format(loss))
 
-    acc = num_correct_kt / num_sum_kt
+    acc = num_correct / num_sum
     loss = np.average(loss_total)
-    return loss,acc
-
+    return loss, acc
 
 # 解析传入的参数
 parser = argparse.ArgumentParser(description='IPDKT')
 parser.add_argument('--batch_size',type=int,default=32,help='number of batch size to train (defauly 32 )')
-parser.add_argument('--epochs',type=int,default=32,help='number of epochs to train (defauly 35 )')
+parser.add_argument('--epochs',type=int,default=32,help='number of epochs to train (defauly 32 )')
 parser.add_argument('--lr',type=float,default=0.01,help='number of learning rate')
-parser.add_argument('--hidden_size',type=int,default=200,help='the number of the hidden-size')
-parser.add_argument('--max_step',type=int,default=100,help='the number of max step')
+parser.add_argument('--hidden_size',type=int,default=256,help='the number of the hidden-size')
+parser.add_argument('--max_step',type=int,default=64,help='the number of max step')
 parser.add_argument('--num_layers',type=int,default=2,help='the number of layers')
-parser.add_argument('--lamda_kt',type=float,default=0.5,help='the number of lamda KT')
-parser.add_argument('--lamda_ik',type=float,default=0.5,help='the number of lamda IK')
 
-parser.add_argument('--data_dir', type=str, default='../Data/KT',help='the data directory, default as ../Data/KT')
-parser.add_argument('--train_file',type=str,default='train.csv',help='name of train_file')
-parser.add_argument('--master_file',type=str,default='master.csv',help='name of master_file')
+parser.add_argument('--are_uid',type=str,default='are_3fee9e47d0f3428382f4afbcb1004117',help='the uid of area')
 
-parser.add_argument('--n_kc',type=int,default=110,help='name of master_file')
+# parser.add_argument('--data_dir', type=str, default='../Data',help='the data directory, default as ../Data/KT')
+# parser.add_argument('--train_file',type=str,default='train_simple.txt',help='name of train_file')
+# parser.add_argument('--master_file',type=str,default='master_simple.txt',help='name of master_file')
+
+# 根据领域来决定的数据
+# parser.add_argument('--n_kc',type=int,default=150,help='name of master_file')
+
+# 从数据库中根据指定的领域获取数据来训练
+# 领域 - 知识点数量
+# 当前时间 - 过去30天内的数据
+#     80%用来训练
+#     20%用来检测
 
 if __name__ == '__main__': 
     parsers = parser.parse_args()
-    train_file_path = ''
-    master_file_path = ''
-    
-    if(parsers.data_dir != '../Data/KT'):
-        train_file_path = os.path.join(parsers.data_dir, parsers.train_file)
-        master_file_path = os.path.join(parsers.data_dir, parsers.master_file)
-    else:
-        data_dir_path = os.path.join('..', 'Data', 'KT')
-        train_file_path = os.path.join(data_dir_path, parsers.train_file)
-        master_file_path = os.path.join(data_dir_path, parsers.master_file)
-    
-    train_file_path = os.path.normpath(train_file_path)
-    master_file_path = os.path.normpath(master_file_path)
 
-    if not os.path.exists(train_file_path) or not os.path.exists(master_file_path):
-        print(train_file_path, ' , ' , master_file_path)
-        print('wrong file path')
-        os._exit(0)
+    # 这里用来获取数据
+    train_data, master_data, cpt_num = DataReader(parsers.are_uid).load_data_from_db()
+    train_data_frame = pd.DataFrame(train_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
+    master_data_frame = pd.DataFrame(master_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
 
     model = 'IPDKT'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -146,12 +127,11 @@ if __name__ == '__main__':
     print(f'current device:{device}')
 
     model = IPDKT(
-        input_size= 2 * parsers.n_kc,
+        input_size= 2 * cpt_num,
         hidden_size= parsers.hidden_size,
         num_layer= parsers.num_layers,
-        output_size= parsers.n_kc
-    )
-    model.to(device)
+        output_size= cpt_num
+    ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr= parsers.lr)
 
     IPDKT_pt_path = os.path.join('PT')
@@ -167,7 +147,6 @@ if __name__ == '__main__':
         print('增量训练')
         check_point = torch.load(IPDKT_pt_train_path, map_location=device)
         model.load_state_dict(check_point['model_state_dict'])
-        # optimizer.load_state_dict(check_point['optimizer_state_dict'])
         lastloss = check_point['loss']
     else:
         print('初始训练')
@@ -176,11 +155,7 @@ if __name__ == '__main__':
     print('model:')
     print(model)
     
-    criterion_kt = nn.BCELoss()
-    criterion_ik = nn.MSELoss()
-    
-    criterion_kt.to(device)
-    criterion_ik.to(device)
+    criterion = nn.BCELoss().to(device)
 
     loss_all = []
 
@@ -195,22 +170,22 @@ if __name__ == '__main__':
     epoch_tqdm = tqdm(range(epoch_start, parsers.epochs))
     for epoch in epoch_tqdm:
         epoch_tqdm.set_description('epoch - {}'.format(epoch))
-        train_data,train_len,train_kc_num = DataReader(train_file_path).load_data()
-        train_data = pd.DataFrame(train_data,columns=['stu_id','que_id','kc_id','correct','cor_rate']).set_index('stu_id')
-        train_dataset = IPDKTDataset(train_data,train_kc_num,parsers.max_step)
-        train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
-        loss,acc = train_epoch(model, train_dataloader, optimizer, parsers.lamda_kt,criterion_kt, parsers.lamda_ik, criterion_ik, device)
-        print('epoch - {} train_loss - {:.2f} acc - {:.2f}'.format(epoch,loss,acc))
-        del train_data,train_len,train_kc_num,train_dataset,train_dataloader
 
-        master_data,master_len,master_kc_num = DataReader(master_file_path).load_data()
-        master_data = pd.DataFrame(master_data,columns=['stu_id','que_id','kc_id','correct','cor_rate']).set_index('stu_id')
-        master_dataset = IPDKTDataset(master_data,master_kc_num,parsers.max_step)
+        train_dataset = IPDKTDataset(train_data_frame, cpt_num, parsers.max_step)
+        train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
+
+        loss, acc = train_epoch(model, train_dataloader, optimizer, criterion, device)
+        epoch_tqdm.set_description('epoch - {} train_loss - {:.2f} acc - {:.2f}'.format(epoch, loss, acc))
+        del train_dataset, train_dataloader
+
+        master_dataset = IPDKTDataset(master_data_frame, cpt_num, parsers.max_step)
         master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
-        loss,acc = master_epoch(model, master_dataloader, parsers.lamda_kt,criterion_kt, parsers.lamda_ik, criterion_ik, device)
-        print('epoch - {} master_loss - {:.2f} acc - {:.2f}'.format(epoch,loss,acc))
+
+        loss, acc = master_epoch(model, master_dataloader, criterion, device)
+        epoch_tqdm.set_description('epoch - {} master_loss - {:.2f} acc - {:.2f}'.format(epoch, loss, acc))
+        # print('epoch - {} master_loss - {:.2f} acc - {:.2f}'.format(epoch, loss, acc))
         loss_all.append(loss)
-        del master_data,master_len,master_kc_num,master_dataset,master_dataloader
+        del master_dataset,master_dataloader
 
         if (epoch + 1) % 8 == 0:
             torch.save({
