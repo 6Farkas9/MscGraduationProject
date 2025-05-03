@@ -163,7 +163,7 @@ if __name__ == '__main__':
     if os.path.exists(IPDKT_pt_temp_path):
         check_point = torch.load(IPDKT_pt_temp_path, map_location=device)
         model.load_state_dict(check_point['model_state_dict'])
-        optimizer.load_state_dict(check_point['optimizer_state_dict'])
+        optimizer.load_state_dict(check_point['optimizer_state_dict']) 
         epoch_start = check_point['epoch'] + 1
         loss_all = check_point['loss all']
 
