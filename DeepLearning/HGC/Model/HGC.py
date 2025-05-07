@@ -103,6 +103,119 @@ class Projection(nn.Module):
             
         return torch.cat(embeddings, dim=0)
 
+class HGC_LRN(nn.Module):
+    def __init__(self, embedding_dim, device):
+        super(HGC_LRN, self).__init__()
+        self.device = device
+        self.embedding_dim = embedding_dim
+
+        self.proj_lrn = Projection(embedding_dim).to(device)
+
+        self.GCN_lsl = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+
+    def forward(self,
+                init : torch.tensor,
+                p_matrix : torch.tensor
+                ) -> torch.tensor:
+        # (self.learners_init, self.scenes_init, self.concepts_init)
+        # (self.p_lsl, self.p_cc, self.p_cac, self.p_csc, self.p_scs, self.p_sls)
+        
+
+        embeddings_lrn = self.proj_lrn(init)
+
+        p_lsl = p_matrix
+        p_lsl.x = embeddings_lrn.clone()
+        # p_lsl = p_lsl.to(self.device)
+
+        out_lsl = self.GCN_lsl(p_lsl)
+
+        return out_lsl
+    
+class HGC_SCN(nn.Module):
+    def __init__(self, embedding_dim, device):
+        super(HGC_SCN, self).__init__()
+        self.device = device
+        self.embedding_dim = embedding_dim
+
+        self.proj_scn = Projection(embedding_dim).to(device)
+
+        self.GCN_scs = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+        self.GCN_sls = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+
+        self.attention_scn = MetaPathAttention(embedding_dim).to(device)
+
+    def forward(self, 
+                init : torch.tensor, 
+                p_matrix : tuple[torch.tensor, torch.tensor]
+                ) -> torch.tensor:
+        # (self.learners_init, self.scenes_init, self.concepts_init)
+        # (self.p_lsl, self.p_cc, self.p_cac, self.p_csc, self.p_scs, self.p_sls)
+        
+        p_scs = p_matrix[0]
+        p_sls = p_matrix[1]
+
+        embeddings_scn = self.proj_scn(init)
+
+        p_scs.x = embeddings_scn.clone()
+        p_sls.x = embeddings_scn.clone()
+
+        # p_scs = p_scs.to(self.device)
+        # p_sls = p_sls.to(self.device)
+
+        out_scs = self.GCN_scs(p_scs)
+        out_sls = self.GCN_sls(p_sls)
+        
+        combined_scn = torch.stack([out_scs, out_sls], dim=0)
+
+        fin_out_scn = self.attention_scn(combined_scn)
+
+        return fin_out_scn
+
+class HGC_CPT(nn.Module):
+    def __init__(self, embedding_dim, device):
+        super(HGC_CPT, self).__init__()
+        self.device = device
+        self.embedding_dim = embedding_dim
+
+        self.proj_cpt = Projection(embedding_dim).to(device)
+
+        self.GCN_cc = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+        self.GCN_cac = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+        self.GCN_csc = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+
+        self.attention_cpt = MetaPathAttention(embedding_dim).to(device)
+
+    def forward(self, 
+                init : torch.tensor, 
+                p_matrix : tuple[torch.tensor, torch.tensor, torch.tensor]
+                ) -> torch.tensor:
+        # (self.learners_init, self.scenes_init, self.concepts_init)
+        # (self.p_lsl, self.p_cc, self.p_cac, self.p_csc, self.p_scs, self.p_sls)
+        
+        p_cc = p_matrix[0]
+        p_cac = p_matrix[1]
+        p_csc = p_matrix[2]
+
+        embeddings_cpt = self.proj_cpt(init)
+
+        p_cc.x = embeddings_cpt.clone()
+        p_cac.x = embeddings_cpt.clone()
+        p_csc.x = embeddings_cpt.clone()
+
+        # p_cc = p_cc.to(self.device)
+        # p_cac = p_cac.to(self.device)
+        # p_csc = p_csc.to(self.device)
+
+        out_cc  = self.GCN_cc(p_cc)
+        out_cac = self.GCN_cac(p_cac)
+        out_csc = self.GCN_csc(p_csc)
+        
+        combined_cpt = torch.stack([out_cc, out_cac, out_csc], dim=0)
+
+        fin_out_cpt = self.attention_cpt(combined_cpt)
+
+        return fin_out_cpt
+
 class HGC(nn.Module):
     def __init__(self, embedding_dim, device):
         super(HGC, self).__init__()

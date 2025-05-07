@@ -12,7 +12,7 @@ from torch_geometric.data import Data
 
 from Dataset.RRDataReader import RRDataReader
 from Dataset.RRDataSet import RRDataSet
-from HGC.Model.HGC import HGC
+from HGC.Model.HGC import HGC_LRN, HGC_SCN, HGC_CPT
 
 from Model.RR import RR
 
@@ -41,36 +41,37 @@ if __name__ == '__main__':
     train_dataset = RRDataSet(train_data, uids, learners_init, parsers.max_step)
     train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
 
-    model_hgc = HGC(parsers.embedding_dim, device).to(device)
+    # model_hgc = HGC(parsers.embedding_dim, device).to(device)
+    
+    model_hgc_lrn = HGC_LRN(parsers.embedding_dim, device).to(device)
+    model_hgc_scn = HGC_SCN(parsers.embedding_dim, device).to(device)
+    model_hgc_cpt = HGC_CPT(parsers.embedding_dim, device).to(device)
+
     model_rr = RR(parsers.embedding_dim, device).to(device)
 
-    print(model_hgc, model_rr)
+    print(model_hgc_lrn)
+    print(model_hgc_scn)
+    print(model_hgc_cpt)
+    print(RR)
 
     tbar = tqdm(train_dataloader)
     for item in tbar:
-        model_hgc.train()
+        model_hgc_lrn.train()
+        model_hgc_scn.train()
+        model_hgc_cpt.train()
         model_rr.train()
-        learner_idx = item['learner_idx'].to(device)
-        learner_init = item['learner_init'].to(device)
-        scn_seq_index = item['scn_seq_index'].to(device)
-        scn_seq_mask = item['scn_seq_mask'].to(device)
-
-        print(p_lsl.edge_index.shape)
-        print(p_lsl.edge_attr.shape)
+        learner_idx = item['learner_idx']
+        learner_init = item['learner_init']
+        scn_seq_index = item['scn_seq_index']
+        scn_seq_mask = item['scn_seq_mask']
 
         p_lsl.x = learners_init
-        # subgraph_edge_index, subgraph_edge_attr = subgraph(learner_idx.to('cpu'), edge_index=p_lsl.edge_index, edge_attr=p_lsl.edge_attr, num_nodes=p_lsl.x.size(0))
+        sub_p_lsl = p_lsl.subgraph(learner_idx)
 
-        sub_p_lsl = p_lsl.subgraph(learner_idx.to('cpu'))
-        # print(learner_idx.shape)
-        # print(subgraph_edge_index.shape)
-        # print(subgraph_edge_attr.shape)
-        
-        # sub_p_lsl = Data(x = learner_init, edge_index=subgraph_edge_index, edge_attr=subgraph_edge_attr)
+        lrn_emb = model_hgc_lrn(learner_init.to(device), sub_p_lsl.to(device))
+        scn_emb = model_hgc_scn(scenes_init.to(device), (p_scs.to(device), p_sls.to(device)))
+        cpt_emb = model_hgc_cpt(concepts_init.to(device), (p_cc.to(device), p_cac.to(device), p_csc.to(device)))
 
-        (lrn_emb, scn_emb, cpt_emb) = model_hgc(
-            (learner_init, scenes_init.to(device) ,concepts_init.to(device)), 
-            (sub_p_lsl.to(device), p_cc.to(device), p_cac.to(device), p_csc.to(device), p_scs.to(device), p_sls.to(device)))
         print(lrn_emb.shape, scn_emb.shape, cpt_emb.shape)
         break
 
