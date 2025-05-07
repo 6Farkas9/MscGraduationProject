@@ -11,7 +11,7 @@ import torch.nn as nn
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader
-from DataSet.DataReader import DataReader
+from DeepLearning.KT.DataSet.IPDKTDataReader import IPDKTDataReader
 from DataSet.IPDKTDataset import IPDKTDataset
 from Model.IPDKT import IPDKT
 
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     parsers = parser.parse_args()
 
     # 这里用来获取数据
-    train_data, master_data, cpt_num = DataReader(parsers.are_uid).load_data_from_db()
+    train_data, master_data, cpt_num = IPDKTDataReader(parsers.are_uid).load_data_from_db()
     train_data_frame = pd.DataFrame(train_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
     master_data_frame = pd.DataFrame(master_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
 

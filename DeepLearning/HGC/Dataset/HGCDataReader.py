@@ -9,7 +9,7 @@ from torch_geometric.data import Data
 # DataReader的职责应该是从数据库中读取数据，构建出图
 # 返回的结果传给Dataset
 
-class DataReader():
+class HGCDataReader():
     
     def get_cpt_are(self):
         return db.get_cpt_are()
@@ -18,22 +18,26 @@ class DataReader():
         return db.get_cpt_cpt()
     
     def get_areas_uid(self):
-        return db.get_areas_uid()
+        uids = db.get_areas_uid()
+        return {uid : uids.index(uid) for uid in uids}
     
-    def get_learners_uid(self):
-        self.lrn_uids = db.get_learners_uid()
-        self.lrn_num = len(self.lrn_uids)
+    def get_learners_uid_with_scn_greater_2(self):
+        uids = db.get_learners_uid_with_scn_greater_2()
+        self.lrn_uids = {uid : idx for idx, uid in enumerate(uids)}
+        self.lrn_num = len(uids)
 
     def get_scenes_uid(self):
-        self.scn_uids = db.get_scenes_uid()
-        self.scn_num = len(self.scn_uids)
+        uids = db.get_scenes_uid()
+        self.scn_uids = {uid : idx for idx, uid in enumerate(uids)}
+        self.scn_num = len(uids)
 
     def get_concepts_uid(self):
-        self.cpt_uids = db.get_concepts_uid()
-        self.cpt_num = len(self.cpt_uids)
+        uids = db.get_concepts_uid()
+        self.cpt_uids = {uid : idx for idx, uid in enumerate(uids)}
+        self.cpt_num = len(uids)
 
-    def get_lrn_scn_num(self):
-        return db.get_lrn_scn_num()
+    def get_lrn_scn_num_with_scn_greater_2(self):
+        return db.get_lrn_scn_num_with_scn_greater_2()
     
     def get_scn_cpt_dif(self):
         return db.get_scn_cpt_dif()
@@ -59,8 +63,8 @@ class DataReader():
         A = torch.zeros(self.cpt_num, self.cpt_num, dtype = torch.float)
         cpt_cpt_data = self.get_cpt_cpt()
         for onedata in cpt_cpt_data:
-            cpt_id_pre = self.cpt_uids.index(onedata[0])
-            cpt_id_aft = self.cpt_uids.index(onedata[1])
+            cpt_id_pre = self.cpt_uids[onedata[0]]
+            cpt_id_aft = self.cpt_uids[onedata[1]]
             A[cpt_id_pre][cpt_id_aft] = 1
         A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
         A = A + A_I
@@ -77,8 +81,8 @@ class DataReader():
         A = torch.zeros(self.cpt_num, len(are_uids), dtype = torch.float)
         cpt_are_data = self.get_cpt_are()
         for onedata in cpt_are_data:
-            cpt_id = self.cpt_uids.index(onedata[0])
-            are_id = are_uids.index(onedata[1])
+            cpt_id = self.cpt_uids[onedata[0]]
+            are_id = are_uids[onedata[1]]
             A[cpt_id][are_id] = 1
         A_T = A.t()
         A = torch.matmul(A, A_T)
@@ -142,10 +146,10 @@ class DataReader():
         # 计算出学习者的初始嵌入表达
         # 返回初始嵌入的结果
         self.learners_init = torch.zeros(self.lrn_num, self.scn_num, dtype=torch.float)
-        lrn_scn_num = self.get_lrn_scn_num()
+        lrn_scn_num = self.get_lrn_scn_num_with_scn_greater_2()
         for onedata in lrn_scn_num:
-            lrn_pos = self.lrn_uids.index(onedata[0])
-            scn_pos = self.scn_uids.index(onedata[1])
+            lrn_pos = self.lrn_uids[onedata[0]]
+            scn_pos = self.scn_uids[onedata[1]]
             times   = onedata[2]
             self.learners_init[lrn_pos][scn_pos] += times
         
@@ -175,7 +179,7 @@ class DataReader():
         self.concepts_init = torch.zeros(self.cpt_num, 128, dtype=torch.float)
         cpt_uid_name = self.get_cpt_uid_name()
         for onedata in cpt_uid_name:
-            cpt_pos = self.cpt_uids.index(onedata[0])
+            cpt_pos = self.cpt_uids[onedata[0]]
             for i in range(len(onedata[1])):
                 self.concepts_init[cpt_pos][i] = ord(onedata[1][i])
     
@@ -189,8 +193,8 @@ class DataReader():
         self.scenes_init = torch.zeros(self.scn_num, self.cpt_num, dtype=torch.float)
         scn_cpt_dif = self.get_scn_cpt_dif()
         for onedata in scn_cpt_dif:
-            scn_pos = self.scn_uids.index(onedata[0])
-            cpt_pos = self.cpt_uids.index(onedata[1])
+            scn_pos = self.scn_uids[onedata[0]]
+            cpt_pos = self.cpt_uids[onedata[1]]
             difficulty = onedata[2]
             self.scenes_init[scn_pos][cpt_pos] += difficulty
         
@@ -213,7 +217,7 @@ class DataReader():
         self.scenes_init = self.scenes_init * D_inv_diag.unsqueeze(1)
 
     def load_data_from_db(self):
-        self.get_learners_uid()
+        self.get_learners_uid_with_scn_greater_2()
         self.get_scenes_uid()
         self.get_concepts_uid()
         # 学习者初始嵌入
@@ -240,7 +244,7 @@ class DataReader():
     
     
 if __name__ == '__main__':
-    datareader =  DataReader()
+    datareader =  HGCDataReader()
     # datareader.get_learners_uid()
     # datareader.get_scenes_uid()
     # datareader.get_concepts_uid()

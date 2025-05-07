@@ -7,7 +7,8 @@ from typing import Dict, Tuple
 
 import sys
 sys.path.append('..')
-from Dataset.DataReader import DataReader
+# sys.path.append('../..')
+from HGC.Dataset.HGCDataReader import HGCDataReader
 
 class MetaPathAttention(nn.Module):
     def __init__(self, embedding_dim):
@@ -103,24 +104,26 @@ class Projection(nn.Module):
         return torch.cat(embeddings, dim=0)
 
 class HGC(nn.Module):
-    def __init__(self, embedding_dim):
+    def __init__(self, embedding_dim, device):
         super(HGC, self).__init__()
+        self.device = device
         self.embedding_dim = embedding_dim
 
-        self.proj_lrn = Projection(embedding_dim)
-        self.proj_scn = Projection(embedding_dim)
+        self.proj_lrn = Projection(embedding_dim).to(device)
+        self.proj_scn = Projection(embedding_dim).to(device)
+        self.proj_cpt = Projection(embedding_dim).to(device)
 
-        self.GCN_lsl = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim)
+        self.GCN_lsl = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
 
-        self.GCN_cc = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim)
-        self.GCN_cac = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim)
-        self.GCN_csc = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim)
+        self.GCN_cc = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+        self.GCN_cac = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+        self.GCN_csc = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
 
-        self.GCN_scs = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim)
-        self.GCN_sls = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim)
+        self.GCN_scs = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
+        self.GCN_sls = GCNConvEmbedding(embedding_dim, embedding_dim, embedding_dim).to(device)
 
-        self.attention_cpt = MetaPathAttention(embedding_dim)
-        self.attention_scn = MetaPathAttention(embedding_dim)
+        self.attention_cpt = MetaPathAttention(embedding_dim).to(device)
+        self.attention_scn = MetaPathAttention(embedding_dim).to(device)
 
     def forward(self, 
                 inits : tuple[torch.tensor, torch.tensor, torch.tensor], 
@@ -128,6 +131,7 @@ class HGC(nn.Module):
                 ) -> tuple[torch.tensor, torch.tensor, torch.tensor]:
         # (self.learners_init, self.scenes_init, self.concepts_init)
         # (self.p_lsl, self.p_cc, self.p_cac, self.p_csc, self.p_scs, self.p_sls)
+        
         p_lsl = p_matrix[0]
         p_cc = p_matrix[1]
         p_cac = p_matrix[2]
@@ -137,13 +141,15 @@ class HGC(nn.Module):
 
         embeddings_lrn = self.proj_lrn(inits[0])
         embeddings_scn = self.proj_scn(inits[1])
+        embeddings_cpt = self.proj_cpt(inits[2])
 
-        p_lsl.x = embeddings_lrn.clone()
-        p_scs.x = embeddings_scn.clone()
-        p_sls.x = embeddings_scn.clone()
-        p_cc.x = inits[2].clone()
-        p_cac.x = inits[2].clone()
-        p_csc.x = inits[2].clone()
+
+        p_lsl.x = embeddings_lrn.clone().to(self.device)
+        p_scs.x = embeddings_scn.clone().to(self.device)
+        p_sls.x = embeddings_scn.clone().to(self.device)
+        p_cc.x = embeddings_cpt.clone().to(self.device)
+        p_cac.x = embeddings_cpt.clone().to(self.device)
+        p_csc.x = embeddings_cpt.clone().to(self.device)
 
         out_lsl = self.GCN_lsl(p_lsl)
         out_scs = self.GCN_scs(p_scs)
@@ -151,7 +157,7 @@ class HGC(nn.Module):
         out_cc  = self.GCN_cc(p_cc)
         out_cac = self.GCN_cac(p_cac)
         out_csc = self.GCN_csc(p_csc)
-
+        
         combined_cpt = torch.stack([out_cc, out_cac, out_csc], dim=0)
         combined_scn = torch.stack([out_scs, out_sls], dim=0)
 
@@ -161,9 +167,9 @@ class HGC(nn.Module):
         return out_lsl, fin_out_scn, fin_out_cpt
 
 if __name__ == '__main__':
-    datareader = DataReader()
-    uids, inits, p_matrixes = datareader.load_data_from_db()
-    model = HGC(128)
+    HGCDataReader = HGCDataReader()
+    uids, inits, p_matrixes = HGCDataReader.load_data_from_db()
+    model = HGC(32, 'cpu')
     lrn_, scn_, cpt_ = model(inits, p_matrixes)
 
     print(lrn_.sum(), scn_.sum(), cpt_.sum())

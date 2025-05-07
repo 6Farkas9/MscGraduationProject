@@ -12,6 +12,19 @@ class DB():
         )
     
     # 获取从time_start开始的所有交互数据
+    def get_all_interacts(self):
+        sql = f"""
+        select lrn_uid, scn_uid, result
+        from interacts 
+        order by created_at desc
+        """
+        cursor = self.con.cursor()
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        cursor.close()
+        return result
+
+    # 获取从time_start开始的所有交互数据
     def get_interacts_from(self, time_start, limit = -1):
         sql = f"""
         select lrn_uid, scn_uid, result from interacts 
@@ -83,8 +96,8 @@ class DB():
         result = {}
         for scn_uid, cpt_uid in cursor.fetchall():
             if scn_uid not in result:
-                result[scn_uid] = []
-            result[scn_uid].append(cpt_uid)
+                result[scn_uid] = set()
+            result[scn_uid].add(cpt_uid)
         cursor.close()
         return result
     
@@ -98,6 +111,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql, [are_uid])
         result = cursor.fetchone()
+        cursor.close()
         return result
     
     # 获取场景涉及的知识点的内部id
@@ -129,6 +143,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchone()[0]
+        cursor.close()
         return result
     
     # 获取场景数量
@@ -140,6 +155,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchone()[0]
+        cursor.close()
         return result
     
     # 获取知识点数量
@@ -151,6 +167,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchone()[0]
+        cursor.close()
         return result
 
     # 获取所有学习者的uid
@@ -164,6 +181,7 @@ class DB():
         result = []
         for item in cursor.fetchall():
             result.append(item[0])
+        cursor.close()
         return result
     
     # 获取所有场景的uid
@@ -177,6 +195,7 @@ class DB():
         result = []
         for item in cursor.fetchall():
             result.append(item[0])
+        cursor.close()
         return result
     
     # 获取所有知识点的uid
@@ -190,6 +209,7 @@ class DB():
         result = []
         for item in cursor.fetchall():
             result.append(item[0])
+        cursor.close()
         return result
     
     # 从graph_interact中获取所有的交互记录以及交互总次数
@@ -201,6 +221,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchall()
+        cursor.close()
         return result
     
     # 从graph_involve中获取所有场景和知识点的难度信息
@@ -212,6 +233,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchall()
+        cursor.close()
         return result
     
     # 获取所有cpt_uid和name
@@ -223,6 +245,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchall()
+        cursor.close()
         return result
     
     # 获取area数量
@@ -234,6 +257,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchone()[0]
+        cursor.close()
         return result
     
     # 从graph_precondition中获取所有前置关系
@@ -245,6 +269,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchall()
+        cursor.close()
         return result
     
     # 从graph_belong中获取所有属于关系
@@ -256,6 +281,7 @@ class DB():
         cursor = self.con.cursor()
         cursor.execute(sql)
         result = cursor.fetchall()
+        cursor.close()
         return result
     
     # 获取所有area信息
@@ -269,5 +295,59 @@ class DB():
         result = []
         for item in cursor.fetchall():
             result.append(item[0])
+        cursor.close()
+        return result
+    
+    # 获取所有至少交互过两个场景的学习者
+    def get_learners_uid_with_scn_greater_2(self):
+        sql = '''
+        select lrn_uid
+        from interacts
+        group by lrn_uid
+        having count(*) >= 2
+        '''
+        cursor = self.con.cursor()
+        cursor.execute(sql)
+        result = []
+        for item in cursor.fetchall():
+            result.append(item[0])
+        cursor.close()
+        return result
+    
+     # 获取所有至少交互过两个场景的学习者的交互图信息
+    def get_lrn_scn_num_with_scn_greater_2(self):
+        sql = '''
+        select lrn_uid, scn_uid, all_times
+        from graph_interact
+        where lrn_uid in (
+            select lrn_uid
+            from interacts
+            group by lrn_uid
+            having count(*) >= 2
+        )
+        '''
+        cursor = self.con.cursor()
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        cursor.close()
+        return result
+    
+    # 获取所有至少交互过两个场景的学习者的所有交互信息
+    def get_interacts_with_scn_greater_2(self):
+        sql = f"""
+        select ict1.lrn_uid, ict1.scn_uid, ict1.result
+        from interacts ict1
+        where ict1.lrn_uid in (
+            select ict2.lrn_uid
+            from interacts ict2
+            group by ict2.lrn_uid
+            having count(*) >= 2
+        )
+        order by ict1.created_at asc
+        """
+        cursor = self.con.cursor()
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        cursor.close()
         return result
 db = DB()

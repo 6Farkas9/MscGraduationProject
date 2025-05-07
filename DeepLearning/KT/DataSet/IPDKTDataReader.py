@@ -1,11 +1,10 @@
-# import sys
-
-# sys.path.append('../..')
+import sys
+sys.path.append('../..')
 
 from Data.DBOperator import db
 from datetime import datetime, timedelta
 
-class DataReader():
+class IPDKTDataReader():
     def __init__(self, are_uid):
         self.are_uid = are_uid
         print(self.are_uid)

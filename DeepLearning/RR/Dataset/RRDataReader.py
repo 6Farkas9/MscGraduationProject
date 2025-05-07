@@ -1,0 +1,107 @@
+import sys
+sys.path.append('..')
+
+import torch
+import numpy as np
+from Data.DBOperator import db
+from datetime import datetime, timedelta
+from torch_geometric.data import Data
+from HGC.Dataset.HGCDataReader import HGCDataReader
+
+
+class RRDataReader():
+    
+    def __init__(self, sample_num):
+        self.sample_num = sample_num
+        self.hgcdr = HGCDataReader()
+
+    def get_concepts_of_scenes(self, scn_uids):
+        return db.get_concepts_of_scenes(scn_uids)
+    
+    def get_interacts_with_scn_greater_2(self, lrn_uids):
+        # lrn_scn = [[] for _ in range(len(lrn_uids))]
+        lrn_scn = {lrn_uid : [] for lrn_uid in lrn_uids.keys()}
+        interacts = db.get_interacts_with_scn_greater_2()
+        for onedata in interacts:
+            lrn_scn[onedata[0]].append(onedata[1])
+        return lrn_scn
+
+    def load_data_from_db(self):
+        uids, inits, p_matrixes = self.hgcdr.load_data_from_db()
+        
+        lrn_scn = self.get_interacts_with_scn_greater_2(uids[0])
+        scn_cpt = self.get_concepts_of_scenes(list(uids[1].keys()))
+        
+        # 获取学习者和知识点之间的交互情况
+        # 这里要改，改成最后一个统计01情况，前面的统计学习次数，直接构建训练集和测试集
+        
+        # lrn_cpt：一个两行n列的tensor，其中第一行是训练集的知识点学习次数，第二行是测试集的学习与否
+        lrn_cpt = {lrn_uid : np.zeros((2, len(uids[2])), dtype=np.float32) for lrn_uid in uids[0].keys()}
+
+        train_data = {lrn_uid : [] for lrn_uid in uids[0].keys()}
+        master_data = {lrn_uid : [] for lrn_uid in uids[0].keys()}
+        for lrn_uid in lrn_scn:
+            scn_uids = list(lrn_scn[lrn_uid])
+            # 训练集
+            for i in range(len(scn_uids) - 1):
+                train_data[lrn_uid].append(scn_uids[i])
+                for cpt_uid in scn_cpt[scn_uids[i]]:
+                    lrn_cpt[lrn_uid][0][uids[2][cpt_uid]] += 1
+            # 添加训练集负采样
+            non_zero_num = np.count_nonzero(lrn_cpt[lrn_uid][0] != 0)
+            neg_num = max(0, self.sample_num - non_zero_num)
+            zero_indexes = np.where(lrn_cpt[lrn_uid][0] == 0)[0]
+            select_indexes = np.random.choice(zero_indexes, neg_num, replace=True)
+            for idx in select_indexes:
+                lrn_cpt[lrn_uid][0][idx] += 1
+            # 测试集
+            master_data[lrn_uid].append(scn_uids[-1])
+            for cpt_uid in scn_cpt[scn_uids[-1]]:
+                lrn_cpt[lrn_uid][1][uids[2][cpt_uid]] += 1
+            non_zero_num = np.count_nonzero(lrn_cpt[lrn_uid][1] != 0)
+            neg_num = min(non_zero_num, len(uids[2]) - non_zero_num)
+            zero_indexes = np.where(lrn_cpt[lrn_uid][1] == 0)[0]
+            select_indexes = np.random.choice(zero_indexes, neg_num, replace=True)
+            for idx in select_indexes:
+                lrn_cpt[lrn_uid][1][idx] += 1
+
+        # for lrn_uid in uids[0]:
+        #     # 添加训练集负采样
+        #     non_zero_num = np.count_nonzero(self.lrn_cpt[lrn_uid][0] != 0)
+        #     neg_num = max(0, sample_num - non_zero_num)
+        #     zero_indexes = np.where(self.lrn_cpt[lrn_uid][0] == 0)[0]
+        #     select_indexes = np.random.choice(zero_indexes, neg_num, replace=True)
+        #     for idx in select_indexes:
+        #         self.lrn_cpt[lrn_uid][0][idx] += 1
+        #     # 添加测试集负采样
+        #     non_zero_num = np.count_nonzero(self.lrn_cpt[lrn_uid][1] != 0)
+        #     neg_num = min(non_zero_num, self.cpt_num - non_zero_num)
+        #     zero_indexes = np.where(self.lrn_cpt[lrn_uid][1] == 0)[0]
+        #     select_indexes = np.random.choice(zero_indexes, neg_num, replace=True)
+        #     for idx in select_indexes:
+        #         self.lrn_cpt[lrn_uid][1][idx] += 1
+
+         # 计算动态场景嵌入的知识点索引
+        indices = []
+        scatter_idx = []
+        for scn_uid in uids[1].keys():
+            row = uids[1][scn_uid]
+            cpt_indices = [uids[2][cpt_uid] for cpt_uid in scn_cpt[scn_uid]]
+            indices.extend(cpt_indices)
+            scatter_idx.extend([row] * len(cpt_indices))
+        
+        # 转换为张量
+        dynamic_indices = torch.tensor(indices, dtype=torch.long)
+        dynamic_scatter_idx = torch.tensor(scatter_idx, dtype=torch.long)
+
+        return train_data, master_data, uids, inits, p_matrixes, dynamic_indices, dynamic_scatter_idx
+    
+if __name__ == '__main__':
+    rrdr = RRDataReader()
+    td, md, uids, inits, p_matrixes, di, dsi = rrdr.load_data_from_db()
+    # print(len(td))
+    # print(len(md))
+    # print(len(ls))
+    # print(len(sc))
+    # print(len(lc))
+    print(lc[list(uids[0].keys())[0]])
