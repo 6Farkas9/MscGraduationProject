@@ -1,11 +1,15 @@
 import sys
-sys.path.append('..')
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
 
 import torch
 import numpy as np
-from Data.DBOperator import db
 from datetime import datetime, timedelta
 from torch_geometric.data import Data
+
+from Data.DBOperator import db
 from HGC.Dataset.HGCDataReader import HGCDataReader
 
 
@@ -36,34 +40,34 @@ class RRDataReader():
         # 这里要改，改成最后一个统计01情况，前面的统计学习次数，直接构建训练集和测试集
         
         # lrn_cpt：一个两行n列的tensor，其中第一行是训练集的知识点学习次数，第二行是测试集的学习与否
-        lrn_cpt = {lrn_uid : np.zeros((2, len(uids[2])), dtype=np.float32) for lrn_uid in uids[0].keys()}
+        # lrn_cpt = {lrn_uid : np.zeros((2, len(uids[2])), dtype=np.float32) for lrn_uid in uids[0].keys()}
 
-        train_data = {lrn_uid : [] for lrn_uid in uids[0].keys()}
-        master_data = {lrn_uid : [] for lrn_uid in uids[0].keys()}
+        train_data = {lrn_uid : [[], np.zeros(len(uids[2]), dtype=np.float32)] for lrn_uid in uids[0].keys()}
+        master_data = {lrn_uid : [[], np.zeros(len(uids[2]), dtype=np.float32)] for lrn_uid in uids[0].keys()}
         for lrn_uid in lrn_scn:
             scn_uids = list(lrn_scn[lrn_uid])
             # 训练集
             for i in range(len(scn_uids) - 1):
-                train_data[lrn_uid].append(scn_uids[i])
+                train_data[lrn_uid][0].append(scn_uids[i])
                 for cpt_uid in scn_cpt[scn_uids[i]]:
-                    lrn_cpt[lrn_uid][0][uids[2][cpt_uid]] += 1
+                    train_data[lrn_uid][1][uids[2][cpt_uid]] += 1
             # 添加训练集负采样
-            non_zero_num = np.count_nonzero(lrn_cpt[lrn_uid][0] != 0)
+            non_zero_num = np.count_nonzero(train_data[lrn_uid][1] != 0)
             neg_num = max(0, self.sample_num - non_zero_num)
-            zero_indexes = np.where(lrn_cpt[lrn_uid][0] == 0)[0]
+            zero_indexes = np.where(train_data[lrn_uid][1] == 0)[0]
             select_indexes = np.random.choice(zero_indexes, neg_num, replace=True)
             for idx in select_indexes:
-                lrn_cpt[lrn_uid][0][idx] += 1
+                train_data[lrn_uid][1][idx] += 1
             # 测试集
-            master_data[lrn_uid].append(scn_uids[-1])
+            master_data[lrn_uid][0].append(scn_uids[-1])
             for cpt_uid in scn_cpt[scn_uids[-1]]:
-                lrn_cpt[lrn_uid][1][uids[2][cpt_uid]] += 1
-            non_zero_num = np.count_nonzero(lrn_cpt[lrn_uid][1] != 0)
+                master_data[lrn_uid][1][uids[2][cpt_uid]] += 1
+            non_zero_num = np.count_nonzero(master_data[lrn_uid][1] != 0)
             neg_num = min(non_zero_num, len(uids[2]) - non_zero_num)
-            zero_indexes = np.where(lrn_cpt[lrn_uid][1] == 0)[0]
+            zero_indexes = np.where(master_data[lrn_uid][1] == 0)[0]
             select_indexes = np.random.choice(zero_indexes, neg_num, replace=True)
             for idx in select_indexes:
-                lrn_cpt[lrn_uid][1][idx] += 1
+                master_data[lrn_uid][1][idx] += 1
 
         # for lrn_uid in uids[0]:
         #     # 添加训练集负采样
@@ -97,11 +101,11 @@ class RRDataReader():
         return train_data, master_data, uids, inits, p_matrixes, dynamic_indices, dynamic_scatter_idx
     
 if __name__ == '__main__':
-    rrdr = RRDataReader()
+    rrdr = RRDataReader(128)
     td, md, uids, inits, p_matrixes, di, dsi = rrdr.load_data_from_db()
-    # print(len(td))
+    print(len(td))
     # print(len(md))
     # print(len(ls))
     # print(len(sc))
     # print(len(lc))
-    print(lc[list(uids[0].keys())[0]])
+    # print(lc[list(uids[0].keys())[0]])

@@ -1,5 +1,8 @@
 import sys
-sys.path.append('..')
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
 
 import os
 import torch
@@ -7,13 +10,13 @@ import argparse
 import pandas as pd
 import numpy as np
 import torch.nn as nn
-
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader
-from DeepLearning.KT.DataSet.IPDKTDataReader import IPDKTDataReader
-from DataSet.IPDKTDataset import IPDKTDataset
-from Model.IPDKT import IPDKT
+
+from KT.DataSet.IPDKTDataReader import IPDKTDataReader
+from KT.DataSet.IPDKTDataset import IPDKTDataset
+from KT.Model.IPDKT import IPDKT
 
 def train_epoch(model, train_iterator, optim, criterion, device="cpu"):
     model.train()

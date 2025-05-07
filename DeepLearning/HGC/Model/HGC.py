@@ -1,3 +1,12 @@
+import sys
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
+
+HGC_path = deeplearning_root + '\\HGC'
+sys.path.append(HGC_path)
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,10 +14,7 @@ from torch_geometric.nn import GATConv, GCNConv
 from torch_geometric.data import Data
 from typing import Dict, Tuple
 
-import sys
-sys.path.append('..')
-# sys.path.append('../..')
-from HGC.Dataset.HGCDataReader import HGCDataReader
+from Dataset.HGCDataReader import HGCDataReader
 
 class MetaPathAttention(nn.Module):
     def __init__(self, embedding_dim):
@@ -216,9 +222,9 @@ class HGC_CPT(nn.Module):
 
         return fin_out_cpt
 
-class HGC(nn.Module):
+class HGC_ALL(nn.Module):
     def __init__(self, embedding_dim, device):
-        super(HGC, self).__init__()
+        super(HGC_ALL, self).__init__()
         self.device = device
         self.embedding_dim = embedding_dim
 
@@ -280,9 +286,9 @@ class HGC(nn.Module):
         return out_lsl, fin_out_scn, fin_out_cpt
 
 if __name__ == '__main__':
-    HGCDataReader = HGCDataReader()
-    uids, inits, p_matrixes = HGCDataReader.load_data_from_db()
-    model = HGC(32, 'cpu')
+    hgcdr = HGCDataReader()
+    uids, inits, p_matrixes = hgcdr.load_data_from_db()
+    model = HGC_ALL(32, 'cpu')
     lrn_, scn_, cpt_ = model(inits, p_matrixes)
 
     print(lrn_.sum(), scn_.sum(), cpt_.sum())

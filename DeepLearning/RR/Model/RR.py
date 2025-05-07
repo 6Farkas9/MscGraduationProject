@@ -1,13 +1,15 @@
+import sys
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv, GCNConv
 from torch_geometric.data import Data
 from typing import Dict, Tuple
-
-import sys
-sys.path.append('../..')
-from HGC.Model.HGC import HGC
 
 class RRGRU(nn.Module):
     def __init__(self, input_size=32, hidden_size=16, num_layers=1):
@@ -53,16 +55,9 @@ class RR(nn.Module):
         super(RR, self).__init__()
         self.device = device
         self.gru = RRGRU(embedding_dim, embedding_dim // 2, 1)
-    
-    # 很麻烦，但是每次都要重新计算HGC
-    # 那么dataset每次都要返回完整的HGC需要的数据
-    # 使用HGC计算出静态嵌入后，直接使用scn计算出的静态嵌入来进行进一步计算
-    # 不行，不能直接使用scn嵌入，还是要使用论文思路
-        # self.hgc = HGC(embedding_dim, device).to(device)
 
     def forward(self, 
-                inits : tuple[torch.tensor, torch.tensor, torch.tensor], 
-                p_martixes : tuple[torch.tensor, torch.tensor, torch.tensor, torch.tensor, torch.tensor, torch.tensor]
+                lrn_static : torch.tensor, cpt_static : torch.tensor
                 ) -> tuple[torch.tensor, torch.tensor, torch.tensor]:
 
         # lrn_emb, scn_emb, cpt_emb = self.hgc(inits, p_martixes)

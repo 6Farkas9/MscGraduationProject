@@ -1,4 +1,9 @@
-import os
+import sys
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
+
 import torch
 import argparse
 import pandas as pd
@@ -10,11 +15,10 @@ from torch.utils.data import Dataset, DataLoader
 from torch_geometric.utils import subgraph
 from torch_geometric.data import Data
 
-from Dataset.RRDataReader import RRDataReader
-from Dataset.RRDataSet import RRDataSet
+from RR.Dataset.RRDataReader import RRDataReader
+from RR.Dataset.RRDataSet import RRDataSet
 from HGC.Model.HGC import HGC_LRN, HGC_SCN, HGC_CPT
-
-from Model.RR import RR
+from RR.Model.RR import RR
 
 parser = argparse.ArgumentParser(description='RR')
 parser.add_argument('--batch_size',type=int,default=32,help='number of batch size to train (defauly 32 )')

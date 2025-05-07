@@ -1,10 +1,14 @@
 import sys
-sys.path.append('../..')
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
 
 import torch
-from Data.DBOperator import db
 from datetime import datetime, timedelta
 from torch_geometric.data import Data
+
+from Data.DBOperator import db
 
 # DataReader的职责应该是从数据库中读取数据，构建出图
 # 返回的结果传给Dataset

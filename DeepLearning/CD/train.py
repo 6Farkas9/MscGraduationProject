@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
+
 import os
 import torch
 import argparse
@@ -6,12 +12,12 @@ import numpy as np
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
-from Model.DTR import Model_PDBeta
-from Model.MIRT import MIRT
-from Dataset.DADDateReader import DADDataReader
-from Dataset.DataOperator import get_H_Data,get_PDBeta_Data
-from Dataset.DADDataSet import DADDataset
-sys.path.append('..')
+
+from CD.Model.DTR import Model_PDBeta
+from CD.Model.MIRT import MIRT
+from CD.Dataset.DADDateReader import DADDataReader
+from CD.Dataset.DataOperator import get_H_Data,get_PDBeta_Data
+from CD.Dataset.DADDataSet import DADDataset
 from KCGE.DataSet.KCGEDataReader import KCGEDataReader
 from KCGE.Model.KCGE import KCGE
 

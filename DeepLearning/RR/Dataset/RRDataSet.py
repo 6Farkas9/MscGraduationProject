@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
+
 import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
@@ -14,20 +20,11 @@ class RRDataSet(Dataset):
         self.cpt_uids = uids[2]
 
         self.lrn_init = lrn_init  # shape: [num_users, embed_dim]
-        # self.scn_init = inits[1]  # shape: [num_scenes, embed_dim]
-        # self.cpt_init = inits[2]  # shape: [num_concepts, embed_dim]
-
-        # self.p_lsl = p_lsl
-        # self.p_lsl.x = self.lrn_init
-        # self.p_cc  = p_matrixes[1]
-        # self.p_cac = p_matrixes[2]
-        # self.p_csc = p_matrixes[3]
-        # self.p_scs = p_matrixes[4]
-        # self.p_sls = p_matrixes[5]
 
         self.scn_seq_indices = torch.zeros(len(self.lrn_uids), max_step, dtype=torch.long)
         self.scn_seq_masks = torch.zeros(len(self.lrn_uids), max_step, dtype=torch.float32)
-        for lrn_uid, scn_seq in self.data.items():
+        for lrn_uid in self.data:
+            scn_seq = self.data[lrn_uid][0]
             row = self.lrn_uids[lrn_uid]
             seq_indices = [self.scn_uids[scn_uid] for scn_uid in scn_seq]
             valid_len = min(len(seq_indices), max_step)
