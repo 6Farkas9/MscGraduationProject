@@ -25,6 +25,7 @@ parser.add_argument('--batch_size',type=int,default=32,help='number of batch siz
 parser.add_argument('--epochs',type=int,default=32,help='number of epochs to train (defauly 32 )')
 parser.add_argument('--lr',type=float,default=0.01,help='number of learning rate')
 parser.add_argument('--embedding_dim',type=int,default=32,help='the number of the embedding_dim')
+parser.add_argument('--hidden_dim',type=int,default=30,help='the number of the hidden_dim')
 parser.add_argument('--max_step',type=int,default=128,help='the number of max step')
 parser.add_argument('--sample_num',type=int,default=100,help='the number of max sample')
 
@@ -49,25 +50,6 @@ if __name__ == '__main__':
     (p_cc_edge_index, p_cc_edge_attr), \
     (p_cac_edge_index, p_cac_edge_attr), \
     (p_csc_edge_index, p_csc_edge_attr) = p_matrixes
-    
-
-    # p_lsl_edge_index = p_matrixes[0][0] 
-    # p_lsl_edge_attr = p_matrixes[0][1]
-
-    # p_scs_edge_index = p_matrixes[1][0]
-    # p_scs_edge_attr = p_matrixes[1][1]
-
-    # p_sls_edge_index = p_matrixes[2][0]
-    # p_sls_edge_attr = p_matrixes[2][1]
-
-    # p_cc_edge_index  = p_matrixes[3][0]
-    # p_cc_edge_attr  = p_matrixes[3][1]
-
-    # p_cac_edge_index = p_matrixes[4][0]
-    # p_cac_edge_attr = p_matrixes[4][1]
-
-    # p_csc_edge_index = p_matrixes[5][0]
-    # p_csc_edge_attr = p_matrixes[5][1]
 
     train_dataset = RRDataSet(train_data, uids, learners_init, parsers.max_step)
     train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
@@ -78,7 +60,7 @@ if __name__ == '__main__':
     model_hgc_scn = HGC_SCN(parsers.embedding_dim, device).to(device)
     model_hgc_cpt = HGC_CPT(parsers.embedding_dim, device).to(device)
 
-    model_rr = RR(parsers.embedding_dim, device).to(device)
+    model_rr = RR(parsers.embedding_dim, parsers.hidden_dim, device).to(device)
 
     print(model_hgc_lrn)
     print(model_hgc_scn)
@@ -113,11 +95,21 @@ if __name__ == '__main__':
                                 p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
                                 )
 
-        print(lrn_emb.shape, scn_emb.shape, cpt_emb.shape)
-
         scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
 
-        print(scn_dynamic_emb)
+        # lrn_static : torch.tensor, 
+        # scn_dynamic : torch.tensor,
+        # scn_seq_index : torch.tensor,
+        # scn_seq_mask : torch.tensor,
+        # cpt_static : torch.tensor
+        r, h_lrn, h_cpt =  model_rr(lrn_emb, 
+                                    scn_dynamic_emb, 
+                                    scn_seq_index.to(device),
+                                    scn_seq_mask.to(device),
+                                    cpt_emb)
+        
+        print(r.shape, h_lrn.shape, h_cpt.shape)
+
 
 
 
