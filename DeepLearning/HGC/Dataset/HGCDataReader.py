@@ -61,7 +61,8 @@ class HGCDataReader():
         p = torch.matmul(torch.matmul(D, A), D)
         row, col = p.nonzero(as_tuple = True)
         weight = p[row, col]
-        self.p_lsl = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        # self.p_lsl = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        self.p_lsl = (torch.stack([row, col], dim=0), weight)
 
     def get_P_cc(self):
         A = torch.zeros(self.cpt_num, self.cpt_num, dtype = torch.float)
@@ -78,7 +79,8 @@ class HGCDataReader():
         p = torch.matmul(torch.matmul(D, A), D)
         row, col = p.nonzero(as_tuple = True)
         weight = p[row, col]
-        self.p_cc = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        # self.p_cc = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        self.p_cc = (torch.stack([row, col], dim=0), weight)
     
     def get_P_cac(self):
         are_uids = self.get_areas_uid()
@@ -98,7 +100,8 @@ class HGCDataReader():
         p = torch.matmul(torch.matmul(D, A), D)
         row, col = p.nonzero(as_tuple = True)
         weight = p[row, col]
-        self.p_cac = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        # self.p_cac = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        self.p_cac = (torch.stack([row, col], dim=0), weight)
     
     def get_P_csc(self):
         A = self.scenes_init.clone().t()
@@ -112,7 +115,8 @@ class HGCDataReader():
         p = torch.matmul(torch.matmul(D, A), D)
         row, col = p.nonzero(as_tuple = True)
         weight = p[row, col]
-        self.p_csc = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        # self.p_csc = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        self.p_csc = (torch.stack([row, col], dim=0), weight)
     
     def get_P_scs(self):
         A = self.scenes_init.clone()
@@ -126,7 +130,8 @@ class HGCDataReader():
         p = torch.matmul(torch.matmul(D, A), D)
         row, col = p.nonzero(as_tuple = True)
         weight = p[row, col]
-        self.p_scs = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        # self.p_scs = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        self.p_scs = (torch.stack([row, col], dim=0), weight)
     
     def get_P_sls(self):
         A = self.learners_init.clone().t()
@@ -140,7 +145,8 @@ class HGCDataReader():
         p = torch.matmul(torch.matmul(D, A), D)
         row, col = p.nonzero(as_tuple = True)
         weight = p[row, col]
-        self.p_sls = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        # self.p_sls = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
+        self.p_sls = (torch.stack([row, col], dim=0), weight)
 
     def learner_init_embedding(self):
         # 使用ls初始化
@@ -244,7 +250,7 @@ class HGCDataReader():
 
         return  (self.lrn_uids, self.scn_uids, self.cpt_uids), \
                 (self.learners_init, self.scenes_init, self.concepts_init), \
-                (self.p_lsl, self.p_cc, self.p_cac, self.p_csc, self.p_scs, self.p_sls)
+                (self.p_lsl, self.p_scs, self.p_sls, self.p_cc, self.p_cac, self.p_csc,)
     
     
 if __name__ == '__main__':
@@ -258,9 +264,7 @@ if __name__ == '__main__':
     # print(type(res), res)
 
     ids, inits, ps =  datareader.load_data_from_db()
-    print(ids)
-    for item in inits:
-        print(item.sum())
+    
     print(ps)
 
     # datareader.learner_init_embedding()

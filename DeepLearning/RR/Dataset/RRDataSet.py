@@ -19,6 +19,8 @@ class RRDataSet(Dataset):
         self.scn_uids = uids[1]
         self.cpt_uids = uids[2]
 
+        self.idx2lrn_uid = {idx : lrn_uid for lrn_uid, idx in uids[0].items()}
+
         self.lrn_init = lrn_init  # shape: [num_users, embed_dim]
 
         self.scn_seq_indices = torch.zeros(len(self.lrn_uids), max_step, dtype=torch.long)
@@ -46,6 +48,8 @@ class RRDataSet(Dataset):
         # 4. data中对应键值的列表（非固定大小）？
         # 直接计算出4岁对应的tensor：大小为max_step，每个位置存储对应scn的行号，mask为是否有效的掩码
 
+        lrn_uid = self.idx2lrn_uid[idx]
+
         learner_init = self.lrn_init[idx]
         # scene_init = self.scn_init
         # concept_init = self.cpt_init
@@ -53,12 +57,15 @@ class RRDataSet(Dataset):
         scn_seq_index = self.scn_seq_indices[idx]
         scn_seq_mask = self.scn_seq_masks[idx]
 
+        r_data = self.data[lrn_uid][1]
+
         # return learner_init, scene_init, concept_init, scn_seq_index, scn_seq_mask
         return {
             'learner_idx' : idx,
             'learner_init' : learner_init,
             'scn_seq_index' : scn_seq_index,
-            'scn_seq_mask' : scn_seq_mask
+            'scn_seq_mask' : scn_seq_mask,
+            'r_uk_data' : r_data
         }
     
     def collate_fn(self, batch):
@@ -66,6 +73,7 @@ class RRDataSet(Dataset):
         learner_init = torch.stack([item['learner_init'] for item in batch])
         scn_seq_index = torch.stack([item['scn_seq_index'] for item in batch])
         scn_seq_mask = torch.stack([item['scn_seq_mask'] for item in batch])
+        r_uk_data = torch.stack([item['r_uk_data'] for item in batch])
 
         # sub_p_lsl = subgraph(learner_idx, edge_index=self.p_lsl.edge_index, edge_attr=self.p_lsl.edge_attr, num_nodes=self.p_lsl.x.size(0))
 
@@ -73,5 +81,6 @@ class RRDataSet(Dataset):
             'learner_idx' : learner_idx,
             'learner_init' : learner_init,
             'scn_seq_index' : scn_seq_index,
-            'scn_seq_mask' : scn_seq_mask
+            'scn_seq_mask' : scn_seq_mask,
+            'r_uk_data' : r_uk_data
         }

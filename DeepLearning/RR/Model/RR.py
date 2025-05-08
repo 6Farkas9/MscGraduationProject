@@ -57,7 +57,8 @@ class RR(nn.Module):
         self.gru = RRGRU(embedding_dim, embedding_dim // 2, 1)
 
     def forward(self, 
-                lrn_static : torch.tensor, cpt_static : torch.tensor
+                lrn_static : torch.tensor, scn_dynamic : torch.tensor
+                
                 ) -> tuple[torch.tensor, torch.tensor, torch.tensor]:
 
         # lrn_emb, scn_emb, cpt_emb = self.hgc(inits, p_martixes)

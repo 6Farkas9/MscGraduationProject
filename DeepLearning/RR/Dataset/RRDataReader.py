@@ -35,6 +35,9 @@ class RRDataReader():
         
         lrn_scn = self.get_interacts_with_scn_greater_2(uids[0])
         scn_cpt = self.get_concepts_of_scenes(list(uids[1].keys()))
+
+        # 为方便之后的计算，这里要计算出scn_cpt的二维矩阵，之后可以直接使用矩阵运算
+        # 不用在这运算
         
         # 获取学习者和知识点之间的交互情况
         # 这里要改，改成最后一个统计01情况，前面的统计学习次数，直接构建训练集和测试集
@@ -69,41 +72,31 @@ class RRDataReader():
             for idx in select_indexes:
                 master_data[lrn_uid][1][idx] += 1
 
-        # for lrn_uid in uids[0]:
-        #     # 添加训练集负采样
-        #     non_zero_num = np.count_nonzero(self.lrn_cpt[lrn_uid][0] != 0)
-        #     neg_num = max(0, sample_num - non_zero_num)
-        #     zero_indexes = np.where(self.lrn_cpt[lrn_uid][0] == 0)[0]
-        #     select_indexes = np.random.choice(zero_indexes, neg_num, replace=True)
-        #     for idx in select_indexes:
-        #         self.lrn_cpt[lrn_uid][0][idx] += 1
-        #     # 添加测试集负采样
-        #     non_zero_num = np.count_nonzero(self.lrn_cpt[lrn_uid][1] != 0)
-        #     neg_num = min(non_zero_num, self.cpt_num - non_zero_num)
-        #     zero_indexes = np.where(self.lrn_cpt[lrn_uid][1] == 0)[0]
-        #     select_indexes = np.random.choice(zero_indexes, neg_num, replace=True)
-        #     for idx in select_indexes:
-        #         self.lrn_cpt[lrn_uid][1][idx] += 1
+        # 计算动态场景嵌入的知识点索引
+        rows = []
+        cols = []
+        for scn_uid, cpt_uids in scn_cpt.items():
+            scn_idx = uids[1][scn_uid]
+            for cpt_uid in cpt_uids:
+                cpt_idx = uids[2][cpt_uid]
+                rows.append(scn_idx)
+                cols.append(cpt_idx)
 
-         # 计算动态场景嵌入的知识点索引
-        indices = []
-        scatter_idx = []
-        for scn_uid in uids[1].keys():
-            row = uids[1][scn_uid]
-            cpt_indices = [uids[2][cpt_uid] for cpt_uid in scn_cpt[scn_uid]]
-            indices.extend(cpt_indices)
-            scatter_idx.extend([row] * len(cpt_indices))
-        
-        # 转换为张量
-        dynamic_indices = torch.tensor(indices, dtype=torch.long)
-        dynamic_scatter_idx = torch.tensor(scatter_idx, dtype=torch.long)
+        index_matrix = torch.tensor([rows, cols], dtype=torch.long)
+        values = torch.ones(index_matrix.shape[1])
 
-        return train_data, master_data, uids, inits, p_matrixes, dynamic_indices, dynamic_scatter_idx
+        dynamic_scn_mat = torch.sparse_coo_tensor(
+            indices=index_matrix,
+            values=values,
+            size=(len(uids[1]), len(uids[2])),
+        )
+
+        return train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat
     
 if __name__ == '__main__':
     rrdr = RRDataReader(128)
-    td, md, uids, inits, p_matrixes, di, dsi = rrdr.load_data_from_db()
-    print(len(td))
+    td, md, uids, inits, p_matrixes, dsm = rrdr.load_data_from_db()
+    print(dsm)
     # print(len(md))
     # print(len(ls))
     # print(len(sc))
