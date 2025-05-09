@@ -57,7 +57,7 @@ def train_epoch(model, train_iterator, optim, criterion, device="cpu"):
     return loss, acc
 
 def master_epoch(model, train_iterator, criterion, device="cpu"):
-    model.train()
+    model.eval()
 
     num_correct = 0
     num_sum = 0

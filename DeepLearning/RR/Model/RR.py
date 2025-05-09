@@ -28,7 +28,7 @@ class RRGRU(nn.Module):
             batch_first=True  # 输入形状为(batch, seq_len, input_size)
         )
         
-    def forward(self, x : torch.tensor) -> torch.tensor:
+    def forward(self, x : torch.Tensor) -> torch.Tensor:
         """
         输入:
         - x: 用户知识水平序列 (batch_size, seq_len, input_size)
@@ -69,12 +69,12 @@ class RR(nn.Module):
         nn.init.xavier_uniform_(self.cpt_lmd)  # Xavier初始化
 
     def forward(self, 
-                lrn_static : torch.tensor, 
-                scn_dynamic : torch.tensor,
-                scn_seq_index : torch.tensor,
-                scn_seq_mask : torch.tensor,
-                cpt_static : torch.tensor
-                ) -> torch.tensor:
+                lrn_static : torch.Tensor, 
+                scn_dynamic : torch.Tensor,
+                scn_seq_index : torch.Tensor,
+                scn_seq_mask : torch.Tensor,
+                cpt_static : torch.Tensor
+                ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # lrn_static : 学习者静态嵌入
         # scn_dynamic : 计算出的场景的动态嵌入
         # scn_seq_index : 当前batch的学习者和场景的互动序列

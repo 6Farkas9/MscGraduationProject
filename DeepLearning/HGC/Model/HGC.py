@@ -20,7 +20,7 @@ class MetaPathAttention(nn.Module):
         self.W_att = nn.Linear(embedding_dim, 1)  # 可训练参数（原文中的 W_att^mp）
         self.activation = nn.ReLU()
 
-    def forward(self, embeddings : torch.tensor) -> torch.tensor:
+    def forward(self, embeddings : torch.Tensor) -> torch.Tensor:
         """
         embeddings: 形状为 [num_paths, x, embedding_dim]
         - num_paths: 元路径的数量
@@ -60,14 +60,14 @@ class GCNConvEmbedding(nn.Module):
         nn.init.xavier_uniform_(self.W)  # Xavier初始化
 
     def forward(self, 
-                h : torch.tensor,
-                edge_index : torch.tensor,
-                edge_attr : torch.tensor
-                ) -> torch.tensor:
+                h : torch.Tensor,
+                edge_index : torch.Tensor,
+                edge_attr : torch.Tensor
+                ) -> torch.Tensor:
         
         for _ in range(3):  # 三层共享参数的卷积
             # 1. 计算 P*h (通过边索引和边权重隐式构造传播矩阵P)
-            row, col = edge_index
+            row, col = edge_index[0], edge_index[1]
             # 加权聚合 (edge_attr作为P的非零元素值)
 
             h_agg = scatter_add(h[row] * edge_attr.unsqueeze(1), col, dim=0, dim_size=h.size(0))
@@ -123,9 +123,9 @@ class HGC_LRN(nn.Module):
         self.GCN_lsl = GCNConvEmbedding(embedding_dim).to(device)
 
     def forward(self,
-                init : torch.tensor,
-                p_lsl_edge_index : torch.tensor, p_lsl_edge_attr : torch.tensor
-                ) -> torch.tensor:    
+                init : torch.Tensor,
+                p_lsl_edge_index : torch.Tensor, p_lsl_edge_attr : torch.Tensor
+                ) -> torch.Tensor:    
 
         embeddings_lrn = self.proj_lrn(init)
 
@@ -149,10 +149,10 @@ class HGC_SCN(nn.Module):
         self.attention_scn = MetaPathAttention(embedding_dim).to(device)
 
     def forward(self, 
-                init : torch.tensor,
-                p_scs_edge_index : torch.tensor, p_scs_edge_attr : torch.tensor,
-                p_sls_edge_index : torch.tensor, p_sls_edge_attr : torch.tensor
-                ) -> torch.tensor:
+                init : torch.Tensor,
+                p_scs_edge_index : torch.Tensor, p_scs_edge_attr : torch.Tensor,
+                p_sls_edge_index : torch.Tensor, p_sls_edge_attr : torch.Tensor
+                ) -> torch.Tensor:
 
         embeddings_scn = self.proj_scn(init)
 
@@ -184,11 +184,11 @@ class HGC_CPT(nn.Module):
         self.attention_cpt = MetaPathAttention(embedding_dim).to(device)
 
     def forward(self, 
-                init : torch.tensor, 
-                p_cc_edge_index : torch.tensor, p_cc_edge_attr : torch.tensor,
-                p_cac_edge_index : torch.tensor, p_cac_edge_attr : torch.tensor,
-                p_csc_edge_index : torch.tensor, p_csc_edge_attr : torch.tensor
-                ) -> torch.tensor:
+                init : torch.Tensor, 
+                p_cc_edge_index : torch.Tensor, p_cc_edge_attr : torch.Tensor,
+                p_cac_edge_index : torch.Tensor, p_cac_edge_attr : torch.Tensor,
+                p_csc_edge_index : torch.Tensor, p_csc_edge_attr : torch.Tensor
+                ) -> torch.Tensor:
 
         embeddings_cpt = self.proj_cpt(init)
 
@@ -231,16 +231,16 @@ class HGC_ALL(nn.Module):
         self.attention_scn = MetaPathAttention(embedding_dim).to(device)
 
     def forward(self, 
-                lrn_init : torch.tensor, 
-                scn_init : torch.tensor, 
-                cpt_init : torch.tensor, 
-                p_lsl_edge_index : torch.tensor, p_lsl_edge_attr : torch.tensor,
-                p_scs_edge_index : torch.tensor, p_scs_edge_attr : torch.tensor,
-                p_sls_edge_index : torch.tensor, p_sls_edge_attr : torch.tensor,
-                p_cc_edge_index : torch.tensor, p_cc_edge_attr : torch.tensor,
-                p_cac_edge_index : torch.tensor, p_cac_edge_attr : torch.tensor,
-                p_csc_edge_index : torch.tensor, p_csc_edge_attr : torch.tensor
-                ) -> tuple[torch.tensor, torch.tensor, torch.tensor]:
+                lrn_init : torch.Tensor, 
+                scn_init : torch.Tensor, 
+                cpt_init : torch.Tensor, 
+                p_lsl_edge_index : torch.Tensor, p_lsl_edge_attr : torch.Tensor,
+                p_scs_edge_index : torch.Tensor, p_scs_edge_attr : torch.Tensor,
+                p_sls_edge_index : torch.Tensor, p_sls_edge_attr : torch.Tensor,
+                p_cc_edge_index : torch.Tensor, p_cc_edge_attr : torch.Tensor,
+                p_cac_edge_index : torch.Tensor, p_cac_edge_attr : torch.Tensor,
+                p_csc_edge_index : torch.Tensor, p_csc_edge_attr : torch.Tensor
+                ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         embeddings_lrn = self.proj_lrn(lrn_init)
         embeddings_scn = self.proj_scn(scn_init)
