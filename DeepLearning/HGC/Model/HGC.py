@@ -71,10 +71,10 @@ class GCNConvEmbedding(nn.Module):
             # 加权聚合 (edge_attr作为P的非零元素值)
 
             h_agg = scatter_add(h[row] * edge_attr.unsqueeze(1), col, dim=0, dim_size=h.size(0))
-            
+
             # 2. 计算 h*P*W (等价于 (P*h)*W)
             h = torch.mm(h_agg, self.W)
-            
+
             # 3. ReLU激活
             h = F.relu(h)
         
@@ -156,12 +156,13 @@ class HGC_SCN(nn.Module):
 
         embeddings_scn = self.proj_scn(init)
 
-        out_scs = self.GCN_scs(embeddings_scn.clone().to(self.device),
-                                p_scs_edge_index.to(self.device),
-                                p_scs_edge_attr.to(self.device))
-        out_sls = self.GCN_sls(embeddings_scn.to(self.device),
-                                p_sls_edge_index.to(self.device),
-                                p_sls_edge_attr.to(self.device))
+        out_scs = self.GCN_scs(embeddings_scn.clone(),
+                                p_scs_edge_index.clone(),
+                                p_scs_edge_attr.clone())
+        
+        out_sls = self.GCN_sls(embeddings_scn.clone(),
+                                p_sls_edge_index.clone(),
+                                p_sls_edge_attr.clone())
         
         combined_scn = torch.stack([out_scs, out_sls], dim=0)
 
@@ -192,15 +193,15 @@ class HGC_CPT(nn.Module):
 
         embeddings_cpt = self.proj_cpt(init)
 
-        out_cc  = self.GCN_cc(embeddings_cpt.clone().to(self.device),
-                                p_cc_edge_index.to(self.device),
-                                p_cc_edge_attr.to(self.device))
-        out_cac = self.GCN_cac(embeddings_cpt.clone().to(self.device),
-                                p_cac_edge_index.to(self.device),
-                                p_cac_edge_attr.to(self.device))
-        out_csc = self.GCN_csc(embeddings_cpt.to(self.device),
-                                p_csc_edge_index.to(self.device),
-                                p_csc_edge_attr.to(self.device))
+        out_cc  = self.GCN_cc(embeddings_cpt.clone(),
+                                p_cc_edge_index.clone(),
+                                p_cc_edge_attr.clone())
+        out_cac = self.GCN_cac(embeddings_cpt.clone(),
+                                p_cac_edge_index.clone(),
+                                p_cac_edge_attr.clone())
+        out_csc = self.GCN_csc(embeddings_cpt.clone(),
+                                p_csc_edge_index.clone(),
+                                p_csc_edge_attr.clone())
         
         combined_cpt = torch.stack([out_cc, out_cac, out_csc], dim=0)
 

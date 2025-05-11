@@ -305,12 +305,12 @@ class DB():
         return result
     
     # 获取所有至少交互过两个场景的学习者
-    def get_learners_uid_with_scn_greater_2(self):
+    def get_learners_uid_with_scn_greater_4(self):
         sql = '''
         select lrn_uid
         from interacts
         group by lrn_uid
-        having count(*) >= 2
+        having count(*) >= 4
         '''
         cursor = self.con.cursor()
         cursor.execute(sql)
@@ -321,7 +321,7 @@ class DB():
         return result
     
      # 获取所有至少交互过两个场景的学习者的交互图信息
-    def get_lrn_scn_num_with_scn_greater_2(self):
+    def get_lrn_scn_num_with_scn_greater_4(self):
         sql = '''
         select lrn_uid, scn_uid, all_times
         from graph_interact
@@ -329,7 +329,7 @@ class DB():
             select lrn_uid
             from interacts
             group by lrn_uid
-            having count(*) >= 2
+            having count(*) >= 4
         )
         '''
         cursor = self.con.cursor()
@@ -338,8 +338,8 @@ class DB():
         cursor.close()
         return result
     
-    # 获取所有至少交互过两个场景的学习者的所有交互信息
-    def get_interacts_with_scn_greater_2(self):
+    # 获取所有至少交互过4个场景的学习者的所有交互信息
+    def get_interacts_with_scn_greater_4(self):
         sql = f"""
         select ict1.lrn_uid, ict1.scn_uid, ict1.result
         from interacts ict1
@@ -347,7 +347,7 @@ class DB():
             select ict2.lrn_uid
             from interacts ict2
             group by ict2.lrn_uid
-            having count(*) >= 2
+            having count(*) >= 4
         )
         order by ict1.created_at asc
         """

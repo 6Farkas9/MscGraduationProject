@@ -97,7 +97,6 @@ if __name__ == '__main__':
     continue_train = False
     epoch_start = 0
     
-    loss_master = []
     if os.path.exists(RR_temp_path):
         print('继续训练')
         continue_train = True
@@ -106,7 +105,7 @@ if __name__ == '__main__':
         model_hgc_scn.load_state_dict(checkpoint['model_hgc_scn'])
         model_hgc_cpt.load_state_dict(checkpoint['model_hgc_cpt'])
         model_rr.load_state_dict(checkpoint['model_rr'])
-        loss_master = checkpoint['loss_master']
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         epoch_start = checkpoint['epoch'] + 1
 
     update_train = False
@@ -160,12 +159,13 @@ if __name__ == '__main__':
         batch_tqdm = tqdm(train_dataloader)
         batch_tqdm.set_description('batch start')
         loss_train = []
-        for item in batch_tqdm:
-            model_hgc_lrn.train()
-            model_hgc_scn.train()
-            model_hgc_cpt.train()
-            model_rr.train()
 
+        model_hgc_lrn.train()
+        model_hgc_scn.train()
+        model_hgc_cpt.train()
+        model_rr.train()
+
+        for item in batch_tqdm:
             learner_idx = item['learner_idx']
             learner_init = item['learner_init']
             scn_seq_index = item['scn_seq_index']
@@ -216,12 +216,13 @@ if __name__ == '__main__':
         batch_tqdm = tqdm(master_dataloader)
         batch_tqdm.set_description('batch start')
         loss_master = []
-        for item in batch_tqdm:
-            model_hgc_lrn.eval()
-            model_hgc_scn.eval()
-            model_hgc_cpt.eval()
-            model_rr.eval()
 
+        model_hgc_lrn.eval()
+        model_hgc_scn.eval()
+        model_hgc_cpt.eval()
+        model_rr.eval()
+
+        for item in batch_tqdm:
             learner_idx = item['learner_idx']
             learner_init = item['learner_init']
             scn_seq_index = item['scn_seq_index']
@@ -269,7 +270,7 @@ if __name__ == '__main__':
                 'model_hgc_scn': model_hgc_scn.state_dict(),
                 'model_hgc_cpt': model_hgc_cpt.state_dict(),
                 'model_rr': model_rr.state_dict(),
-                'loss_master': loss_master,
+                'optimizer': optimizer.state_dict(),
                 'epoch': epoch
             }, RR_temp_path)
 

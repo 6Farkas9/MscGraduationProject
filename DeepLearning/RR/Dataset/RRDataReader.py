@@ -22,10 +22,10 @@ class RRDataReader():
     def get_concepts_of_scenes(self, scn_uids):
         return db.get_concepts_of_scenes(scn_uids)
     
-    def get_interacts_with_scn_greater_2(self, lrn_uids):
+    def get_interacts_with_scn_greater_4(self, lrn_uids):
         # lrn_scn = [[] for _ in range(len(lrn_uids))]
         lrn_scn = {lrn_uid : [] for lrn_uid in lrn_uids.keys()}
-        interacts = db.get_interacts_with_scn_greater_2()
+        interacts = db.get_interacts_with_scn_greater_4()
         for onedata in interacts:
             lrn_scn[onedata[0]].append(onedata[1])
         return lrn_scn
@@ -33,7 +33,7 @@ class RRDataReader():
     def load_data_from_db(self):
         uids, inits, p_matrixes = self.hgcdr.load_data_from_db()
         
-        lrn_scn = self.get_interacts_with_scn_greater_2(uids[0])
+        lrn_scn = self.get_interacts_with_scn_greater_4(uids[0])
         scn_cpt = self.get_concepts_of_scenes(list(uids[1].keys()))
 
         # 为方便之后的计算，这里要计算出scn_cpt的二维矩阵，之后可以直接使用矩阵运算

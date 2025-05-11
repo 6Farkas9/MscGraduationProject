@@ -25,8 +25,8 @@ class HGCDataReader():
         uids = db.get_areas_uid()
         return {uid : uids.index(uid) for uid in uids}
     
-    def get_learners_uid_with_scn_greater_2(self):
-        uids = db.get_learners_uid_with_scn_greater_2()
+    def get_learners_uid_with_scn_greater_4(self):
+        uids = db.get_learners_uid_with_scn_greater_4()
         self.lrn_uids = {uid : idx for idx, uid in enumerate(uids)}
         self.lrn_num = len(uids)
 
@@ -40,8 +40,8 @@ class HGCDataReader():
         self.cpt_uids = {uid : idx for idx, uid in enumerate(uids)}
         self.cpt_num = len(uids)
 
-    def get_lrn_scn_num_with_scn_greater_2(self):
-        return db.get_lrn_scn_num_with_scn_greater_2()
+    def get_lrn_scn_num_with_scn_greater_4(self):
+        return db.get_lrn_scn_num_with_scn_greater_4()
     
     def get_scn_cpt_dif(self):
         return db.get_scn_cpt_dif()
@@ -156,7 +156,7 @@ class HGCDataReader():
         # 计算出学习者的初始嵌入表达
         # 返回初始嵌入的结果
         self.learners_init = torch.zeros(self.lrn_num, self.scn_num, dtype=torch.float)
-        lrn_scn_num = self.get_lrn_scn_num_with_scn_greater_2()
+        lrn_scn_num = self.get_lrn_scn_num_with_scn_greater_4()
         for onedata in lrn_scn_num:
             lrn_pos = self.lrn_uids[onedata[0]]
             scn_pos = self.scn_uids[onedata[1]]
@@ -227,7 +227,7 @@ class HGCDataReader():
         self.scenes_init = self.scenes_init * D_inv_diag.unsqueeze(1)
 
     def load_data_from_db(self):
-        self.get_learners_uid_with_scn_greater_2()
+        self.get_learners_uid_with_scn_greater_4()
         self.get_scenes_uid()
         self.get_concepts_uid()
         # 学习者初始嵌入
