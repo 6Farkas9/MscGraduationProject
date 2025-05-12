@@ -1,3 +1,6 @@
-DeepLearning/Data/
 BackEnd/libs/
+BackEnd/.vs/
+BackEnd/.vs/BackEnd
 BackEnd/BackEnd/
+BackEnd/x64/
+*.pyc

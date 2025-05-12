@@ -5,8 +5,10 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "${vcpkgRoot}/x64-windows/include",
-                "${workspaceFolder}/BackEnd/libs/libtorch-release/include",
-                "${workspaceFolder}/BackEnd/libs/libtorch-release/include/torch/csrc/api/include"
+                "${workspaceFolder}/BackEnd/libs/libtorch-release/libtorch/include",
+                "${workspaceFolder}/BackEnd/libs/libtorch-release/libtorch/include/torch/csrc/api/include",
+                "${workspaceFolder}/BackEnd/libs/Crow/include",
+                "${workspaceFolder}/BackEnd/libs/asio-1.34.2/include"
             ],
             "defines": [
                 "_DEBUG",

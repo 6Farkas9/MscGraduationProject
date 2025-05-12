@@ -1,290 +1,326 @@
+import sys
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
+
 import os
 import torch
 import argparse
 import sys
 import numpy as np
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 from tqdm import tqdm
-from Model.DTR import Model_PDBeta
-from Model.MIRT import MIRT
-from Dataset.DADDateReader import DADDataReader
-from Dataset.DataOperator import get_H_Data,get_PDBeta_Data
-from Dataset.DADDataSet import DADDataset
-sys.path.append('..')
-from KCGE.DataSet.KCGEDataReader import KCGEDataReader
-from KCGE.Model.KCGE import KCGE
+from torch_geometric.utils import subgraph
+from torch_geometric.data import Data
 
-# def save_model_state(model_dtr, model_mirt, model_kcge, optimizer_cd, optimizer_kcge, loss, save_cd_path, save_kcge_path):
-#     torch.save({
-#         'model_state_dict_dtr': model_dtr.state_dict(),
-#         'model_state_dict_mirt': model_mirt.state_dict(),
-#         'optimizer_state_dict_cd': optimizer_cd.state_dict(),  # 仅保存dtr和mirt的优化器状态
-#         'loss': loss
-#     }, save_cd_path)
+from CD.Dataset.CDDataReader import CDDataReader
+from CD.Dataset.CDDataSet import CDDataset
+from CD.Model.CD import CD
+from HGC.Model.HGC import HGC_LRN, HGC_SCN, HGC_CPT
 
-#     torch.save({
-#         'model_state_dict_kcge': model_kcge.state_dict(),
-#         'optimizer_state_dict_kcge': optimizer_kcge.state_dict()  # 仅保存kcge的优化器状态
-#     }, save_kcge_path)
-
-# def load_model_state(model_dtr, model_mirt, model_kcge, optimizer_cd, optimizer_kcge, save_cd_path, save_kcge_path, device):
-#     # 加载dtr和mirt的模型参数及优化器状态
-#     checkpoint_AB = torch.load(save_cd_path)
-#     model_dtr.load_state_dict(checkpoint_AB['model_state_dict_dtr'], map_location=device)
-#     model_mirt.load_state_dict(checkpoint_AB['model_state_dict_mirt'], map_location=device)
-#     optimizer_cd.load_state_dict(checkpoint_AB['optimizer_state_dict_cd'], map_location=device)  # 加载dtr和mirt的优化器状态
-
-#     # 加载C的模型参数及优化器状态
-#     checkpoint_C = torch.load(save_kcge_path)
-#     model_kcge.load_state_dict(checkpoint_C['model_state_dict_kcge'], map_location=device)
-#     optimizer_kcge.load_state_dict(checkpoint_C['optimizer_state_dict_kcge'], map_location=device)  # 加载kcge的优化器状态
+def protect_norm(models):
+    for model in models:
+        for name, param in model.named_parameters():
+            if torch.isnan(param).any():
+                param.data = torch.nan_to_num(param.data, nan=0.0, posinf=1e4, neginf=-1e4)
 
 parser = argparse.ArgumentParser(description='CD')
 parser.add_argument('--batch_size',type=int,default=32,help='number of batch size to train (defauly 32 )')
-parser.add_argument('--epochs',type=int,default=32,help='number of epochs to train (defauly 32 )')
-parser.add_argument('--lr',type=float,default=0.01,help='number of learning rate')
-parser.add_argument('--embedding_dim',type=int,default=16,help='number of embedding dim')
+parser.add_argument('--epochs',type=int,default=2,help='number of epochs to train (defauly 32 )')
+parser.add_argument('--lr',type=float,default=0.001,help='number of learning rate')
+parser.add_argument('--embedding_dim',type=int,default=32,help='number of embedding dim')
 parser.add_argument('--lamda_kcge',type=int,default=1,help='lamda used in kCGE')
 parser.add_argument('--num_workers',type=int,default=3,help='num of workers')
-
-parser.add_argument('--data_dir',type=str,default='../Data/CD/',help='path of data file')
-parser.add_argument('--train_file',type=str,default='train.csv',help='name of train_file')
-parser.add_argument('--master_file',type=str,default='master.csv',help='name of master_file')
+parser.add_argument('--max_step',type=int,default=128,help='num of max_step')
 
 if __name__ == '__main__':
     parsers = parser.parse_args()
     train_file_path = ''
     master_file_path = ''
 
-    if(parsers.data_dir != '../Data/CD/'):
-        train_file_path = os.path.join(parsers.data_dir, parsers.train_file)
-        master_file_path = os.path.join(parsers.data_dir, parsers.master_file)
-    else:
-        data_dir_path = os.path.join('..', 'Data', 'CD')
-        train_file_path = os.path.join(data_dir_path, parsers.train_file)
-        master_file_path = os.path.join(data_dir_path, parsers.master_file)
-    
-    train_file_path = os.path.normpath(train_file_path)
-    master_file_path = os.path.normpath(master_file_path)
-
-    if not os.path.exists(train_file_path) or not os.path.exists(master_file_path):
-        print(train_file_path, ' , ' , master_file_path)
-        print('wrong file path')
-        os._exit(0)
-    
-    # 这里引用的知识图谱需要更改
-    kcge_data_path = os.path.join('..','Data','KG')
-    relation_file_path = os.path.join(kcge_data_path, 'relations.csv')
-    relation_file_path = os.path.normpath(relation_file_path)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}
 
-    reader_relation = KCGEDataReader(relation_file_path, device, parsers.embedding_dim)
-    data_relation, exer_all, topic_all = reader_relation.load_Data()
+    train_data, master_data, uids, inits, p_matrixes = CDDataReader().load_Data_from_db()
 
-    # print(f"data_relation 的最小值: {data_relation.x.min()}, 最大值: {data_relation.x.max()}")
+    lrn_uids, scn_uids, cpt_uids = uids
+    learners_init, scenes_init, concepts_init = inits
 
-    train_data_loader = DADDataReader(train_file_path, device)
-    train_log_data, train_stu_exer = train_data_loader.load_Data()
+    (p_lsl_edge_index, p_lsl_edge_attr), \
+    (p_scs_edge_index, p_scs_edge_attr), \
+    (p_sls_edge_index, p_sls_edge_attr), \
+    (p_cc_edge_index, p_cc_edge_attr), \
+    (p_cac_edge_index, p_cac_edge_attr), \
+    (p_csc_edge_index, p_csc_edge_attr) = p_matrixes
 
-    master_data_loader = DADDataReader(master_file_path, device)
-    master_log_data, master_stu_exer = master_data_loader.load_Data()
+    model_hgc_lrn = HGC_LRN(parsers.embedding_dim, device).to(device)
+    model_hgc_scn = HGC_SCN(parsers.embedding_dim, device).to(device)
+    model_hgc_cpt = HGC_CPT(parsers.embedding_dim, device).to(device)
+    model_cd = CD(parsers.embedding_dim, device).to(device)
 
-    # print(f"train_log_data 的最小值: {train_log_data.min()}, 最大值: {train_log_data.max()}")
-    # print(f"master_log_data 的最小值: {master_log_data.min()}, 最大值: {master_log_data.max()}")
-
-    model_kcge = KCGE(parsers.embedding_dim, 5, parsers.lamda_kcge).to(device)
-    model_dtr = Model_PDBeta(parsers.embedding_dim).to(device)
-    model_mirt = MIRT().to(device)
-
-    optimizer = torch.optim.Adam([{'params':model_dtr.parameters()},
-                                {'params':model_mirt.parameters()},
-                                {'params':model_kcge.parameters()}], lr= parsers.lr)
+    optimizer = torch.optim.Adam([{'params':model_hgc_lrn.parameters()},
+                                {'params':model_hgc_scn.parameters()},
+                                {'params':model_hgc_cpt.parameters()},
+                                {'params':model_cd.parameters()}], lr= parsers.lr)
 
     criterion = nn.BCELoss().to(device)
 
-    pt_path = os.path.join('PT')
-    cd_pt_train_path = os.path.join(pt_path, 'cd_train.pt')
-    cd_pt_train_path = os.path.normpath(cd_pt_train_path)
-    cd_pt_temp_path = os.path.join(pt_path, 'cd_temp.pt')
-    cd_pt_temp_path = os.path.normpath(cd_pt_temp_path)
-    cd_pt_use_path = os.path.join(pt_path, 'cd_use.pt')
-    cd_pt_use_path = os.path.normpath(cd_pt_use_path)
+    HGC_pt_path = os.path.join(deeplearning_root, 'HGC', 'PT')
+    HGC_LRN_train_path = os.path.join(HGC_pt_path, 'HGC_LRN_train.pt')
+    HGC_SCN_train_path = os.path.join(HGC_pt_path, 'HGC_SCN_train.pt')
+    HGC_CPT_train_path = os.path.join(HGC_pt_path, 'HGC_CPT_train.pt')
+    HGC_LRN_use_path = os.path.join(HGC_pt_path, 'HGC_LRN_use.pt')
+    HGC_SCN_use_path = os.path.join(HGC_pt_path, 'HGC_SCN_use.pt')
+    HGC_CPT_use_path = os.path.join(HGC_pt_path, 'HGC_CPT_ues.pt')
 
-    kcge_pt_path = os.path.join('..', 'KCGE', 'PT')
-    kcge_pt_path = os.path.normpath(kcge_pt_path)
-    kcge_pt_use_path = os.path.join(kcge_pt_path, 'kcge_use.pt')
-    kcge_pt_use_path = os.path.normpath(kcge_pt_use_path)
-
-    cd_add_update = True
-    kcge_add_update = True
-
-    # 有问题：优化器参数的分开组合
-    if os.path.exists(cd_pt_train_path):
-        print('CD增量训练')
-        # 加载dtr和mirt的模型参数及优化器状态
-        checkpoint_cd = torch.load(cd_pt_train_path,  map_location=device)
-        model_dtr.load_state_dict(checkpoint_cd['model_state_dict_dtr'])
-        model_mirt.load_state_dict(checkpoint_cd['model_state_dict_mirt'])
-        lastloss = checkpoint_cd['loss']
-    else:
-        print('CD初始训练')
-        cd_add_update = False
-
-    if os.path.exists(kcge_pt_use_path):
-        print('KCGE增量训练')
-        checkpoint_kcge = torch.load(kcge_pt_use_path, map_location=device)
-        model_kcge.load_state_dict(checkpoint_kcge['model_state_dict_kcge'])
-    else:
-        print('KCGE初始训练')
-        kcge_add_update = False
+    CD_pt_path = os.path.join(deeplearning_root, 'CD', 'PT')
+    CD_train_path = os.path.join(CD_pt_path, 'CD_train.pt')
+    CD_use_path = os.path.join(CD_pt_path, 'CD_use.pt')
+    CD_temp_path = os.path.join(CD_pt_path, 'CD_temp.pt')
 
     epoch_start = 0
-    loss_all = []
-    if os.path.exists(cd_pt_temp_path):
-        check_point = torch.load(cd_pt_temp_path, map_location=device)
-        model_dtr.load_state_dict(check_point['model_state_dict_dtr'])
-        model_mirt.load_state_dict(check_point['model_state_dict_mirt'])
-        model_kcge.load_state_dict(check_point['model_state_dict_kcge'])
+    continue_train = False
+    
+    if os.path.exists(CD_temp_path):
+        print('继续训练')
+        continue_train = True
+        check_point = torch.load(CD_temp_path, map_location=device)
+        model_hgc_lrn.load_state_dict(check_point['model_state_dict_dtr'])
+        model_hgc_scn.load_state_dict(check_point['model_state_dict_mirt'])
+        model_hgc_cpt.load_state_dict(check_point['model_state_dict_kcge'])
+        model_cd.load_state_dict(check_point['model_state_dict_kcge'])
         optimizer.load_state_dict(check_point['optimizer_state_dict'])
         epoch_start = check_point['epoch'] + 1
-        loss_all = check_point['loss all']
 
-    for epoch in range(epoch_start, parsers.epochs):
-        print('train epoch:{}'.format(epoch))
-        model_kcge.train()
-        model_dtr.train()
-        model_mirt.train()
+    update_train = False
+    loss_last = None
+    if not continue_train:
+        if os.path.exists(HGC_LRN_train_path):
+            print('HGC_LRN增量训练')
+            # update_train = True
+            checkpoint = torch.load(HGC_LRN_train_path, map_location=device)
+            model_hgc_lrn.load_state_dict(checkpoint['model_hgc_lrn'])
+        else:
+            print('HGC_LRN初始训练')
+
+        if os.path.exists(HGC_SCN_train_path):
+            print('HGC_SCN增量训练')
+            # update_train = True
+            checkpoint = torch.load(HGC_SCN_train_path, map_location=device)
+            model_hgc_scn.load_state_dict(checkpoint['model_hgc_scn'])
+        else:
+            print('HGC_SCN初始训练')
+
+        if os.path.exists(HGC_CPT_train_path):
+            print('HGC_CPT增量训练')
+            # update_train = True
+            checkpoint = torch.load(HGC_CPT_train_path, map_location=device)
+            model_hgc_cpt.load_state_dict(checkpoint['model_hgc_cpt'])
+        else:
+            print('HGC_LRN初始训练')
+
+        if os.path.exists(CD_train_path):
+            print('CD增量训练')
+            update_train = True
+            checkpoint = torch.load(CD_train_path, map_location=device)
+            model_cd.load_state_dict(checkpoint['model_cd'])
+            loss_last = checkpoint['loss']
+        else:
+            print('CD初始训练')
+
+    epoch_tqdm = tqdm(range(epoch_start, parsers.epochs))
+
+    for epoch in epoch_tqdm:
+        epoch_tqdm.set_description('epoch {} - train'.format(epoch))
+
+        model_hgc_lrn.train()
+        model_hgc_scn.train()
+        model_hgc_cpt.train()
+        model_cd.train()
+
+        train_dataset = CDDataset(train_data, uids, learners_init, parsers.max_step)
+        train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
+
+        batch_tqdm = tqdm(train_dataloader)
+        batch_tqdm.set_description('train batch:')
+
         num_correct = 0
         num_total = 0
-        loss_total = []
-        dad_dataset = DADDataset(exer_all, train_log_data)
-        dad_dataloader = DataLoader(dad_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=parsers.num_workers, **dataloader_kwargs)
-        batch_tqdm = tqdm(dad_dataloader)
-        batch_tqdm.set_description('train batch:')
+        loss_train = []
+
         for item in batch_tqdm:
-            stu_id = item[0]
-            exer_id = item[1]
-            correct = item[2].to(device).float()
+            learner_idx = item['learner_idx']
+            learner_init = item['learner_init']
+            scn_seq_index = item['scn_seq_index']
+            scn_seq_mask = item['scn_seq_mask']
+            result = item['result']
 
-            z_star, z_sharp = model_kcge(data_relation)
+            p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
+            sub_p_lsl = p_lsl.subgraph(learner_idx)
 
-            # print(f"z_sharp 的最小值: {z_sharp.min()}, 最大值: {z_sharp.max()}")
-            # print(f"z_star 的最小值: {z_star.min()}, 最大值: {z_star.max()}")
-
-            h_u, h_v, h_c = get_H_Data(train_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
-
-            print(type(h_u), type(h_v), type(h_c))
-
-            # print(f"h_u 的最小值: {h_u.min()}, 最大值: {h_u.max()}")
-            # print(f"h_v 的最小值: {h_v.min()}, 最大值: {h_v.max()}")
-            # print(f"h_c 的最小值: {h_c.min()}, 最大值: {h_c.max()}")
-
-            p_u, d_v, beta_v = get_PDBeta_Data(h_u, h_v, h_c, model_dtr, parsers.embedding_dim)
+            lrn_emb = model_hgc_lrn(
+                sub_p_lsl.x.to(device), 
+                sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
+            )
+            scn_emb = model_hgc_scn(
+                scenes_init.to(device), 
+                p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
+                p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+            )
+            cpt_emb = model_hgc_cpt(
+                concepts_init.to(device), 
+                p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
+                p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
+                p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+            )
             
-            p_u_temp = p_u[stu_id]
-            d_v_temp = d_v[exer_id]
-            beta_v_temp = beta_v[exer_id]
+            # 这里已经获得了相当于z的矩阵
+            # 然后输入到cd中
 
-            output = model_mirt(p_u_temp, d_v_temp, beta_v_temp).squeeze()
-            loss = criterion(output, correct)
+            result_pred = model_cd(
+                scn_seq_index.to(device), 
+                scn_seq_mask.to(device), 
+                scn_emb, 
+                cpt_emb
+            )
+
+            result = result.flatten().to(device)
+            result_pred = result_pred.flatten()
+
+            # print(result.max(), result.min())
+            # print(result_pred.max(), result_pred.min())
+
+            loss = criterion(result, result_pred)
 
             optimizer.zero_grad()
             loss.backward()
-
-            # for name, param in model_kcge.named_parameters():
-            #     if param.grad is not None:
-            #         print(f"KCGE - {name} 的最小梯度值: {param.grad.min()}, 最大梯度值: {param.grad.max()}")
-            #     else:
-            #         print(f"KCGE - {name} 没有梯度")
-    
-            # for name, param in model_dtr.named_parameters():
-            #     if param.grad is not None:
-            #         print(f"DTR - {name} 的最小梯度值: {param.grad.min()}, 最大梯度值: {param.grad.max()}")
-            #     else:
-            #         print(f"DTR - {name} 没有梯度")
-
+            protect_norm([model_hgc_lrn, model_hgc_scn, model_hgc_cpt, model_cd])
             optimizer.step()
+            protect_norm([model_hgc_lrn, model_hgc_scn, model_hgc_cpt, model_cd])
 
-            # print("KCGE grad:", [p.grad for p in model_kcge.parameters() if p.grad is not None])
-
-            num_correct += ((output >= 0.5).long() == correct).sum().item()
-            num_total += len(output)
-            loss_total.append(loss.item())
+            num_correct += ((result_pred >= 0.5).long() == result).sum().item()
+            num_total += len(result)
+            loss_train.append(loss.detach().cpu().numpy())
             batch_tqdm.set_description('loss:{:.4f}'.format(loss))
-        acc = num_correct / num_total
-        loss = np.average(loss_total)
-        print('epoch {} - loss:{:.4f} - acc:{:.4f}'.format(epoch,loss,acc))
         
-        print()
+        acc = num_correct / num_total
+        loss = np.average(loss_train)
+        epoch_tqdm.set_description('epoch {} - train - loss:{:.4f} - acc:{:.4f}'.format(epoch, loss, acc))
 
-        print('test epoch:{}'.format(epoch))
-        model_kcge.eval()
-        model_dtr.eval()
-        model_mirt.eval()
+        del train_dataloader
+
+        epoch_tqdm.set_description('epoch {} - master'.format(epoch))
+
+        model_hgc_lrn.eval()
+        model_hgc_scn.eval()
+        model_hgc_cpt.eval()
+        model_cd.eval()
+
+        master_dataset = CDDataset(master_data, uids, learners_init, parsers.max_step)
+        master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
+
+        batch_tqdm = tqdm(master_dataloader)
+        batch_tqdm.set_description('master batch:')
+
         num_correct = 0
         num_total = 0
-        loss_total = []
-        dad_dataset = DADDataset(exer_all, master_log_data)
-        dad_dataloader = DataLoader(dad_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=parsers.num_workers, **dataloader_kwargs)
-        batch_tqdm = tqdm(dad_dataloader)
-        batch_tqdm.set_description('test batch:')
-        for item in batch_tqdm:
-            stu_id = item[0]
-            exer_id = item[1]
-            correct = item[2].to(device).float()
-            with torch.no_grad():
-                z_star, z_sharp = model_kcge(data_relation)
-            h_u, h_v, h_c = get_H_Data(master_stu_exer, exer_all, topic_all, z_sharp, z_star, device)
-            with torch.no_grad():
-                p_u, d_v, beta_v = get_PDBeta_Data(h_u, h_v, h_c, model_dtr, parsers.embedding_dim)
-            p_u_temp = p_u[stu_id]
-            d_v_temp = d_v[exer_id]
-            beta_v_temp = beta_v[exer_id]
-            with torch.no_grad():
-                output = model_mirt(p_u_temp, d_v_temp, beta_v_temp).squeeze()
-            loss = criterion(output,correct)
-            num_correct += ((output >= 0.5).long() == correct).sum().item()
-            num_total += len(output)
-            loss_total.append(loss.item())
-            batch_tqdm.set_description('loss:{:.4f}'.format(loss))
-        acc = num_correct / num_total
-        loss = np.average(loss_total)
-        print('epoch {} - loss:{:.4f} - acc:{:.4f}'.format(epoch, loss, acc))
+        loss_master = []
 
-        loss_all.append(loss)
+        for item in batch_tqdm:
+            learner_idx = item['learner_idx']
+            learner_init = item['learner_init']
+            scn_seq_index = item['scn_seq_index']
+            scn_seq_mask = item['scn_seq_mask']
+            result = item['result']
+
+            p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
+            sub_p_lsl = p_lsl.subgraph(learner_idx)
+
+            with torch.no_grad():
+
+                lrn_emb = model_hgc_lrn(
+                    sub_p_lsl.x.to(device), 
+                    sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
+                )
+                scn_emb = model_hgc_scn(
+                    scenes_init.to(device), 
+                    p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
+                    p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+                )
+                cpt_emb = model_hgc_cpt(
+                    concepts_init.to(device), 
+                    p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
+                    p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
+                    p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+                )
+                
+                # 这里已经获得了相当于z的矩阵
+                # 然后输入到cd中
+
+                result_pred = model_cd(
+                    scn_seq_index.to(device), 
+                    scn_seq_mask.to(device), 
+                    scn_emb, 
+                    cpt_emb
+                )
+
+            result = result.flatten().to(device)
+            result_pred = result_pred.flatten()
+
+            loss = criterion(result, result_pred)
+
+            num_correct += ((result_pred >= 0.5).long() == result).sum().item()
+            num_total += len(result)
+            loss_master.append(loss.detach().cpu().numpy())
+            batch_tqdm.set_description('loss:{:.4f}'.format(loss))
+        
+        acc = num_correct / num_total
+        loss = np.average(loss_master)
+        epoch_tqdm.set_description('epoch {} - master - loss:{:.4f} - acc:{:.4f}'.format(epoch, loss, acc))
+
+        del master_dataloader
+
         if (epoch + 1) % 8 == 0:
             torch.save({
-                'model_state_dict_dtr': model_dtr.state_dict(),
-                'model_state_dict_mirt': model_mirt.state_dict(),
-                'model_state_dict_kcge': model_kcge.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'epoch': epoch,
-                'loss all': loss_all
-            }, cd_pt_temp_path)
+                'model_hgc_lrn': model_hgc_lrn.state_dict(),
+                'model_hgc_scn': model_hgc_scn.state_dict(),
+                'model_hgc_cpt': model_hgc_cpt.state_dict(),
+                'model_cd': model_cd.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'epoch': epoch
+            }, CD_temp_path)
 
-    if os.path.exists(cd_pt_temp_path):
-        os.remove(cd_pt_temp_path)
+    if os.path.exists(CD_temp_path):
+        os.remove(CD_temp_path)
+
+    if not update_train or loss < loss_last:
+        torch.save({
+            'model_hgc_lrn': model_hgc_lrn.state_dict(),
+        }, HGC_LRN_train_path)
+        torch.save({
+            'model_hgc_scn': model_hgc_scn.state_dict(),
+        }, HGC_SCN_train_path)
+        torch.save({
+            'model_hgc_cpt': model_hgc_cpt.state_dict(),
+        }, HGC_CPT_train_path)
+        torch.save({
+            'model_cd': model_cd.state_dict(),
+            'loss' : loss
+        }, CD_train_path)
     
-    loss = np.average(loss_all)
-    if not cd_add_update or not kcge_add_update or loss < lastloss:
-        torch.save({
-            'model_state_dict_dtr': model_dtr.state_dict(),
-            'model_state_dict_mirt': model_mirt.state_dict(),
-            'loss': loss
-        }, cd_pt_train_path)
+        # torch.save(model.state_dict(), IPDKT_pt_use_path)
 
-        torch.save({
-            'model_state_dict_kcge': model_kcge.state_dict(),
-        }, kcge_pt_use_path)
-
-    torch.save({
-        'model_state_dict_dtr': model_dtr.state_dict(),
-        'model_state_dict_mirt': model_mirt.state_dict()
-    }, cd_pt_use_path)
-
-    torch.save({
-        'model_state_dict_kcge': model_kcge.state_dict()
-    }, kcge_pt_use_path)
+        scripted_model = torch.jit.script(model_hgc_lrn)
+        scripted_model = torch.jit.optimize_for_inference(scripted_model)
+        scripted_model.save(HGC_LRN_use_path)
+        scripted_model = torch.jit.script(model_hgc_scn)
+        scripted_model = torch.jit.optimize_for_inference(scripted_model)
+        scripted_model.save(HGC_SCN_use_path)
+        scripted_model = torch.jit.script(model_hgc_cpt)
+        scripted_model = torch.jit.optimize_for_inference(scripted_model)
+        scripted_model.save(HGC_CPT_use_path)
+        scripted_model = torch.jit.script(model_cd)
+        scripted_model = torch.jit.optimize_for_inference(scripted_model)
+        scripted_model.save(CD_use_path)
