@@ -104,21 +104,13 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-<<<<<<< HEAD
       <AdditionalIncludeDirectories>D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\include\torch\csrc\api\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-=======
-      <AdditionalIncludeDirectories>D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\asio-1.34.2\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\Crow\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-debug\libtorch\include\torch\csrc\api\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-debug\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
->>>>>>> main
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-<<<<<<< HEAD
       <AdditionalLibraryDirectories>D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-=======
-      <AdditionalLibraryDirectories>D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-debug\libtorch\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
->>>>>>> main
       <AdditionalDependencies>D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\lib\*.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>/INCLUDE:?warp_size@cuda@at@@YAHXZ %(AdditionalOptions)</AdditionalOptions>
     </Link>
@@ -131,11 +123,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-<<<<<<< HEAD
       <AdditionalIncludeDirectories>D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\include\torch\csrc\api\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-=======
-      <AdditionalIncludeDirectories>D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\asio-1.34.2\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\Crow\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\include\torch\csrc\api\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
->>>>>>> main
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -151,12 +139,6 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
   </ItemGroup>
-<<<<<<< HEAD
-=======
-  <ItemGroup>
-    <ClInclude Include="include\crow.h" />
-  </ItemGroup>
->>>>>>> main
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
