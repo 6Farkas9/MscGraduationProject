@@ -35,44 +35,6 @@ class CDDataReader():
         lrn_scn = self.get_interacts_with_scn_greater_4(uids[0])
         # scn_cpt = self.get_concepts_of_scenes(list(uids[1].keys()))
 
-        # # 计算学习者和场景的交互稀疏矩阵
-        # rows = []
-        # cols = []
-        # for lrn_uid, scn_uids in lrn_scn.items():
-        #     lrn_idx = uids[0][lrn_uid]
-        #     for scn_uids in scn_uids:
-        #         scn_idx = uids[1][scn_uids]
-        #         rows.append(lrn_idx)
-        #         cols.append(scn_idx)
-
-        # index_matrix = torch.tensor([rows, cols], dtype=torch.long)
-        # values = torch.ones(index_matrix.shape[1])
-
-        # lrn_scn_mat = torch.sparse_coo_tensor(
-        #     indices=index_matrix,
-        #     values=values,
-        #     size=(len(uids[0]), len(uids[1])),
-        # )
-
-        # # 计算动态场景嵌入的知识点索引
-        # rows = []
-        # cols = []
-        # for scn_uid, cpt_uids in scn_cpt.items():
-        #     scn_idx = uids[1][scn_uid]
-        #     for cpt_uid in cpt_uids:
-        #         cpt_idx = uids[2][cpt_uid]
-        #         rows.append(scn_idx)
-        #         cols.append(cpt_idx)
-
-        # index_matrix = torch.tensor([rows, cols], dtype=torch.long)
-        # values = torch.ones(index_matrix.shape[1])
-
-        # scn_cpt_mat = torch.sparse_coo_tensor(
-        #     indices=index_matrix,
-        #     values=values,
-        #     size=(len(uids[1]), len(uids[2])),
-        # )
-
         # 按照8:2的比例获取train和master数据
         train_data = {lrn_uid : [[], []] for lrn_uid in uids[0].keys()}
         master_data = {lrn_uid : [[], []] for lrn_uid in uids[0].keys()}
@@ -130,7 +92,7 @@ class CDDataReader():
         return res_data, stu_exer
     
 if __name__ == '__main__':
-    cddr = CDDataReader()
+    cddr = CDDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
     
     td, md, uids, inits, p_matrixes = cddr.load_Data_from_db()
 
