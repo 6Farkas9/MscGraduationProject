@@ -28,13 +28,10 @@ class IPDKTDataReader():
             )
         return result
     
-    # 获得当前领域的所有知识点，cpt_uid和id_in_area
+    # 获得当前领域的所有知识点，cpt_uid
     def get_all_concepts_of_area(self):
-        result = db.get_all_concepts_of_area(self.are_uid)
-        cpt_uid2id_in = {}
-        for line in result:
-            cpt_uid2id_in[line[0]] = line[1]
-        return cpt_uid2id_in
+        cpt_uids = db.get_all_concepts_of_area(self.are_uid)
+        return {uid : cpt_uids.index(uid) for uid in cpt_uids}
 
     def get_30days_before(self):
         return (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
@@ -42,18 +39,21 @@ class IPDKTDataReader():
     def get_concepts_of_scene(self, scn_uids):
         return db.get_concepts_of_scenes(scn_uids)
     
-    def get_concept_num_of_area(self):
-        return db.get_concept_num_of_area(self.are_uid)[0]
+    # def get_concept_num_of_area(self):
+    #     return db.get_concept_num_of_area(self.are_uid)[0]
     
-    def get_cpt_id_in_area_of_scene(self, scn_uids):
-        return db.get_concepts_id_in_area_of_scenes(scn_uids)
+    def get_cpt_uid_of_scene(self, scn_uids):
+        return db.get_concepts_uid_of_scenes(scn_uids)
 
     # 从数据库中获取所有数据
     def load_data_from_db(self):
         # 获取当前领域所有知识点相关的场景的交互信息
         # result = [(lrn_uid, scn_uid, correct),...]
         interacts = self.get_all_recordings()
-        cpt_num = self.get_concept_num_of_area()
+        cpt_uids = self.get_all_concepts_of_area()
+        # print(cpt_uids)
+        # cpt_num = self.get_concept_num_of_area()
+
         # 构建lrn和scn的数字id -- 貌似，转化就行
         lrn_uids = {}
         scn_uids = set()
@@ -65,7 +65,7 @@ class IPDKTDataReader():
             # if interact[1] not in scn_uids:
             #     temp_id = len(scn_uids)
             #     scn_uids[interact[1]] = temp_id
-        scn_cpts = self.get_cpt_id_in_area_of_scene(list(scn_uids))
+        scn_cpts = self.get_cpt_uid_of_scene(list(scn_uids))
         data = []
         current_pos = -1
         current_lrn = -1
@@ -82,7 +82,8 @@ class IPDKTDataReader():
                 data[current_pos].append([]) # cpt_ids
                 data[current_pos].append([]) # corrects
             # data[current_pos][1].append(scn_id)
-            data[current_pos][1].append(scn_cpts[interact[1]])
+            # data[current_pos][1].append(cpt_uids[scn_cpts[interact[1]]])
+            data[current_pos][1].append([cpt_uids[cpt_uid] for cpt_uid in scn_cpts[interact[1]]])
             data[current_pos][2].append(correct)
         train_data = []
         master_data = []
@@ -109,7 +110,7 @@ class IPDKTDataReader():
                 master_data[pos][2].append(onelrndata[2][i])
                 # master_data[pos][3].append(onelrndata[3][i])
             
-        return train_data, master_data, cpt_num
+        return train_data, master_data, cpt_uids
 
     # 获取当前时间前推30天内的所有interacts数据
     
@@ -148,7 +149,7 @@ class IPDKTDataReader():
     #     return data,max_pro,kc_num
 
 if __name__ == '__main__':
-    dr = DataReader('are_3fee9e47d0f3428382f4afbcb1004117')
+    dr = IPDKTDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
     # are_3fee9e47d0f3428382f4afbcb1004117
     data, num = dr.load_data_from_db()
     print(num)

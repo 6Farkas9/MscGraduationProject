@@ -17,6 +17,12 @@ from torch.utils.data import DataLoader
 from KT.DataSet.IPDKTDataReader import IPDKTDataReader
 from KT.DataSet.IPDKTDataset import IPDKTDataset
 from KT.Model.IPDKT import IPDKT
+from Data.DBOperator import db
+
+# # 应对KT的要求，将此次参与训练的cpt置为trained，之后在使用的时候kt只能预测这些知识点
+def make_cpt_trained(cpt_uids : list):
+    print('设置trained属性')
+    db.make_cpt_trained(cpt_uids)
 
 def train_epoch(model, train_iterator, optim, criterion, device="cpu"):
     model.train()
@@ -95,7 +101,7 @@ def master_epoch(model, train_iterator, criterion, device="cpu"):
 # 解析传入的参数
 parser = argparse.ArgumentParser(description='IPDKT')
 parser.add_argument('--batch_size',type=int,default=32,help='number of batch size to train (defauly 32 )')
-parser.add_argument('--epochs',type=int,default=32,help='number of epochs to train (defauly 32 )')
+parser.add_argument('--epochs',type=int,default=2,help='number of epochs to train (defauly 32 )')
 parser.add_argument('--lr',type=float,default=0.01,help='number of learning rate')
 parser.add_argument('--hidden_size',type=int,default=256,help='the number of the hidden-size')
 parser.add_argument('--max_step',type=int,default=64,help='the number of max step')
@@ -103,26 +109,16 @@ parser.add_argument('--num_layers',type=int,default=2,help='the number of layers
 
 parser.add_argument('--are_uid',type=str,default='are_3fee9e47d0f3428382f4afbcb1004117',help='the uid of area')
 
-# parser.add_argument('--data_dir', type=str, default='../Data',help='the data directory, default as ../Data/KT')
-# parser.add_argument('--train_file',type=str,default='train_simple.txt',help='name of train_file')
-# parser.add_argument('--master_file',type=str,default='master_simple.txt',help='name of master_file')
-
-# 根据领域来决定的数据
-# parser.add_argument('--n_kc',type=int,default=150,help='name of master_file')
-
-# 从数据库中根据指定的领域获取数据来训练
-# 领域 - 知识点数量
-# 当前时间 - 过去30天内的数据
-#     80%用来训练
-#     20%用来检测
-
 if __name__ == '__main__': 
     parsers = parser.parse_args()
 
     # 这里用来获取数据
-    train_data, master_data, cpt_num = IPDKTDataReader(parsers.are_uid).load_data_from_db()
+    # 这里要改
+    train_data, master_data, cpt_uids = IPDKTDataReader(parsers.are_uid).load_data_from_db()
     train_data_frame = pd.DataFrame(train_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
     master_data_frame = pd.DataFrame(master_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
+
+    cpt_num = len(cpt_uids)
 
     model = 'IPDKT'
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -214,3 +210,5 @@ if __name__ == '__main__':
         scripted_model = torch.jit.script(model)
         scripted_model = torch.jit.optimize_for_inference(scripted_model)
         scripted_model.save(IPDKT_pt_use_path)
+
+    make_cpt_trained(list(cpt_uids.keys()))

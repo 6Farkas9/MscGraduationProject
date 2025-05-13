@@ -74,10 +74,10 @@ class DB():
         cursor.close()
         return result
     
-    # 获取are_uid下的所有知识点uid和id_in_area
+    # 获取are_uid下的所有知识点uid
     def get_all_concepts_of_area(self, are_uid):
         sql = f"""
-        select cpt.cpt_uid, cpt.id_in_area
+        select cpt.cpt_uid
         from concepts cpt
         join graph_belong bg
         on cpt.cpt_uid = bg.cpt_uid 
@@ -85,7 +85,9 @@ class DB():
         """
         cursor = self.con.cursor()
         cursor.execute(sql, [are_uid])
-        result = cursor.fetchall()
+        result = []
+        for item in cursor.fetchall():
+            result.append(item[0])
         cursor.close()
         return result
     
@@ -121,9 +123,9 @@ class DB():
         return result
     
     # 获取场景涉及的知识点的内部id
-    def get_concepts_id_in_area_of_scenes(self, scn_uids):
+    def get_concepts_uid_of_scenes(self, scn_uids):
         sql = f"""
-        select gi.scn_uid, cpt.id_in_area
+        select gi.scn_uid, cpt.cpt_uid
         from graph_involve gi
         join concepts cpt
         on gi.cpt_uid = cpt.cpt_uid
@@ -356,4 +358,17 @@ class DB():
         result = cursor.fetchall()
         cursor.close()
         return result
+    
+    # KT中将参与训练的cpt均置为trained，方便之后使用时辨别哪些可用KT预测
+    def make_cpt_trained(self, cpt_uids):
+        sql = f"""
+        update concepts
+        set trained = 1
+        where cpt_uid in (%s)
+        """
+        place_holders = ','.join(['%s'] * len(cpt_uids))
+        cursor = self.con.cursor()
+        cursor.execute(sql % place_holders, cpt_uids)
+        self.con.commit()
+        cursor.close()
 db = DB()
