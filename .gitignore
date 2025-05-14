@@ -1,6 +1,4 @@
-BackEnd/libs/
 BackEnd/.vs/
-BackEnd/BackEnd/
-BackEnd/x64/
+BackEnd/libs/
+BackEnd/build/
 *.pyc
-.vs/
