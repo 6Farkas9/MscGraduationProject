@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${vcpkgRoot}/x64-windows/include",
+                "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\libs\\libtorch-release\\libtorch\\include",
+                "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\libs\\libtorch-release\\libtorch\\include\\torch\\csrc\\api\\include",
+                "D:\\Desktop\\GraduationDesign\\GraduationDesign\\BackEnd\\libs\\mysql-connector-c++-9.3.0-winx64\\include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "compilerPath": "D:/MingW/14.2.0/mingw64/bin/g++.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64"
+        }
+    ],
+    "version": 4
+}
