@@ -1,11 +1,6 @@
 ﻿#include <iostream>
-// #include <vector>
-// #include <torch/script.h>
-// #include <torch/torch.h>
-// #include <filesystem>
-// #include <windows.h>
-
 #include "DBOperator.h"
+#include "KT.h"
 
 int main() {
     try{
@@ -16,7 +11,20 @@ int main() {
             return 1;
         }
 
-        db.testSelect("concepts", 10);
+        // db.get_cpt_uid_id_of_area("are_3fee9e47d0f3428382f4afbcb1004117");
+
+        KT kt(db);
+        // lrn_aee0624932cf4affa00626e8f038c4e8
+        // are_3fee9e47d0f3428382f4afbcb1004117
+        auto ans = kt.forward(
+            "are_3fee9e47d0f3428382f4afbcb1004117",
+            "lrn_aee0624932cf4affa00626e8f038c4e8"
+        );
+
+        for(auto & item : ans){
+            std::cout << item << " ";
+        }
+        std::cout << std::endl;
     }
     catch(const std::exception& e){
         std::cerr << "Error: " << e.what() << std::endl;
@@ -25,6 +33,15 @@ int main() {
 
     return 0;
 }
+
+// DBOperator db = DBOperator::getInstance();
+//         KT kt(db);
+//         // lrn_aee0624932cf4affa00626e8f038c4e8
+//         // are_3fee9e47d0f3428382f4afbcb1004117
+//         kt.forward(
+//             "are_3fee9e47d0f3428382f4afbcb1004117",
+//             "lrn_aee0624932cf4affa00626e8f038c4e8"
+//         );
 
     // std::cout << "starting..." << std::endl;
 

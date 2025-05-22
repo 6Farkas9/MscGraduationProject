@@ -24,6 +24,12 @@ class IPDKT(nn.Module):
         self.kt_fc2 = nn.Linear(self.hidden_size, self.output_size)
     
     def forward(self, x : torch.Tensor) -> torch.Tensor:
+        '''
+        in shape:
+            batch * step_size * concepts * 2
+        out shape:
+            batch * step_size * concepts
+        '''
         # device = x.device
         # h0 = Variable(torch.zeros(self.num_layers, x.size(0), self.hidden_size)).to(device)
         # print(x.shape)

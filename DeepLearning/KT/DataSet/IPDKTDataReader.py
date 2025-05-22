@@ -28,10 +28,10 @@ class IPDKTDataReader():
             )
         return result
     
-    # 获得当前领域的所有知识点，cpt_uid
+    # 获得当前领域的所有知识点，cpt_uid, inner_id
     def get_all_concepts_of_area(self):
-        cpt_uids = db.get_all_concepts_of_area(self.are_uid)
-        return {uid : cpt_uids.index(uid) for uid in cpt_uids}
+        cpt_uids = db.get_all_concepts_uid_and_id_of_area(self.are_uid)
+        return cpt_uids
 
     def get_30days_before(self):
         return (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')

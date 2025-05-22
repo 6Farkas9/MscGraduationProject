@@ -163,10 +163,13 @@
   <ItemGroup>
     <ClInclude Include="include\api\crow.h" />
     <ClInclude Include="include\database\DBOperator.h" />
+    <ClInclude Include="include\utils\MLSTimer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\database\DBOperator.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\models\KT.cpp" />
+    <ClCompile Include="src\utils\MLSTimer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

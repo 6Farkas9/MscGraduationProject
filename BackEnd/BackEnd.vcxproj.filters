@@ -45,6 +45,9 @@
     <ClInclude Include="include\database\DBOperator.h">
       <Filter>include\database</Filter>
     </ClInclude>
+    <ClInclude Include="include\utils\MLSTimer.h">
+      <Filter>include\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -52,6 +55,12 @@
     </ClCompile>
     <ClCompile Include="src\database\DBOperator.cpp">
       <Filter>src\database</Filter>
+    </ClCompile>
+    <ClCompile Include="src\models\KT.cpp">
+      <Filter>src\models</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\MLSTimer.cpp">
+      <Filter>src\utils</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

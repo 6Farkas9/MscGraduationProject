@@ -58,9 +58,9 @@ class DB():
                 from graph_belong gb 
                 join areas a on gb.are_uid = a.are_uid
                 where a.are_uid != %s
-            ) non_are_name_cpts on gi.cpt_uid = non_are_name_cpts.cpt_uid 
+            ) non_are_uid_cpts on gi.cpt_uid = non_are_uid_cpts.cpt_uid 
             group by gi.scn_uid
-            having count(non_are_name_cpts.cpt_uid) = 0 
+            having count(non_are_uid_cpts.cpt_uid) = 0 
             and count(gi.cpt_uid) > 0
         ) valid_scn on itc.scn_uid = valid_scn.scn_uid
         where itc.created_at >= %s
@@ -88,6 +88,23 @@ class DB():
         result = []
         for item in cursor.fetchall():
             result.append(item[0])
+        cursor.close()
+        return result
+    
+    # 获取are_uid下的所有知识点uid和id_in_area
+    def get_all_concepts_uid_and_id_of_area(self, are_uid):
+        sql = f"""
+        select cpt.cpt_uid, cpt.id_in_area
+        from concepts cpt
+        join graph_belong bg
+        on cpt.cpt_uid = bg.cpt_uid 
+        where bg.are_uid = %s
+        """
+        cursor = self.con.cursor()
+        cursor.execute(sql, [are_uid])
+        result = {}
+        for item in cursor.fetchall():
+            result[item[0]] = item[1]
         cursor.close()
         return result
     

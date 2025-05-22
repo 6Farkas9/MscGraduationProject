@@ -35,11 +35,18 @@ def train_epoch(model, train_iterator, optim, criterion, device="cpu"):
 
     for item in tbar:
         x = item[0].to(device).float()
+
+        # print(x.shape)
+        # exit()
+
         cpt = item[1].to(device).long()
         cor = item[2].to(device).float()
 
         optim.zero_grad()
         output = model(x)
+
+        # print(output.shape)
+        # exit()
 
         cor_expanded = cor.unsqueeze(-1).expand_as(output)
         mask = cpt.bool()

@@ -40,7 +40,14 @@ bool DBOperator::initialize() {
         std::string connectionStr = "tcp://127.0.0.1:3306?authMethod=mysql_native_password&characterEncoding=utf8mb4";
         
         // 建立连接
-        pImpl_->conn.reset(pImpl_->driver->connect(connectionStr, "root", "123456"));
+        try{
+            auto x = pImpl_->driver->connect(connectionStr, "root", "123456");
+            pImpl_->conn.reset(x);
+        }
+        catch(const std::exception& e){
+            std::cerr << "Error: " << e.what() << std::endl;
+            return 1;
+        }
         
         // 选择数据库
         pImpl_->conn->setSchema("MLS_db");
@@ -125,28 +132,26 @@ void DBOperator::close() {
 
 // ========== 私有通用执行方法 ==========
 
-std::vector<std::unordered_map<std::string, std::string>> 
-DBOperator::executeQuery(const std::string& query) {
+std::vector<std::vector<std::string>> DBOperator::executeQuery(const std::string& query) {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
-    std::vector<std::unordered_map<std::string, std::string>> results;
-    
+    std::vector<std::vector<std::string>> results;
     try {
         if (!pImpl_->conn || pImpl_->conn->isClosed()) {
             throw sql::SQLException("Connection is not initialized or closed");
         }
-
         std::unique_ptr<sql::PreparedStatement> stmt(pImpl_->conn->prepareStatement(query));
         
         std::unique_ptr<sql::ResultSet> res(stmt->executeQuery());
         sql::ResultSetMetaData* meta = res->getMetaData();
         unsigned int columns = meta->getColumnCount();
-        
         while (res->next()) {
-            std::unordered_map<std::string, std::string> row;
+            std::vector<std::string> row;
             for (unsigned int i = 1; i <= columns; ++i) {
-                row[meta->getColumnLabel(i)] = res->getString(i);
+                // row[meta->getColumnLabel(i)] = res->getString(i);
+                row.emplace_back(res->getString(i));
+                // std::cout << res->getString(i) << std::endl;
             }
-            results.push_back(std::move(row));
+            results.emplace_back(std::move(row));
         }
     } catch (const sql::SQLException& e) {
         std::cerr << "MySQL Query Error: " << e.what() 
@@ -182,9 +187,99 @@ void DBOperator::testSelect(std::string table, int limit) {
     std::cout << sql << std::endl;
     auto res = executeQuery(sql);
     for(auto row : res){
-        for(auto kv : row){
-            std::cout << kv.second << "\t";
+        for(auto item : row){
+            std::cout << item << "\t";
         }
         std::cout << std::endl;
     }
+}
+
+std::vector<std::vector<std::string>> DBOperator::get_Are_lrn_Interacts_Time(const std::string &are_uid, const std::string &lrn_uid, const std::string &time_start, const std::string &time_end){
+    std::string sql = R"(
+        SELECT 
+            i.scn_uid, 
+            i.result
+        FROM 
+            interacts i
+        INNER JOIN 
+            graph_involve gi ON i.scn_uid = gi.scn_uid
+        INNER JOIN 
+            graph_belong gb ON gi.cpt_uid = gb.cpt_uid
+        WHERE 
+            i.lrn_uid = ")";
+    sql += lrn_uid + R"(" 
+        AND gb.are_uid = ")";
+    sql += are_uid + R"(" 
+        AND i.created_at >= ")";
+    sql += time_start + R"(" 
+        AND i.created_at <= ")";
+    sql += time_end + R"(" 
+        ORDER BY 
+        i.created_at ASC;)";
+
+    // std::cout << sql << std::endl;
+
+    auto result = executeQuery(sql);
+    
+    std::vector<std::vector<std::string>> ans;
+
+    for(auto &row : result){
+        ans.emplace_back(std::vector<std::string>());
+        for(auto &item : row){
+            ans.back().emplace_back(item);
+            // std::cout << item << " ";
+        }
+        // std::cout << std::endl;
+    }
+
+    return ans;
+}
+
+std::unordered_map<std::string, int> DBOperator::get_cpt_uid_id_of_area(const std::string &are_uid){
+    std::string sql = 
+        R"(select cpt.cpt_uid, cpt.id_in_area
+        from concepts cpt
+        join graph_belong bg
+        on cpt.cpt_uid = bg.cpt_uid 
+        where bg.are_uid = ")";
+    sql += are_uid + R"(";)";
+
+    // std::cout << sql << std::endl;
+    auto result = executeQuery(sql);
+    // std::cout << cpt_num << std::endl;
+
+    std::unordered_map<std::string, int> ans;
+    for(auto &row : result){
+        int id_in_area;
+        std::istringstream(row[1]) >> id_in_area;
+        // std::cout << id_in_area << std::endl;
+        ans[row[0]] = id_in_area;
+    }
+    return ans;
+}
+
+std::unordered_map<std::string, std::unordered_set<std::string>> DBOperator::get_Cpt_of_Scn(const std::unordered_set<std::string> &scn_uids){
+    std::string sql = R"(
+        select scn_uid, cpt_uid
+        from graph_involve
+        where scn_uid in ()";
+
+    int i = 0;
+    int length = scn_uids.size() - 1;
+    for (auto &scn_uid : scn_uids){
+        sql += R"(")" + scn_uid + R"(")";
+        if(i++ < length) 
+            sql += R"(,)";
+    }
+    sql += R"())";
+    // std::cout << sql << std::endl;
+    auto result = executeQuery(sql);
+    std::unordered_map<std::string, std::unordered_set<std::string>> ans;
+    for (auto & row : result){
+        if(ans.find(row[0]) == ans.end()){
+            ans[row[0]] = std::unordered_set<std::string>();
+        }
+        ans[row[0]].insert(row[1]);
+    }
+    return ans;
 }
