@@ -7,6 +7,7 @@ if deeplearning_root not in sys.path:
 import os
 import torch
 import argparse
+import json
 import pandas as pd
 import numpy as np
 import torch.nn as nn
@@ -17,12 +18,6 @@ from torch.utils.data import DataLoader
 from KT.DataSet.IPDKTDataReader import IPDKTDataReader
 from KT.DataSet.IPDKTDataset import IPDKTDataset
 from KT.Model.IPDKT import IPDKT
-from Data.MySQLOperator import mysqldb
-
-# # 应对KT的要求，将此次参与训练的cpt置为trained，之后在使用的时候kt只能预测这些知识点
-def make_cpt_trained(cpt_uids : list):
-    print('设置trained属性')
-    mysqldb.make_cpt_trained(cpt_uids)
 
 def train_epoch(model, train_iterator, optim, criterion, device="cpu"):
     model.train()
@@ -111,13 +106,12 @@ parser.add_argument('--batch_size',type=int,default=32,help='number of batch siz
 parser.add_argument('--epochs',type=int,default=2,help='number of epochs to train (defauly 32 )')
 parser.add_argument('--lr',type=float,default=0.01,help='number of learning rate')
 parser.add_argument('--hidden_size',type=int,default=256,help='the number of the hidden-size')
-parser.add_argument('--max_step',type=int,default=64,help='the number of max step')
+parser.add_argument('--max_step',type=int,default=128,help='the number of max step')
 parser.add_argument('--num_layers',type=int,default=2,help='the number of layers')
 
 # parser.add_argument('--are_uid',type=str,default='are_3fee9e47d0f3428382f4afbcb1004117',help='the uid of area')
 
 def train_single_are(datareader, parsers):
-    
     # train_data, master_data, cpt_uids = IPDKTDataReader(are_uid).load_data_from_db()
     train_data, master_data, cpt_uids = datareader.load_data_from_db()
     train_data_frame = pd.DataFrame(train_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
@@ -218,19 +212,76 @@ def train_single_are(datareader, parsers):
         scripted_model = torch.jit.optimize_for_inference(scripted_model)
         scripted_model.save(IPDKT_pt_use_path)
 
-    make_cpt_trained(list(cpt_uids.keys()))
+    datareader.make_cpt_trained()
+
+    save_final_predict(are_uid, datareader, device)
+
+
+def save_final_predict(are_uid, datareader: IPDKTDataReader, device):
+    # 获取当前领域的所有学生的各自的数据 - 因为是最终预测，不需要数据大小对齐，所以获取所有数据就行
+    final_data, cpt_id2uid = datareader.load_final_data(device)
+    
+    # 然后加载模型，
+    IPDKT_pt_path = os.path.join('PT')
+    IPDKT_pt_use_path = os.path.join(IPDKT_pt_path, are_uid + '_use.pt')
+
+    model_ipdkt = torch.jit.load(IPDKT_pt_use_path)
+
+    # 预测出结果
+    pre_result = {}
+    for lrn_uid in final_data:
+        result = model_ipdkt(final_data[lrn_uid])[-1]
+        # print(pre_result[lrn_uid])
+        pre_result[lrn_uid] = {cpt_uid : result[id].item() for id, cpt_uid in cpt_id2uid.items()}
+
+    # 保存到MongoDB中
+    datareader.save_final_data(pre_result)
+
 
 if __name__ == '__main__': 
     parsers = parser.parse_args()
-
-    # 这里用来获取数据
-    # 这里要改
+    IPDKT_pt_path = os.path.join('PT')
+    IPDKT_are_schedule_path = os.path.join(IPDKT_pt_path, 'IPDKT_schedule.json')
     datareader = IPDKTDataReader()
-    are_uids = datareader.load_area_uids()
-
-    # are_uids = IPDKTDataReader().load_area_uids()
+    # KT比较特殊，不能用一个temp完全解决中途崩溃的问题，需要记录哪些area已经处理过了
+    # 是挺复杂的逻辑，但是这里不需要考虑那么复杂
+    # 每个are_uid有三个值，waiting 0/processing 1/done 2
+    # 先获取processing的are_uid,然后判断是否有temp.pt
+    # 如果有temp.pt则说明是在训练过程中崩溃的？ -- 不能这样，设置的是8个一保存，可能没到8个就崩溃了
+    # 所以：排除所有事done的area，从processing开始，训练processing和waiting的
+    # 是否重复训练无所谓其实
+    are_uids = []
+    are_uids_dict = {}
+    if os.path.exists(IPDKT_are_schedule_path):
+        with open(IPDKT_are_schedule_path, 'r') as f:
+            are_uids_dict = json.load(f)
+            for are_uid in are_uids_dict:
+                if are_uids_dict[are_uid] == 0:
+                    are_uids.append(are_uid)
+                elif are_uids_dict[are_uid] == 1:
+                    are_uids.insert(0, are_uid)
+                else:
+                    continue
+    else:
+        are_uids = datareader.load_area_uids()
+        are_uids_dict = {are_uid : 0 for are_uid in are_uids}
 
     for are_uid in are_uids:
+        are_uids_dict[are_uid] = 1
+
+        with open(IPDKT_are_schedule_path, 'w') as f:
+            json.dump(are_uids_dict, f)
+
         datareader.set_are_uid(are_uid)
         train_single_are(datareader, parsers)
+
+        # 这里根据训练出的参数，保存所有学生在该领域的知识点的KT预测结果
+        # save_final_predict(are_uid, datareader)
+
+        are_uids_dict[are_uid] = 2
+
+        with open(IPDKT_are_schedule_path, 'w') as f:
+            json.dump(are_uids_dict, f)
     
+    if os.path.exists(IPDKT_are_schedule_path):
+        os.remove(IPDKT_are_schedule_path)

@@ -4,9 +4,13 @@ deeplearning_root = str(Path(__file__).parent.parent.parent)
 if deeplearning_root not in sys.path:
     sys.path.insert(0, deeplearning_root)
 
+import torch
+from tqdm import tqdm
+
 from datetime import datetime, timedelta
 
 from Data.MySQLOperator import mysqldb
+from Data.MongoDBOperator import mongodb
 
 class IPDKTDataReader():
 
@@ -61,16 +65,21 @@ class IPDKTDataReader():
         # result = [(lrn_uid, scn_uid, correct),...]
         interacts = self.get_all_recordings()
         cpt_uids = self.get_all_concepts_of_area()
+        self.cpt_uids = cpt_uids
+        self.cpt_num = len(cpt_uids)
+        self.cpt_id2uid = {cpt_uids[cpt_uid] : cpt_uid for cpt_uid in cpt_uids}
         # print(cpt_uids)
         # cpt_num = self.get_concept_num_of_area()
 
         # 构建lrn和scn的数字id -- 貌似，转化就行
         lrn_uids = {}
+        self.lrn_id2uid = {}
         scn_uids = set()
         for interact in interacts:
             if interact[0] not in lrn_uids:
                 temp_id = len(lrn_uids)
                 lrn_uids[interact[0]] = temp_id
+                self.lrn_id2uid[temp_id] = interact[0]
             scn_uids.add(interact[1])
             # if interact[1] not in scn_uids:
             #     temp_id = len(scn_uids)
@@ -95,6 +104,9 @@ class IPDKTDataReader():
             # data[current_pos][1].append(cpt_uids[scn_cpts[interact[1]]])
             data[current_pos][1].append([cpt_uids[cpt_uid] for cpt_uid in scn_cpts[interact[1]]])
             data[current_pos][2].append(correct)
+
+        self.data = data
+
         train_data = []
         master_data = []
         pos = -1
@@ -119,44 +131,45 @@ class IPDKTDataReader():
                 master_data[pos][1].append(onelrndata[1][i])
                 master_data[pos][2].append(onelrndata[2][i])
                 # master_data[pos][3].append(onelrndata[3][i])
-            
+        
+        self.cpt_uids_list = list(cpt_uids.keys())
+
         return train_data, master_data, cpt_uids
+    
+    # # 应对KT的要求，将此次参与训练的cpt置为trained，之后在使用的时候kt只能预测这些知识点
+    def make_cpt_trained(self):
+        mysqldb.make_cpt_trained(self.cpt_uids_list)
 
     # 获取当前时间前推30天内的所有interacts数据
-    
-    # def load_data(self):
-    #     data = []
-    #     data_f = open(self.dir, 'r')
-    #     line = data_f.readline()
-    #     current_stu_id = ''
-    #     temp = []
-    #     while line:
-    #         line = line.strip('\n')
-    #         line = line.split('\t')
-    #         if line[0] != current_stu_id:
-    #             if current_stu_id:
-    #                 data.append(temp)
-    #             current_stu_id = line[0]
-    #             temp = []
-    #             temp.append(int(current_stu_id))
-    #             for i in range(3):
-    #                 temp.append([])
-            
-    #         temp[1].append(int(line[1]))
+    def load_final_data(self, device):
+        # shape: [[lrn_uid, [[cpt_uid, cpt_uid], [...],  ...], [correct, correct]], [....], ...]
+        final_data = {}
 
-    #         temp_item = line[2].split(',')
-    #         for i in range(len(temp_item)):
-    #             temp_item[i] = int(temp_item[i]) - 1
-    #         temp[2].append(temp_item)
+        for onelrndata in self.data:
+            lrn_uid = self.lrn_id2uid[onelrndata[0]]
+            interact_num = len(onelrndata[1])
 
-    #         temp[3].append(float(line[3]))
-    #         temp_item = line[4].split(',')
-    #         for i in range(len(temp_item)):
-    #             temp_item[i] = float(temp_item[i])
-    #         temp[4].append(temp_item)
-    #         line = data_f.readline()
-    #     data_f.close()
-    #     return data,max_pro,kc_num
+            final_data[lrn_uid] = torch.zeros(interact_num, self.cpt_num * 2, dtype=torch.float32, device=device)
+
+            row = []
+            col = []
+
+            for i in range(interact_num):
+                skip = self.cpt_num * (1 - onelrndata[2][i])
+                row.extend([i] * len(onelrndata[1][i]))
+                col.extend([cpt_id + skip for cpt_id in onelrndata[1][i]])
+
+            # for i in range(interact_num):
+            #     skip = self.cpt_num * (1 - onelrndata[2][i])
+            #     for cpt_id in onelrndata[1][i]:
+            #         final_data[lrn_uid][i][int(skip + cpt_id)] = 1.0
+
+            final_data[lrn_uid][row, col] = 1.0
+
+        return final_data, self.cpt_id2uid
+
+    def save_final_data(self, final_data):
+        mongodb.save_kt_final_data(final_data)
 
 if __name__ == '__main__':
     dr = IPDKTDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
