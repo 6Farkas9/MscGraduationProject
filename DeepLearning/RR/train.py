@@ -16,6 +16,7 @@ from sklearn.metrics import roc_auc_score
 from torch.utils.data import DataLoader
 from torch_geometric.utils import subgraph
 from torch_geometric.data import Data
+from operator import itemgetter
 
 from RR.Dataset.RRDataReader import RRDataReader
 from RR.Dataset.RRDataSet import RRDataSet
@@ -38,7 +39,7 @@ def RRloss(r_pred : torch.tensor, r : torch.tensor, h_lrn : torch.tensor, h_cpt 
     loss = mse_loss + lambda_reg * regularization_loss
     return loss
 
-def save_final_data(uids, inits, p_matrixes, datareader):
+def save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDataReader):
     # 其实，就是最后一次的master的特化版本
     # 根据输入的数据获取各种图
     # 然后获取所有学生的近一个月的所有交互数据
@@ -46,7 +47,68 @@ def save_final_data(uids, inits, p_matrixes, datareader):
     # 得出四个结果
     # 学习者、知识点、场景的嵌入式表达直接保存
     # 推荐得分按学习者分类保存
-    return
+    lrn_uids, scn_uids, cpt_uids = uids
+    learners_init, scenes_init, concepts_init = inits
+
+    (p_lsl_edge_index, p_lsl_edge_attr), \
+    (p_scs_edge_index, p_scs_edge_attr), \
+    (p_sls_edge_index, p_sls_edge_attr), \
+    (p_cc_edge_index, p_cc_edge_attr), \
+    (p_cac_edge_index, p_cac_edge_attr), \
+    (p_csc_edge_index, p_csc_edge_attr) = p_matrixes
+
+    HGC_pt_path = os.path.join(deeplearning_root, 'HGC', 'PT')
+    HGC_LRN_use_path = os.path.join(HGC_pt_path, 'HGC_LRN_use.pt')
+    HGC_SCN_use_path = os.path.join(HGC_pt_path, 'HGC_SCN_use.pt')
+    HGC_CPT_use_path = os.path.join(HGC_pt_path, 'HGC_CPT_ues.pt')
+
+    RR_pt_path = os.path.join(deeplearning_root, 'RR', 'PT')
+    RR_use_path = os.path.join(RR_pt_path, 'RR_use.pt')
+
+    model_hgc_lrn = torch.jit.load(HGC_LRN_use_path)
+    model_hgc_scn = torch.jit.load(HGC_SCN_use_path)
+    model_hgc_cpt = torch.jit.load(HGC_CPT_use_path)
+    model_rr = torch.jit.load(RR_use_path)
+
+    model_hgc_lrn.eval()
+    model_hgc_scn.eval()
+    model_hgc_cpt.eval()
+    model_rr.eval()
+
+    with torch.no_grad():
+
+        lrn_emb = model_hgc_lrn(learners_init.to(device), 
+                                p_lsl_edge_index.to(device), p_lsl_edge_attr.to(device)
+                                )
+        scn_emb = model_hgc_scn(scenes_init.to(device), 
+                                p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
+                                p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+                                )
+        cpt_emb = model_hgc_cpt(concepts_init.to(device), 
+                                p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
+                                p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
+                                p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+                                )
+
+        scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
+
+        scn_index, scn_mask = datareader.get_final_lrn_scn_index(lrn_uids, scn_uids)
+
+        r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
+                                    scn_dynamic_emb, 
+                                    scn_index.to(device),
+                                    scn_mask.to(device),
+                                    cpt_emb)
+
+    lrn_uids_list = [lrn_uid for lrn_uid, _ in sorted(lrn_uids.items(), key=itemgetter(1))]
+    scn_uids_list = [scn_uid for scn_uid, _ in sorted(scn_uids.items(), key=itemgetter(1))]
+    cpt_uids_list = [cpt_uid for cpt_uid, _ in sorted(cpt_uids.items(), key=itemgetter(1))]
+    
+
+    # 保存lrn_emb，scn_emb，cpt_emb
+    datareader.save_final_data(lrn_uids_list, scn_uids_list, cpt_uids_list, 
+                               lrn_emb, scn_emb, cpt_emb,
+                               r_pred)
 
 if __name__ == '__main__':
     parsers = parser.parse_args()
@@ -55,8 +117,8 @@ if __name__ == '__main__':
     dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}
 
     print(device)
-
-    train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat = RRDataReader(parsers.sample_num).load_data_from_db()
+    rrdatareader = RRDataReader(parsers.sample_num)
+    train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat = rrdatareader.load_data_from_db()
 
     # (self.learners_init, self.scenes_init, self.concepts_init), \
     # (self.p_lsl, self.p_scs, self.p_sls, self.p_cc, self.p_cac, self.p_csc,)
@@ -321,5 +383,5 @@ if __name__ == '__main__':
     # 保存 1.学习者嵌入式表达2.场景嵌入式表达3.知识点嵌入式表达
     # 针对特定的学习者保存推荐结果？是的
 
-    # save_final_data()
+    save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, rrdatareader)
 

@@ -28,11 +28,69 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
-        print(f"""
-        匹配: {result.matched_count} 条
-        修改: {result.modified_count} 条
-        新增: {len(result.upserted_ids)} 条
-        """)
+    def save_rr_final_lrn_emb(self, lrn_emb_dict):
+        collection = self.mongo_db["learners"]
+
+        operations = [
+            UpdateOne(
+                {"_id": lrn_uid},  # 查询条件
+                {"$set": {
+                    "HGC_Emb" : data
+                }},    # 更新内容（完全替换匹配字段）
+                upsert=True        # 有则更新无则插入
+            )
+            for lrn_uid, data in lrn_emb_dict.items()
+        ]
+
+        result = collection.bulk_write(operations)
+
+    def save_rr_final_scn_emb(self, scn_emb_dict):
+        collection = self.mongo_db["scnenes"]
+
+        operations = [
+            UpdateOne(
+                {"_id": scn_uid},  # 查询条件
+                {"$set": {
+                    "HGC_Emb" : data
+                }},    # 更新内容（完全替换匹配字段）
+                upsert=True        # 有则更新无则插入
+            )
+            for scn_uid, data in scn_emb_dict.items()
+        ]
+
+        result = collection.bulk_write(operations)
+
+    def save_rr_final_cpt_emb(self, cpt_emb_dict):
+        collection = self.mongo_db["concepts"]
+
+        operations = [
+            UpdateOne(
+                {"_id": cpt_uid},  # 查询条件
+                {"$set": {
+                    "HGC_Emb" : data
+                }},    # 更新内容（完全替换匹配字段）
+                upsert=True        # 有则更新无则插入
+            )
+            for cpt_uid, data in cpt_emb_dict.items()
+        ]
+
+        result = collection.bulk_write(operations)
+
+    def save_rr_final_r_pred_emb(self, r_pred_dict):
+        collection = self.mongo_db["learners"]
+
+        operations = [
+            UpdateOne(
+                {"_id": lrn_uid},  # 查询条件
+                {"$set": {
+                    "RR_PRED" : data
+                }},    # 更新内容（完全替换匹配字段）
+                upsert=True        # 有则更新无则插入
+            )
+            for lrn_uid, data in r_pred_dict.items()
+        ]
+
+        result = collection.bulk_write(operations)
 
 
 mongodb = MongoDB()

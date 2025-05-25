@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from torch_geometric.data import Data
 
 from Data.MySQLOperator import mysqldb
+from Data.MongoDBOperator import mongodb
 from HGC.Dataset.HGCDataReader import HGCDataReader
 
 
@@ -34,6 +35,7 @@ class RRDataReader():
         uids, inits, p_matrixes = self.hgcdr.load_data_from_db()
         
         lrn_scn = self.get_interacts_with_scn_greater_4(uids[0])
+        self.lrn_scn = lrn_scn
         scn_cpt = self.get_concepts_of_scenes(list(uids[1].keys()))
 
         # 为方便之后的计算，这里要计算出scn_cpt的二维矩阵，之后可以直接使用矩阵运算
@@ -45,10 +47,14 @@ class RRDataReader():
         # lrn_cpt：一个两行n列的tensor，其中第一行是训练集的知识点学习次数，第二行是测试集的学习与否
         # lrn_cpt = {lrn_uid : np.zeros((2, len(uids[2])), dtype=np.float32) for lrn_uid in uids[0].keys()}
 
+        self.max_interact_num = 0
         train_data = {lrn_uid : [[], np.zeros(len(uids[2]), dtype=np.float32)] for lrn_uid in uids[0].keys()}
         master_data = {lrn_uid : [[], np.zeros(len(uids[2]), dtype=np.float32)] for lrn_uid in uids[0].keys()}
         for lrn_uid in lrn_scn:
             scn_uids = list(lrn_scn[lrn_uid])
+
+            self.max_interact_num = max(self.max_interact_num, len(scn_uids))
+
             # 训练集
             for i in range(len(scn_uids) - 1):
                 train_data[lrn_uid][0].append(scn_uids[i])
@@ -92,6 +98,58 @@ class RRDataReader():
         )
 
         return train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat
+    
+    def get_final_lrn_scn_index(self, lrn_uids, scn_uids):
+        # 根据这个lrn_scn去做出
+        # scn_seq_index : torch.Tensor,
+        # scn_seq_mask : torch.Tensor,
+        # 其中scn_seq_index的长度是最多的交互次数
+        scn_index = torch.zeros(len(lrn_uids), self.max_interact_num, dtype=torch.long)
+        scn_mask  = torch.zeros(len(lrn_uids), self.max_interact_num, dtype=torch.float32)
+        lrn_idx = 0
+        row = []
+        col = []
+        for lrn_uid in lrn_uids:
+            current_interact_num = len(self.lrn_scn[lrn_uid])
+
+            row.extend([lrn_idx] * current_interact_num)
+            col.extend([idx for idx in range(current_interact_num)])
+
+            current_scn_seq = [scn_uids[scn_uid] for scn_uid in self.lrn_scn[lrn_uid]]
+            scn_index[lrn_idx][:current_interact_num] = torch.tensor(current_scn_seq, dtype=torch.long)
+
+        scn_mask[row, col] = 1.0
+
+        return scn_index, scn_mask
+    
+    def save_final_data(self, lrn_uids, scn_uids, cpt_uids, lrn_emb, scn_emb, cpt_emb, r_pred):
+        lrn_emb_dict = {
+            lrn_uid : c_lrn_emb.tolist() for lrn_uid, c_lrn_emb in zip(lrn_uids, lrn_emb)
+        }
+
+        mongodb.save_rr_final_lrn_emb(lrn_emb_dict)
+
+        scn_emb_dict = {
+            scn_uid : c_scn_emb.tolist() for scn_uid, c_scn_emb in zip(scn_uids, scn_emb)
+        }
+
+        mongodb.save_rr_final_scn_emb(scn_emb_dict)
+
+        cpt_emb_dict = {
+            cpt_uid : c_cpt_emb.tolist() for cpt_uid, c_cpt_emb in zip(cpt_uids, cpt_emb)
+        }
+
+        mongodb.save_rr_final_cpt_emb(cpt_emb_dict)
+
+        r_pred_dict = {
+            lrn_uid: {
+                cpt_uid: float(r_pred[i, j])  # 显式转换为Python float
+                for j, cpt_uid in enumerate(cpt_uids)
+            }
+            for i, lrn_uid in enumerate(lrn_uids)
+        }
+
+        mongodb.save_rr_final_r_pred_emb(r_pred_dict)
     
 if __name__ == '__main__':
     rrdr = RRDataReader(128)
