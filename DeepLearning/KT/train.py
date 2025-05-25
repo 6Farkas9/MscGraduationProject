@@ -227,10 +227,13 @@ def save_final_predict(are_uid, datareader: IPDKTDataReader, device):
 
     model_ipdkt = torch.jit.load(IPDKT_pt_use_path)
 
+    model_ipdkt.eval()
+
     # 预测出结果
     pre_result = {}
     for lrn_uid in final_data:
-        result = model_ipdkt(final_data[lrn_uid])[-1]
+        with torch.no_grad():
+            result = model_ipdkt(final_data[lrn_uid])[-1]
         # print(pre_result[lrn_uid])
         pre_result[lrn_uid] = {cpt_uid : result[id].item() for id, cpt_uid in cpt_id2uid.items()}
 

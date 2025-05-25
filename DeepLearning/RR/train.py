@@ -38,6 +38,16 @@ def RRloss(r_pred : torch.tensor, r : torch.tensor, h_lrn : torch.tensor, h_cpt 
     loss = mse_loss + lambda_reg * regularization_loss
     return loss
 
+def save_final_data(uids, inits, p_matrixes, datareader):
+    # 其实，就是最后一次的master的特化版本
+    # 根据输入的数据获取各种图
+    # 然后获取所有学生的近一个月的所有交互数据
+    # 加载模型
+    # 得出四个结果
+    # 学习者、知识点、场景的嵌入式表达直接保存
+    # 推荐得分按学习者分类保存
+    return
+
 if __name__ == '__main__':
     parsers = parser.parse_args()
 
@@ -307,4 +317,9 @@ if __name__ == '__main__':
         scripted_model = torch.jit.optimize_for_inference(scripted_model)
         scripted_model.save(RR_use_path)
 
-    
+    # 在这里保存mongo数据
+    # 保存 1.学习者嵌入式表达2.场景嵌入式表达3.知识点嵌入式表达
+    # 针对特定的学习者保存推荐结果？是的
+
+    # save_final_data()
+
