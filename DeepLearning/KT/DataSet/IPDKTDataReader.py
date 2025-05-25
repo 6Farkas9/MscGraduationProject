@@ -9,9 +9,16 @@ from datetime import datetime, timedelta
 from Data.DBOperator import db
 
 class IPDKTDataReader():
-    def __init__(self, are_uid):
+
+    def __init__(self):
+        self.are_uid = ""
+
+    def set_are_uid(self, are_uid):
         self.are_uid = are_uid
-        print(self.are_uid)
+
+    # def __init__(self, are_uid):
+    #     self.are_uid = are_uid
+    #     print(self.are_uid)
 
     # 这里是要准备KT所需要的交互数据
     # 学习者uid - 数字id
@@ -44,6 +51,9 @@ class IPDKTDataReader():
     
     def get_cpt_uid_of_scene(self, scn_uids):
         return db.get_concepts_uid_of_scenes(scn_uids)
+    
+    def load_area_uids(self):
+        return db.get_areas_uid()
 
     # 从数据库中获取所有数据
     def load_data_from_db(self):

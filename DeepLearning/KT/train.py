@@ -114,14 +114,12 @@ parser.add_argument('--hidden_size',type=int,default=256,help='the number of the
 parser.add_argument('--max_step',type=int,default=64,help='the number of max step')
 parser.add_argument('--num_layers',type=int,default=2,help='the number of layers')
 
-parser.add_argument('--are_uid',type=str,default='are_3fee9e47d0f3428382f4afbcb1004117',help='the uid of area')
+# parser.add_argument('--are_uid',type=str,default='are_3fee9e47d0f3428382f4afbcb1004117',help='the uid of area')
 
-if __name__ == '__main__': 
-    parsers = parser.parse_args()
-
-    # 这里用来获取数据
-    # 这里要改
-    train_data, master_data, cpt_uids = IPDKTDataReader(parsers.are_uid).load_data_from_db()
+def train_single_are(datareader, parsers):
+    
+    # train_data, master_data, cpt_uids = IPDKTDataReader(are_uid).load_data_from_db()
+    train_data, master_data, cpt_uids = datareader.load_data_from_db()
     train_data_frame = pd.DataFrame(train_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
     master_data_frame = pd.DataFrame(master_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
 
@@ -141,16 +139,18 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr= parsers.lr)
 
     IPDKT_pt_path = os.path.join('PT')
-    IPDKT_pt_train_path = os.path.join(IPDKT_pt_path, 'IPDKT_train.pt')
+    IPDKT_pt_train_path = os.path.join(IPDKT_pt_path, are_uid + '_train.pt')
+    print(IPDKT_pt_path)
     IPDKT_pt_train_path = os.path.normpath(IPDKT_pt_train_path)
     isaddupdate = True
-    IPDKT_pt_use_path = os.path.join(IPDKT_pt_path, 'IPDKT_use.pt')
+    IPDKT_pt_use_path = os.path.join(IPDKT_pt_path, are_uid + '_use.pt')
+    print(IPDKT_pt_use_path)
     IPDKT_pt_use_path = os.path.normpath(IPDKT_pt_use_path)
     IPDKT_pt_temp_path = os.path.join(IPDKT_pt_path, 'IPDKT_train_temp.pt')
     IPDKT_pt_temp_path = os.path.normpath(IPDKT_pt_temp_path)
 
     if os.path.exists(IPDKT_pt_train_path):
-        print('增量训练')
+        print(are_uid + '增量训练')
         check_point = torch.load(IPDKT_pt_train_path, map_location=device)
         model.load_state_dict(check_point['model_state_dict'])
         lastloss = check_point['loss']
@@ -219,3 +219,18 @@ if __name__ == '__main__':
         scripted_model.save(IPDKT_pt_use_path)
 
     make_cpt_trained(list(cpt_uids.keys()))
+
+if __name__ == '__main__': 
+    parsers = parser.parse_args()
+
+    # 这里用来获取数据
+    # 这里要改
+    datareader = IPDKTDataReader()
+    are_uids = datareader.load_area_uids()
+
+    # are_uids = IPDKTDataReader().load_area_uids()
+
+    for are_uid in are_uids:
+        datareader.set_are_uid(are_uid)
+        train_single_are(datareader, parsers)
+    

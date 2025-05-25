@@ -388,4 +388,5 @@ class DB():
         cursor.execute(sql % place_holders, cpt_uids)
         self.con.commit()
         cursor.close()
+
 db = DB()
