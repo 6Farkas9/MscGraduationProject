@@ -17,12 +17,12 @@ from torch.utils.data import DataLoader
 from KT.DataSet.IPDKTDataReader import IPDKTDataReader
 from KT.DataSet.IPDKTDataset import IPDKTDataset
 from KT.Model.IPDKT import IPDKT
-from Data.DBOperator import db
+from Data.MySQLOperator import mysqldb
 
 # # 应对KT的要求，将此次参与训练的cpt置为trained，之后在使用的时候kt只能预测这些知识点
 def make_cpt_trained(cpt_uids : list):
     print('设置trained属性')
-    db.make_cpt_trained(cpt_uids)
+    mysqldb.make_cpt_trained(cpt_uids)
 
 def train_epoch(model, train_iterator, optim, criterion, device="cpu"):
     model.train()

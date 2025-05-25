@@ -8,7 +8,7 @@ import torch
 from datetime import datetime, timedelta
 from torch_geometric.data import Data
 
-from Data.DBOperator import db
+from Data.MySQLOperator import mysqldb
 
 # DataReader的职责应该是从数据库中读取数据，构建出图
 # 返回的结果传给Dataset
@@ -16,38 +16,38 @@ from Data.DBOperator import db
 class HGCDataReader():
     
     def get_cpt_are(self):
-        return db.get_cpt_are()
+        return mysqldb.get_cpt_are()
 
     def get_cpt_cpt(self):
-        return db.get_cpt_cpt()
+        return mysqldb.get_cpt_cpt()
     
     def get_areas_uid(self):
-        uids = db.get_areas_uid()
+        uids = mysqldb.get_areas_uid()
         return {uid : uids.index(uid) for uid in uids}
     
     def get_learners_uid_with_scn_greater_4(self):
-        uids = db.get_learners_uid_with_scn_greater_4()
+        uids = mysqldb.get_learners_uid_with_scn_greater_4()
         self.lrn_uids = {uid : idx for idx, uid in enumerate(uids)}
         self.lrn_num = len(uids)
 
     def get_scenes_uid(self):
-        uids = db.get_scenes_uid()
+        uids = mysqldb.get_scenes_uid()
         self.scn_uids = {uid : idx for idx, uid in enumerate(uids)}
         self.scn_num = len(uids)
 
     def get_concepts_uid(self):
-        uids = db.get_concepts_uid()
+        uids = mysqldb.get_concepts_uid()
         self.cpt_uids = {uid : idx for idx, uid in enumerate(uids)}
         self.cpt_num = len(uids)
 
     def get_lrn_scn_num_with_scn_greater_4(self):
-        return db.get_lrn_scn_num_with_scn_greater_4()
+        return mysqldb.get_lrn_scn_num_with_scn_greater_4()
     
     def get_scn_cpt_dif(self):
-        return db.get_scn_cpt_dif()
+        return mysqldb.get_scn_cpt_dif()
     
     def get_cpt_uid_name(self):
-        return db.get_cpt_uid_name()
+        return mysqldb.get_cpt_uid_name()
 
     def get_P_lsl(self):
         A = self.learners_init.clone()

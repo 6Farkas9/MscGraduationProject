@@ -9,7 +9,7 @@ import pandas as pd
 
 import numpy as np 
 
-from Data.DBOperator import db
+from Data.MySQLOperator import mysqldb
 from HGC.Dataset.HGCDataReader import HGCDataReader
 
 class CDDataReader():
@@ -19,14 +19,14 @@ class CDDataReader():
     def get_interacts_with_scn_greater_4(self, lrn_uids):
         # lrn_scn = [[] for _ in range(len(lrn_uids))]
         lrn_scn = {lrn_uid : [[], []] for lrn_uid in lrn_uids.keys()}
-        interacts = db.get_interacts_with_scn_greater_4()
+        interacts = mysqldb.get_interacts_with_scn_greater_4()
         for onedata in interacts:
             lrn_scn[onedata[0]][0].append(onedata[1])
             lrn_scn[onedata[0]][1].append(onedata[2])
         return lrn_scn
     
     def get_concepts_of_scenes(self, scn_uids):
-        return db.get_concepts_of_scenes(scn_uids)
+        return mysqldb.get_concepts_of_scenes(scn_uids)
 
     def load_Data_from_db(self):
         uids, inits, p_matrixes = self.hgcdr.load_data_from_db()

@@ -7,7 +7,7 @@ if deeplearning_root not in sys.path:
 import mysql
 import mysql.connector
 
-class DB():
+class MySQLDB():
 
     def __init__(self):
         self.con = mysql.connector.connect(
@@ -389,4 +389,4 @@ class DB():
         self.con.commit()
         cursor.close()
 
-db = DB()
+mysqldb = MySQLDB()

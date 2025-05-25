@@ -6,7 +6,7 @@ if deeplearning_root not in sys.path:
 
 from datetime import datetime, timedelta
 
-from Data.DBOperator import db
+from Data.MySQLOperator import mysqldb
 
 class IPDKTDataReader():
 
@@ -28,7 +28,7 @@ class IPDKTDataReader():
     # 获得只包含当前领域相关知识点的场景的交互信息
     def get_all_recordings(self, limit = -1):
         time_start = self.get_30days_before()
-        result = db.get_interacts_with_cpt_in_are_from(
+        result = mysqldb.get_interacts_with_cpt_in_are_from(
                 self.are_uid,
                 time_start,
                 limit
@@ -37,23 +37,23 @@ class IPDKTDataReader():
     
     # 获得当前领域的所有知识点，cpt_uid, inner_id
     def get_all_concepts_of_area(self):
-        cpt_uids = db.get_all_concepts_uid_and_id_of_area(self.are_uid)
+        cpt_uids = mysqldb.get_all_concepts_uid_and_id_of_area(self.are_uid)
         return cpt_uids
 
     def get_30days_before(self):
         return (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
     
     def get_concepts_of_scene(self, scn_uids):
-        return db.get_concepts_of_scenes(scn_uids)
+        return mysqldb.get_concepts_of_scenes(scn_uids)
     
     # def get_concept_num_of_area(self):
     #     return db.get_concept_num_of_area(self.are_uid)[0]
     
     def get_cpt_uid_of_scene(self, scn_uids):
-        return db.get_concepts_uid_of_scenes(scn_uids)
+        return mysqldb.get_concepts_uid_of_scenes(scn_uids)
     
     def load_area_uids(self):
-        return db.get_areas_uid()
+        return mysqldb.get_areas_uid()
 
     # 从数据库中获取所有数据
     def load_data_from_db(self):
