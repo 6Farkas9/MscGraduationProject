@@ -53,6 +53,7 @@ class CD(nn.Module):
     def forward(self, 
                 scn_seq_index : torch.Tensor, 
                 scn_seq_mask : torch.Tensor, 
+                lrn_static : torch.Tensor,
                 scn_emb : torch.Tensor, 
                 cpt_emb : torch.Tensor) -> torch.Tensor:
         # 先计算h矩阵
@@ -63,6 +64,8 @@ class CD(nn.Module):
         # print(scn_seq_index.shape, scn_seq_mask.shape)
 
         h_lrn = (scn_emb[scn_seq_index] * scn_seq_mask.unsqueeze(-1)).sum(dim=1) / scn_seq_mask.sum(dim=1, keepdim=True)
+        h_lrn.add_(lrn_static).div_(2.0)
+        # print('h_lrn:', h_lrn.shape)
 
         h_scn = scn_emb
         h_cpt = cpt_emb

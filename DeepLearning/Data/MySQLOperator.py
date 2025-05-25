@@ -376,6 +376,18 @@ class MySQLDB():
         cursor.close()
         return result
     
+    # 获取special_scenes中的所有scn_uid和cpt_uid
+    def get_all_special_scn_cpt_uid(self):
+        sql = f"""
+        select scn_uid, cpt_uid
+        from special_scenes
+        """
+        cursor = self.con.cursor()
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        cursor.close()
+        return result
+    
     # KT中将参与训练的cpt均置为trained，方便之后使用时辨别哪些可用KT预测
     def make_cpt_trained(self, cpt_uids):
         sql = f"""

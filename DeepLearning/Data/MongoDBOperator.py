@@ -28,7 +28,7 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
-    def save_rr_final_lrn_emb(self, lrn_emb_dict):
+    def save_final_lrn_emb(self, lrn_emb_dict):
         collection = self.mongo_db["learners"]
 
         operations = [
@@ -44,8 +44,8 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
-    def save_rr_final_scn_emb(self, scn_emb_dict):
-        collection = self.mongo_db["scnenes"]
+    def save_final_scn_emb(self, scn_emb_dict):
+        collection = self.mongo_db["scenes"]
 
         operations = [
             UpdateOne(
@@ -60,7 +60,7 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
-    def save_rr_final_cpt_emb(self, cpt_emb_dict):
+    def save_final_cpt_emb(self, cpt_emb_dict):
         collection = self.mongo_db["concepts"]
 
         operations = [
@@ -83,7 +83,23 @@ class MongoDB:
             UpdateOne(
                 {"_id": lrn_uid},  # 查询条件
                 {"$set": {
-                    "RR_PRED" : data
+                    "RR" : data
+                }},    # 更新内容（完全替换匹配字段）
+                upsert=True        # 有则更新无则插入
+            )
+            for lrn_uid, data in r_pred_dict.items()
+        ]
+
+        result = collection.bulk_write(operations)
+
+    def save_cd_final_r_pred_emb(self, r_pred_dict):
+        collection = self.mongo_db["learners"]
+
+        operations = [
+            UpdateOne(
+                {"_id": lrn_uid},  # 查询条件
+                {"$set": {
+                    "CD" : data
                 }},    # 更新内容（完全替换匹配字段）
                 upsert=True        # 有则更新无则插入
             )

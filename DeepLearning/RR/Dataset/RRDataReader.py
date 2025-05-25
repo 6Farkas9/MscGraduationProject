@@ -127,19 +127,19 @@ class RRDataReader():
             lrn_uid : c_lrn_emb.tolist() for lrn_uid, c_lrn_emb in zip(lrn_uids, lrn_emb)
         }
 
-        mongodb.save_rr_final_lrn_emb(lrn_emb_dict)
+        mongodb.save_final_lrn_emb(lrn_emb_dict)
 
         scn_emb_dict = {
             scn_uid : c_scn_emb.tolist() for scn_uid, c_scn_emb in zip(scn_uids, scn_emb)
         }
 
-        mongodb.save_rr_final_scn_emb(scn_emb_dict)
+        mongodb.save_final_scn_emb(scn_emb_dict)
 
         cpt_emb_dict = {
             cpt_uid : c_cpt_emb.tolist() for cpt_uid, c_cpt_emb in zip(cpt_uids, cpt_emb)
         }
 
-        mongodb.save_rr_final_cpt_emb(cpt_emb_dict)
+        mongodb.save_final_cpt_emb(cpt_emb_dict)
 
         r_pred_dict = {
             lrn_uid: {

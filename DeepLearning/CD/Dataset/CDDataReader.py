@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np 
 
 from Data.MySQLOperator import mysqldb
+from Data.MongoDBOperator import mongodb
 from HGC.Dataset.HGCDataReader import HGCDataReader
 
 class CDDataReader():
@@ -43,9 +44,6 @@ class CDDataReader():
             results = list(lrn_scn[lrn_uid][1])
 
             scn_num = len(scn_uids)
-
-            if scn_num == 0:
-                print('shit')
             
             train_num = max(1, int(scn_num * 0.8))
 
@@ -61,35 +59,55 @@ class CDDataReader():
         
         # 实际上返回的这些值都是不变的，dataset中需要根据lrn_uid来获取对应的子集
         return train_data, master_data, uids, inits, p_matrixes#, lrn_scn_mat, scn_cpt_mat
+    
+    def get_final_lrn_scn_index(self, lrn_uids, scn_uids):
 
-    def load_Data(self):
-        reader_file = pd.read_csv(self.path, header=0)
+        # 获取所有的特殊课程的scn_uid和cpt_uid
+        # 通过uid和scn_uids获取每个特殊课程的id
+        # 然后获取有序的cpt_uid_list
 
-        num_stu = 0
-        stu_all = {} # {stu_origin_id:newid,....}
-        stu_exer = []
-        len_row, _ = reader_file.shape
+        special_scn_cpt_uids =  mysqldb.get_all_special_scn_cpt_uid()
 
-        res_data = []
+        cpt_num = len(special_scn_cpt_uids)
+        scn_mask  = torch.ones(len(lrn_uids), cpt_num, dtype=torch.float32)
 
-        for i in range(len_row):
-            stu_name = reader_file.iloc[i,0]
-            exer_id = reader_file.iloc[i,1]
-            correct = reader_file.iloc[i,2]
+        scn_seq = [scn_uids[scn_uid] for scn_uid, _ in special_scn_cpt_uids]
+        cpt_uids_list_orderd = [cpt_uid for _, cpt_uid in special_scn_cpt_uids]
+        scn_index_oneline = torch.tensor(scn_seq, dtype=torch.long)
+        
+        scn_index = scn_index_oneline.expand(len(lrn_uids), -1).contiguous()
 
-            if stu_name not in stu_all.keys():
-                stu_all[stu_name] = num_stu
-                stu_exer.append([])
-                num_stu += 1
-            
-            stu_id = stu_all[stu_name]
-            if exer_id not in stu_exer[stu_id]:
-                stu_exer[stu_id].append(exer_id)
-            res_data.append([stu_id,exer_id,correct])
+        return scn_index, scn_mask, cpt_uids_list_orderd
+    
+    def save_final_data(self, lrn_uids, scn_uids, cpt_uids, lrn_emb, scn_emb, cpt_emb, r_pred, ordered_cpt_uids):
 
-        res_data = torch.tensor(res_data, dtype=torch.long).to(self.device)
+        lrn_emb_dict = {
+            lrn_uid : c_lrn_emb.tolist() for lrn_uid, c_lrn_emb in zip(lrn_uids, lrn_emb)
+        }
 
-        return res_data, stu_exer
+        mongodb.save_final_lrn_emb(lrn_emb_dict)
+
+        scn_emb_dict = {
+            scn_uid : c_scn_emb.tolist() for scn_uid, c_scn_emb in zip(scn_uids, scn_emb)
+        }
+
+        mongodb.save_final_scn_emb(scn_emb_dict)
+
+        cpt_emb_dict = {
+            cpt_uid : c_cpt_emb.tolist() for cpt_uid, c_cpt_emb in zip(cpt_uids, cpt_emb)
+        }
+
+        mongodb.save_final_cpt_emb(cpt_emb_dict)
+
+        # cd不同于其他的模型，最终的结果计算要计算学习者关于特定场景的正确概率
+        r_pred_dict = {
+            lrn_uid: {
+                cpt_uid: float(r_pred[i, j])  # 显式转换为Python float
+                for j, cpt_uid in enumerate(ordered_cpt_uids)
+            }
+            for i, lrn_uid in enumerate(lrn_uids)
+        }
+        mongodb.save_cd_final_r_pred_emb(r_pred_dict)
     
 if __name__ == '__main__':
     cddr = CDDataReader('are_3fee9e47d0f3428382f4afbcb1004117')

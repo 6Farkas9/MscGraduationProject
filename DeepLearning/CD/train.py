@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from torch_geometric.utils import subgraph
 from torch_geometric.data import Data
+from operator import itemgetter
 
 from CD.Dataset.CDDataReader import CDDataReader
 from CD.Dataset.CDDataSet import CDDataset
@@ -21,10 +22,83 @@ from CD.Model.CD import CD
 from HGC.Model.HGC import HGC_LRN, HGC_SCN, HGC_CPT
 
 def protect_norm(models):
+    return 
     for model in models:
         for name, param in model.named_parameters():
             if torch.isnan(param).any():
                 param.data = torch.nan_to_num(param.data, nan=0.0, posinf=1e4, neginf=-1e4)
+
+def save_final_data(uids, inits, p_matrixes, datareader : CDDataReader):
+
+    lrn_uids, scn_uids, cpt_uids = uids
+    learners_init, scenes_init, concepts_init = inits
+
+    (p_lsl_edge_index, p_lsl_edge_attr), \
+    (p_scs_edge_index, p_scs_edge_attr), \
+    (p_sls_edge_index, p_sls_edge_attr), \
+    (p_cc_edge_index, p_cc_edge_attr), \
+    (p_cac_edge_index, p_cac_edge_attr), \
+    (p_csc_edge_index, p_csc_edge_attr) = p_matrixes
+
+    HGC_pt_path = os.path.join(deeplearning_root, 'HGC', 'PT')
+    HGC_LRN_use_path = os.path.join(HGC_pt_path, 'HGC_LRN_use.pt')
+    HGC_SCN_use_path = os.path.join(HGC_pt_path, 'HGC_SCN_use.pt')
+    HGC_CPT_use_path = os.path.join(HGC_pt_path, 'HGC_CPT_ues.pt')
+
+    CD_pt_path = os.path.join(deeplearning_root, 'CD', 'PT')
+    CD_use_path = os.path.join(CD_pt_path, 'CD_use.pt')
+
+    model_hgc_lrn = torch.jit.load(HGC_LRN_use_path)
+    model_hgc_scn = torch.jit.load(HGC_SCN_use_path)
+    model_hgc_cpt = torch.jit.load(HGC_CPT_use_path)
+    model_cd = torch.jit.load(CD_use_path)
+
+    model_hgc_lrn.eval()
+    model_hgc_scn.eval()
+    model_hgc_cpt.eval()
+    model_cd.eval()
+
+    with torch.no_grad():
+        lrn_emb = model_hgc_lrn(
+            learners_init.to(device), 
+            p_lsl_edge_index.to(device), p_lsl_edge_attr.to(device)
+        )
+        scn_emb = model_hgc_scn(
+            scenes_init.to(device), 
+            p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
+            p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+        )
+        cpt_emb = model_hgc_cpt(
+            concepts_init.to(device), 
+            p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
+            p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
+            p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+        )
+        
+        # 这里已经获得了相当于z的矩阵
+        # 然后输入到cd中
+
+        scn_index, scn_mask, ordered_cpt_uids = datareader.get_final_lrn_scn_index(lrn_uids, scn_uids)
+
+        r_pred = model_cd(
+            scn_index.to(device), 
+            scn_mask.to(device), 
+            lrn_emb,
+            scn_emb, 
+            cpt_emb
+        )
+
+    lrn_uids_list = [lrn_uid for lrn_uid, _ in sorted(lrn_uids.items(), key=itemgetter(1))]
+    scn_uids_list = [scn_uid for scn_uid, _ in sorted(scn_uids.items(), key=itemgetter(1))]
+    cpt_uids_list = [cpt_uid for cpt_uid, _ in sorted(cpt_uids.items(), key=itemgetter(1))]
+    
+
+    # 保存lrn_emb，scn_emb，cpt_emb
+    datareader.save_final_data(lrn_uids_list, scn_uids_list, cpt_uids_list, 
+                               lrn_emb, scn_emb, cpt_emb,
+                               r_pred, ordered_cpt_uids)
+
+
 
 parser = argparse.ArgumentParser(description='CD')
 parser.add_argument('--batch_size',type=int,default=32,help='number of batch size to train (defauly 32 )')
@@ -43,7 +117,8 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}
 
-    train_data, master_data, uids, inits, p_matrixes = CDDataReader().load_Data_from_db()
+    cddatareader = CDDataReader()
+    train_data, master_data, uids, inits, p_matrixes = cddatareader.load_Data_from_db()
 
     lrn_uids, scn_uids, cpt_uids = uids
     learners_init, scenes_init, concepts_init = inits
@@ -178,10 +253,12 @@ if __name__ == '__main__':
             
             # 这里已经获得了相当于z的矩阵
             # 然后输入到cd中
+            # print('lrn_emb', lrn_emb.shape)
 
             result_pred = model_cd(
                 scn_seq_index.to(device), 
                 scn_seq_mask.to(device), 
+                lrn_emb,
                 scn_emb, 
                 cpt_emb
             )
@@ -262,6 +339,7 @@ if __name__ == '__main__':
                 result_pred = model_cd(
                     scn_seq_index.to(device), 
                     scn_seq_mask.to(device), 
+                    lrn_emb,
                     scn_emb, 
                     cpt_emb
                 )
@@ -324,3 +402,5 @@ if __name__ == '__main__':
         scripted_model = torch.jit.script(model_cd)
         scripted_model = torch.jit.optimize_for_inference(scripted_model)
         scripted_model.save(CD_use_path)
+
+    save_final_data(uids, inits, p_matrixes, cddatareader)
