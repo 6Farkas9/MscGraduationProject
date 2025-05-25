@@ -162,6 +162,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\api\crow.h" />
+    <ClInclude Include="include\core\MLS_config.h" />
     <ClInclude Include="include\database\DBOperator.h" />
     <ClInclude Include="include\utils\MLSTimer.h" />
   </ItemGroup>

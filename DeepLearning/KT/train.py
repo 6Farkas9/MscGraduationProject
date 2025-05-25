@@ -140,11 +140,11 @@ def train_single_are(datareader, parsers):
 
     IPDKT_pt_path = os.path.join('PT')
     IPDKT_pt_train_path = os.path.join(IPDKT_pt_path, are_uid + '_train.pt')
-    print(IPDKT_pt_path)
+    # print(IPDKT_pt_path)
     IPDKT_pt_train_path = os.path.normpath(IPDKT_pt_train_path)
     isaddupdate = True
     IPDKT_pt_use_path = os.path.join(IPDKT_pt_path, are_uid + '_use.pt')
-    print(IPDKT_pt_use_path)
+    # print(IPDKT_pt_use_path)
     IPDKT_pt_use_path = os.path.normpath(IPDKT_pt_use_path)
     IPDKT_pt_temp_path = os.path.join(IPDKT_pt_path, 'IPDKT_train_temp.pt')
     IPDKT_pt_temp_path = os.path.normpath(IPDKT_pt_temp_path)

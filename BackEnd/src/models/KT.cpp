@@ -25,10 +25,13 @@ KT::~KT(){
     6.获取最后一个的预测结果作为返回
     */
 std::vector<float> KT::forward(const std::string &are_uid, const std::string &lrn_uid){
-    // are_uid获取对应的PT文件先暂时略过，没想好怎么去组织这个文件格式
+    
     torch::jit::Module IPDKT;
-    std::string abs_path = R"(D:\Desktop\GraduationDesign\GraduationDesign\DeepLearning\KT\PT\IPDKT_use.pt)";
-    IPDKT = torch::jit::load(abs_path);
+    // are_uid获取对应的PT文件先暂时略过，没想好怎么去组织这个文件格式
+    std::string pt_path = R"(\KT\PT\)" + are_uid + "_use.pt";
+    pt_path = DEEPLEARNING_ROOT + pt_path;
+    std::cout << pt_path << std::endl;
+    IPDKT = torch::jit::load(pt_path);
     // IPDKT.to(torch::kCPU);
     IPDKT.eval();
     
