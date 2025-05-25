@@ -1,5 +1,4 @@
 #include "KT.h"
-#include "MLSTimer.h"
 
 KT::KT(DBOperator &db) :
     db(db)
