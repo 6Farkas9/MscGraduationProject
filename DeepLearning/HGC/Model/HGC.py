@@ -85,30 +85,39 @@ class Projection(nn.Module):
         super().__init__()
         # 输入维度为场景数量（动态），输出固定维度
         self.proj = nn.Sequential(
-            nn.Linear(1, 16),    # 处理单个归一化交互值
-            nn.ReLU(),
-            nn.Linear(16, embedding_dim)
+            nn.Linear(1, 32),
+            nn.LeakyReLU(0.1),  # 改用LeakyReLU防止负值完全消失
+            nn.Linear(32, 64),
+            nn.LeakyReLU(0.1),
+            nn.Linear(64, embedding_dim)
         )
         
+        # 初始化权重
+        self._init_weights()
+
+    def _init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
+                nn.init.constant_(m.bias, 0.1)  # 小的正偏置
+        
     def forward(self, normalized_matrix: torch.Tensor) -> torch.Tensor:
-        """
-        输入: normalized_matrix = D⁻¹A [num_learners, num_scenes]
-        输出: [num_learners, hidden_dim]
-        """
         num_learners = normalized_matrix.size(0)
         embeddings = []
         
         for i in range(num_learners):
-            # 提取非零归一化交互值 [num_interacted_scenes, 1]
-            non_zero = normalized_matrix[i].nonzero().squeeze(-1).float()
-            if len(non_zero) == 0:
-                emb = torch.zeros(1, self.proj[-1].out_features, dtype=torch.float)
-            else:
-                # 对每个归一化值独立编码 [num_interacted_scenes, hidden_dim]
-                embs = self.proj(non_zero.unsqueeze(-1))
-                # 均值聚合 [hidden_dim]
-                emb = embs.mean(dim=0, keepdim=True)
-            embeddings.append(emb)
+            # 获取当前学习者的所有交互值（包括零）
+            interactions = normalized_matrix[i].view(-1, 1)
+            
+            # 对非零交互使用更强的权重
+            mask = (interactions > 0).float()
+            embs = self.proj(interactions) * mask
+            
+            # 加权聚合（考虑交互强度）
+            sum_weights = mask.sum(dim=0) + 1e-6  # 防止除零
+            emb = embs.sum(dim=0) / sum_weights
+            
+            embeddings.append(emb.unsqueeze(0))
             
         return torch.cat(embeddings, dim=0)
 
@@ -126,7 +135,7 @@ class HGC_LRN(nn.Module):
                 init : torch.Tensor,
                 p_lsl_edge_index : torch.Tensor, p_lsl_edge_attr : torch.Tensor
                 ) -> torch.Tensor:    
-
+        
         embeddings_lrn = self.proj_lrn(init)
 
         out_lsl = self.GCN_lsl(embeddings_lrn,
