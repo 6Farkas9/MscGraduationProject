@@ -22,11 +22,35 @@ from CD.Model.CD import CD
 from HGC.Model.HGC import HGC_LRN, HGC_SCN, HGC_CPT
 
 def protect_norm(models):
-    return 
+    return
     for model in models:
         for name, param in model.named_parameters():
             if torch.isnan(param).any():
                 param.data = torch.nan_to_num(param.data, nan=0.0, posinf=1e4, neginf=-1e4)
+
+def check_nan(model, step_name):
+    for name, param in model.named_parameters():
+        if torch.isnan(param).any() or torch.isinf(param).any():
+            print(f"NaN/Inf in {step_name}: {name}")
+            raise ValueError(f"参数 {name} 在 {step_name} 出现NaN/Inf")
+
+def check_grad_stats(model):
+    stats = {}
+    for name, param in model.named_parameters():
+        if param.grad is not None:
+            grad = param.grad.data
+            stats[name] = {
+                "norm": grad.norm(2).item(),
+                "max": grad.max().item(),
+                "min": grad.min().item(),
+                "mean": grad.mean().item()
+            }
+    print(stats)
+
+def check_data(inputs):
+    assert torch.isfinite(inputs).all(), "数据包含 NaN/Inf!"
+    print(f"输入范围: [{inputs.min():.4f}, {inputs.max():.4f}]")
+
 
 def save_final_data(uids, inits, p_matrixes, datareader : CDDataReader):
 
@@ -103,7 +127,7 @@ def save_final_data(uids, inits, p_matrixes, datareader : CDDataReader):
 parser = argparse.ArgumentParser(description='CD')
 parser.add_argument('--batch_size',type=int,default=32,help='number of batch size to train (defauly 32 )')
 parser.add_argument('--epochs',type=int,default=2,help='number of epochs to train (defauly 32 )')
-parser.add_argument('--lr',type=float,default=0.001,help='number of learning rate')
+parser.add_argument('--lr',type=float,default=1e-5,help='number of learning rate')
 parser.add_argument('--embedding_dim',type=int,default=32,help='number of embedding dim')
 parser.add_argument('--lamda_kcge',type=int,default=1,help='lamda used in kCGE')
 parser.add_argument('--num_workers',type=int,default=3,help='num of workers')
@@ -135,10 +159,12 @@ if __name__ == '__main__':
     model_hgc_cpt = HGC_CPT(parsers.embedding_dim, device).to(device)
     model_cd = CD(parsers.embedding_dim, device).to(device)
 
-    optimizer = torch.optim.Adam([{'params':model_hgc_lrn.parameters()},
-                                {'params':model_hgc_scn.parameters()},
-                                {'params':model_hgc_cpt.parameters()},
-                                {'params':model_cd.parameters()}], lr= parsers.lr)
+    # optimizer = torch.optim.Adam([{'params':model_hgc_lrn.parameters()},
+    #                             {'params':model_hgc_scn.parameters()},
+    #                             {'params':model_hgc_cpt.parameters()},
+    #                             {'params':model_cd.parameters()}], lr= parsers.lr)
+    
+    optimizer = torch.optim.Adam([{'params':model_cd.parameters()}], lr= parsers.lr)
 
     criterion = nn.BCELoss().to(device)
 
@@ -210,9 +236,9 @@ if __name__ == '__main__':
     for epoch in epoch_tqdm:
         epoch_tqdm.set_description('epoch {} - train'.format(epoch))
 
-        model_hgc_lrn.train()
-        model_hgc_scn.train()
-        model_hgc_cpt.train()
+        model_hgc_lrn.eval()
+        model_hgc_scn.eval()
+        model_hgc_cpt.eval()
         model_cd.train()
 
         train_dataset = CDDataset(train_data, uids, learners_init, parsers.max_step)
@@ -235,21 +261,23 @@ if __name__ == '__main__':
             p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
             sub_p_lsl = p_lsl.subgraph(learner_idx)
 
-            lrn_emb = model_hgc_lrn(
-                sub_p_lsl.x.to(device), 
-                sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
-            )
-            scn_emb = model_hgc_scn(
-                scenes_init.to(device), 
-                p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
-                p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
-            )
-            cpt_emb = model_hgc_cpt(
-                concepts_init.to(device), 
-                p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
-                p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
-                p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
-            )
+            with torch.no_grad():
+
+                lrn_emb = model_hgc_lrn(
+                    sub_p_lsl.x.to(device), 
+                    sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
+                )
+                scn_emb = model_hgc_scn(
+                    scenes_init.to(device), 
+                    p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
+                    p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+                )
+                cpt_emb = model_hgc_cpt(
+                    concepts_init.to(device), 
+                    p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
+                    p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
+                    p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+                )
             
             # 这里已经获得了相当于z的矩阵
             # 然后输入到cd中
@@ -263,6 +291,13 @@ if __name__ == '__main__':
                 cpt_emb
             )
 
+            check_data(result_pred)
+            check_data(result)
+
+            check_nan(model_cd, "前向传播")
+
+            # print('in train', result_pred.max(), result_pred.min())
+
             result = result.flatten().to(device)
             result_pred = result_pred.flatten()
 
@@ -271,11 +306,30 @@ if __name__ == '__main__':
 
             loss = criterion(result, result_pred)
 
+            print(f"损失值: {loss.item()}")
+
+            check_nan(model_cd, "损失计算")
+
             optimizer.zero_grad()
+
             loss.backward()
-            protect_norm([model_hgc_lrn, model_hgc_scn, model_hgc_cpt, model_cd])
+
+            check_nan(model_cd, "反向传播")
+
+            torch.nn.utils.clip_grad_norm_(model_hgc_lrn.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model_hgc_scn.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model_hgc_cpt.parameters(), max_norm=1.0)
+            torch.nn.utils.clip_grad_norm_(model_cd.parameters(), max_norm=1.0)
+
+            check_grad_stats(model_cd)
+
+            # protect_norm([model_hgc_lrn, model_hgc_scn, model_hgc_cpt, model_cd])
+            
             optimizer.step()
-            protect_norm([model_hgc_lrn, model_hgc_scn, model_hgc_cpt, model_cd])
+
+            check_nan(model_cd, "参数更新")
+
+            # protect_norm([model_hgc_lrn, model_hgc_scn, model_hgc_cpt, model_cd])
 
             num_correct += ((result_pred >= 0.5).long() == result).sum().item()
             num_total += len(result)
@@ -344,6 +398,8 @@ if __name__ == '__main__':
                     cpt_emb
                 )
 
+                print('in master', result_pred.max(), result_pred.min())
+
             result = result.flatten().to(device)
             result_pred = result_pred.flatten()
 
@@ -373,34 +429,34 @@ if __name__ == '__main__':
     if os.path.exists(CD_temp_path):
         os.remove(CD_temp_path)
 
-    if not update_train or loss < loss_last:
-        torch.save({
-            'model_hgc_lrn': model_hgc_lrn.state_dict(),
-        }, HGC_LRN_train_path)
-        torch.save({
-            'model_hgc_scn': model_hgc_scn.state_dict(),
-        }, HGC_SCN_train_path)
-        torch.save({
-            'model_hgc_cpt': model_hgc_cpt.state_dict(),
-        }, HGC_CPT_train_path)
-        torch.save({
-            'model_cd': model_cd.state_dict(),
-            'loss' : loss
-        }, CD_train_path)
+    # if not update_train or loss < loss_last:
+    #     torch.save({
+    #         'model_hgc_lrn': model_hgc_lrn.state_dict(),
+    #     }, HGC_LRN_train_path)
+    #     torch.save({
+    #         'model_hgc_scn': model_hgc_scn.state_dict(),
+    #     }, HGC_SCN_train_path)
+    #     torch.save({
+    #         'model_hgc_cpt': model_hgc_cpt.state_dict(),
+    #     }, HGC_CPT_train_path)
+    #     torch.save({
+    #         'model_cd': model_cd.state_dict(),
+    #         'loss' : loss
+    #     }, CD_train_path)
     
-        # torch.save(model.state_dict(), IPDKT_pt_use_path)
+    #     # torch.save(model.state_dict(), IPDKT_pt_use_path)
 
-        scripted_model = torch.jit.script(model_hgc_lrn)
-        scripted_model = torch.jit.optimize_for_inference(scripted_model)
-        scripted_model.save(HGC_LRN_use_path)
-        scripted_model = torch.jit.script(model_hgc_scn)
-        scripted_model = torch.jit.optimize_for_inference(scripted_model)
-        scripted_model.save(HGC_SCN_use_path)
-        scripted_model = torch.jit.script(model_hgc_cpt)
-        scripted_model = torch.jit.optimize_for_inference(scripted_model)
-        scripted_model.save(HGC_CPT_use_path)
-        scripted_model = torch.jit.script(model_cd)
-        scripted_model = torch.jit.optimize_for_inference(scripted_model)
-        scripted_model.save(CD_use_path)
+    #     scripted_model = torch.jit.script(model_hgc_lrn)
+    #     scripted_model = torch.jit.optimize_for_inference(scripted_model)
+    #     scripted_model.save(HGC_LRN_use_path)
+    #     scripted_model = torch.jit.script(model_hgc_scn)
+    #     scripted_model = torch.jit.optimize_for_inference(scripted_model)
+    #     scripted_model.save(HGC_SCN_use_path)
+    #     scripted_model = torch.jit.script(model_hgc_cpt)
+    #     scripted_model = torch.jit.optimize_for_inference(scripted_model)
+    #     scripted_model.save(HGC_CPT_use_path)
+    #     scripted_model = torch.jit.script(model_cd)
+    #     scripted_model = torch.jit.optimize_for_inference(scripted_model)
+    #     scripted_model.save(CD_use_path)
 
-    save_final_data(uids, inits, p_matrixes, cddatareader)
+    # save_final_data(uids, inits, p_matrixes, cddatareader)

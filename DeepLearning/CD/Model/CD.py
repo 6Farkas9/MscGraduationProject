@@ -22,11 +22,24 @@ class DTR(nn.Module):
                 h_scn_cpt :torch.Tensor,
                 h_scn :torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+
+        # h_lrn_cpt = (h_lrn_cpt - h_lrn_cpt.mean()) / (h_lrn_cpt.std() + 1e-8)
+        # h_scn_cpt = (h_scn_cpt - h_scn_cpt.mean()) / (h_scn_cpt.std() + 1e-8)
+        # h_scn = (h_scn - h_scn.mean()) / (h_scn.std() + 1e-8)
+
+        print("h_lrn_cpt范围:", h_lrn_cpt.min(), h_lrn_cpt.max())
+        print("h_scn_cpt范围:", h_scn_cpt.min(), h_scn_cpt.max())
+        print("h_scn范围:", h_scn.min(), h_scn.max())
+
         p_lrn = torch.nn.functional.leaky_relu(self.l_p_lrn(h_lrn_cpt), negative_slope=0.01).squeeze(-1)
 
         d_scn = torch.nn.functional.leaky_relu(self.l_d_scn(h_scn_cpt), negative_slope=0.01).squeeze(-1)
 
         beta_scn = torch.nn.functional.leaky_relu(self.l_b_scn(h_scn), negative_slope=0.01).squeeze(-1)
+
+        print(p_lrn.min(), p_lrn.max(), torch.isnan(p_lrn).any(), torch.isinf(p_lrn).any())
+        print(d_scn.min(), d_scn.max(), torch.isnan(d_scn).any(), torch.isinf(d_scn).any())
+        print(beta_scn.min(), beta_scn.max(), torch.isnan(beta_scn).any(), torch.isinf(beta_scn).any())
 
         return p_lrn, d_scn, beta_scn
     
@@ -38,7 +51,13 @@ class MIRT(nn.Module):
     def forward(self, p_lrn: torch.Tensor, d_scn: torch.Tensor, beta_scn: torch.Tensor) -> torch.Tensor:
         # 限制使用的时候batch也必须要有，等于1
         # print(p_lrn.shape, d_scn.shape, beta_scn.shape)
-        result = torch.sigmoid(torch.einsum('bic,bc->bi', d_scn, p_lrn) + beta_scn)
+        # result = torch.sigmoid(torch.einsum('bic,bc->bi', d_scn, p_lrn) + beta_scn)
+
+        einsum_out = torch.einsum('bic,bc->bi', d_scn, p_lrn)
+        print("einsum 输出范围:", einsum_out.min(), einsum_out.max())
+        sigmoid_input = einsum_out + beta_scn
+        print("sigmoid 输入范围:", sigmoid_input.min(), sigmoid_input.max())
+        result = torch.sigmoid(sigmoid_input)
         return result
 
 class CD(nn.Module):
@@ -102,5 +121,8 @@ class CD(nn.Module):
         # print(d_scn.shape, beta_scn.shape)
 
         result = self.mirt(p_lrn, d_scn, beta_scn) * scn_seq_mask
+
+        print("MIRT 输出范围:", result.min(), result.max())
+        assert not torch.isnan(result).any(), "MIRT 输出包含 NaN!"
 
         return result
