@@ -401,4 +401,53 @@ class MySQLDB():
         self.con.commit()
         cursor.close()
 
+    # 从graph_belong中获取are_uid所有cpt_uid
+    def get_cpt_uid_of_are(self, are_uid):
+        sql = f"""
+        select cpt_uid
+        from graph_belong
+        where are_uid = %s
+        """
+        cursor = self.con.cursor()
+        cursor.execute(sql, [are_uid])
+        result = []
+        for item in cursor.fetchall():
+            result.append(item[0])
+        cursor.close()
+        return result
+    
+    # 从graph_involve中获取are相关的所有记录
+    def get_scn_cpt_uid_of_are(self, are_uid):
+        sql = f"""
+        select gi.scn_uid, gi.cpt_uid, gi.difficulty
+        from graph_involve as gi
+        join graph_belong as gb
+        on gb.cpt_uid = gi.cpt_uid
+        where gb.are_uid = %s
+        """
+        cursor = self.con.cursor()
+        cursor.execute(sql, [are_uid])
+        result = cursor.fetchall()
+        cursor.close()
+        return result
+    
+    # 从graph_precondition中获取are相关的所有记录
+    def get_cpt_cpt_of_are(self, are_uid):
+        sql = f"""
+        with cpt_in_are as (
+            select cpt_uid
+            from graph_belong
+            where are_uid = %s 
+        )
+        select gp.cpt_uid_pre, gp.cpt_uid_aft
+        from graph_precondition as gp
+        join cpt_in_are as cia1 on gp.cpt_uid_pre = cia1.cpt_uid
+        join cpt_in_are as cia2 on gp.cpt_uid_aft = cia2.cpt_uid
+        """
+        cursor = self.con.cursor()
+        cursor.execute(sql, [are_uid])
+        result = cursor.fetchall()
+        cursor.close()
+        return result
+
 mysqldb = MySQLDB()

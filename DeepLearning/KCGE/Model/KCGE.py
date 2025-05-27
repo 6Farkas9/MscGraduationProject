@@ -1,9 +1,17 @@
+import sys
+from pathlib import Path
+deeplearning_root = str(Path(__file__).parent.parent.parent)
+if deeplearning_root not in sys.path:
+    sys.path.insert(0, deeplearning_root)
+
+KCGE_path = deeplearning_root + '\\KCGE'
+sys.path.append(KCGE_path)
+
 import torch
 import math
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
-from torch_geometric.data import Data
+
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import degree
 
