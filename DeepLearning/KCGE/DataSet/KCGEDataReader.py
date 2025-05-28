@@ -125,7 +125,7 @@ class KCGEDataReader():
         edge_attr = torch.cat((edge_attr, temp_edge_attr), dim = 0)
         edge_type = torch.cat((edge_type, temp_edge_type), dim = 0)
 
-        return edge_index, edge_attr, edge_type
+        return self.cpt_uids, self.scn_uids, edge_index, edge_attr, edge_type
     
 if __name__ == '__main__':
     kcgedatareader =  KCGEDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
@@ -137,6 +137,6 @@ if __name__ == '__main__':
     print(d.shape, e.shape, f.shape)
     print(g.shape, h.shape, j.shape)
 
-    edge_index, edge_attr, edge_type = kcgedatareader.load_data_from_db()
+    _, _, edge_index, edge_attr, edge_type = kcgedatareader.load_data_from_db()
 
     print(edge_index.shape, edge_attr.shape, edge_type.shape)

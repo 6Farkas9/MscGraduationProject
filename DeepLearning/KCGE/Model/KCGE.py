@@ -15,23 +15,23 @@ import torch.nn.functional as F
 from torch_geometric.nn import MessagePassing
 from torch_geometric.utils import degree
 
+from DataSet.KCGEDataReader import KCGEDataReader
+
 class ECGEConv(MessagePassing):
-    def __init__(self, in_channels, out_channels, num_relations):
+    def __init__(self, in_channels, out_channels):
         super(ECGEConv, self).__init__(aggr='add')  # 使用加法聚合
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.num_relations = num_relations
 
         # 为每种关系定义一个可学习的权重矩阵 W
-        self.weights = nn.Parameter(torch.Tensor(num_relations, in_channels, out_channels))
+        self.weights = nn.Parameter(torch.Tensor(4, in_channels, out_channels))
         self.bias = nn.Parameter(torch.Tensor(out_channels))
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.kaiming_uniform_(self.weights, a=math.sqrt(5))
+        nn.init.xavier_uniform_(self.weights)
         nn.init.constant_(self.bias, 0)
 
-    # def forward(self, x, edge_index, edge_type, edge_weight=None):
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_type: torch.Tensor, edge_weight: torch.Tensor) -> torch.Tensor:
         # 计算节点的度并进行归一化
         row = edge_index[0]
@@ -40,21 +40,18 @@ class ECGEConv(MessagePassing):
         deg = degree(col, x.size(0), dtype=x.dtype)
         # print(f"节点度：{deg.min()}, {deg.max()}")
         deg_inv_sqrt = deg.pow(-0.5)
-        deg_inv_sqrt[deg == 0] = 1  # 将度为零的节点设置为1  # 将度为零的节点的归一化因子设为0
-        # print(f"归一化因子：{deg_inv_sqrt.min()}, {deg_inv_sqrt.max()}")
         norm = deg_inv_sqrt[row] * deg_inv_sqrt[col]
 
-        # 调用 propagate 方法进行消息传递
-        return self.propagate(edge_index, size=(x.size(0), x.size(0)), x=x, edge_type=edge_type, norm=norm, edge_weight=edge_weight)
+        res = self.propagate(edge_index=edge_index, size=(x.size(0), x.size(0)), x=x, edge_type=edge_type, norm=norm, edge_weight=edge_weight)
+
+        res = F.leaky_relu(res, negative_slope=0.01)
+        res = F.dropout(res, p=0.2, training=self.training)
+        return res
 
     def message(self, x_j, edge_type, norm, edge_weight):
-        # 根据边的类型选择不同的权重矩阵
         w = self.weights[edge_type]
-        # 计算节点嵌入，乘以归一化因子和边的权重
         x_j = torch.matmul(x_j.unsqueeze(1), w).squeeze(1)
         x_j *= edge_weight.view(-1,1)
-        # print(f"edge_weight 的最小值: {edge_weight.min()}, 最大值: {edge_weight.max()}")
-        # print(f"norm 的最小值: {norm.min()}, 最大值: {norm.max()}")
         return norm.view(-1, 1) * x_j
 
     def update(self, aggr_out):
@@ -62,39 +59,36 @@ class ECGEConv(MessagePassing):
         return aggr_out + self.bias
 
 class KCGE(nn.Module):
-    def __init__(self, embedding_dim, num_relations, lamda):
+    def __init__(self, embedding_dim, device):
         super(KCGE, self).__init__()
-        self.lamda = lamda
+        self.embedding_dim = embedding_dim
+        self.device = device
+        # 三层卷积
+        self.conv1 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第1层
+        self.conv2 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第2层
+        self.conv3 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第3层
 
-        self.conv1 = ECGEConv(embedding_dim, embedding_dim, num_relations)  # 第1层
-        self.conv2 = ECGEConv(embedding_dim, embedding_dim, num_relations)  # 第2层
+    def forward(self, edge_index: torch.Tensor, edge_type: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
 
-    # def forward(self, data):
-    # def forward(self, data) -> tuple[torch.Tensor, torch.Tensor]:
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, edge_type: torch.Tensor, edge_weight: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # x, edge_index, edge_type, edge_weight = data.x, data.edge_index, data.edge_type, data.edge_weight
-        # print(type(data))
-        # print(f"x 输入的最小值: {x.min()}, 最大值: {x.max()}")
-        # print(f"conv1 之前的 x 的最小值: {x.min()}, 最大值: {x.max()}")
-        z_1 = F.leaky_relu(self.conv1(x, edge_index, edge_type, edge_weight), negative_slope=0.01)  # 第1层
-        # print(f"conv1 之后的 z_1 的最小值: {z_1.min()}, 最大值: {z_1.max()}")
-        # print(f"conv1 输出的最小值: {z_1.min()}, 最大值: {z_1.max()}")
-        z_1 = F.dropout(z_1, training=self.training)
-        z_2 = self.conv2(z_1, edge_index, edge_type, edge_weight)  # 第2层
-        # print(f"conv2 输出的最小值: {z_2.min()}, 最大值: {z_2.max()}")
+        # x初始化为全1tensor
+        x = torch.ones((edge_index.size(1), self.embedding_dim), dtype=torch.float32, device=self.device)
+
+        z_1 = self.conv1(x, edge_index, edge_type, edge_attr)
+        z_2 = self.conv2(z_1, edge_index, edge_type, edge_attr)
+        z_3 = self.conv3(z_2, edge_index, edge_type, edge_attr)
         
-        z_star = (x + z_1 + z_2) / 4
+        z = (x + z_1 + z_2 + z_3) / 4
+        # 进行简化，令z_shape和z_star相同
 
-        temp = [x, z_1, z_2]
+        return z
+    
+if __name__ == '__main__':
+    kcgedatareader = KCGEDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
 
-        z_sharp = temp[self.lamda]
-        for i in range(self.lamda + 1, 3):
-            z_sharp += temp[i]
-        z_sharp = z_sharp / (4 - self.lamda)
+    _, _, edge_index, edge_attr, edge_type = kcgedatareader.load_data_from_db()
 
-        # print(f"conv1 权重的最小值: {self.conv1.weights.min()}, 最大值: {self.conv1.weights.max()}")
-        # print(f"conv1 偏置的最小值: {self.conv1.bias.min()}, 最大值: {self.conv1.bias.max()}")
-        # print(f"conv2 权重的最小值: {self.conv2.weights.min()}, 最大值: {self.conv2.weights.max()}")
-        # print(f"conv2 偏置的最小值: {self.conv2.bias.min()}, 最大值: {self.conv2.bias.max()}")
+    model_kcge = KCGE(32, 'cpu')
 
-        return z_star, z_sharp
+    z = model_kcge(edge_index, edge_type, edge_attr)
+
+    print(z)
