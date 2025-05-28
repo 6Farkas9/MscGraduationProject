@@ -64,13 +64,21 @@ class MySQLDB():
         FROM interacts i
         JOIN scenes s ON i.scn_uid = s.scn_uid AND s.has_result = 1
         JOIN scn_has_result shr ON i.scn_uid = shr.scn_uid
-        where i.created_at >= %s
+        WHERE i.created_at >= %s and i.lrn_uid IN (
+            SELECT i2.lrn_uid
+            FROM interacts i2
+            JOIN scenes s2 ON i2.scn_uid = s2.scn_uid AND s2.has_result = 1
+            JOIN scn_has_result shr2 ON i2.scn_uid = shr2.scn_uid
+            WHERE i2.created_at >= %s
+            GROUP BY i2.lrn_uid
+            HAVING COUNT(*) >= 4
+        )
         ORDER BY i.created_at ASC;
         """
         if limit > 0:
             sql += f" limit {limit}"
         cursor = self.con.cursor()
-        cursor.execute(sql, [are_uid, time_start])
+        cursor.execute(sql, [are_uid, time_start, time_start])
         result = cursor.fetchall()
         cursor.close()
         return result
