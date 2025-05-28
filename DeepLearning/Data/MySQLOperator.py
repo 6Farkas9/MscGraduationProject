@@ -46,25 +46,26 @@ class MySQLDB():
         return result
 
     # 获取are_uid下的知识点相关的所有从time_start开始的交互数据
-    def get_interacts_with_cpt_in_are_from(self, are_uid, time_start, limit = -1):
+    def get_interacts_with_cpt_in_are_from_with_result(self, are_uid, time_start, limit = -1):
         sql = f"""
-        select itc.lrn_uid, itc.scn_uid, itc.result 
-        from interacts itc 
-        join (
-            select gi.scn_uid 
-            from graph_involve gi 
-            left join (
-                select gb.cpt_uid 
-                from graph_belong gb 
-                join areas a on gb.are_uid = a.are_uid
-                where a.are_uid != %s
-            ) non_are_uid_cpts on gi.cpt_uid = non_are_uid_cpts.cpt_uid 
-            group by gi.scn_uid
-            having count(non_are_uid_cpts.cpt_uid) = 0 
-            and count(gi.cpt_uid) > 0
-        ) valid_scn on itc.scn_uid = valid_scn.scn_uid
-        where itc.created_at >= %s
-        order by itc.lrn_uid, itc.created_at asc 
+        WITH cpt_in_are AS (
+            SELECT cpt_uid 
+            FROM graph_belong 
+            WHERE are_uid = %s
+        ),
+        scn_has_result AS (
+            SELECT gi.scn_uid
+            FROM graph_involve gi
+            LEFT JOIN cpt_in_are cia ON gi.cpt_uid = cia.cpt_uid
+            GROUP BY gi.scn_uid
+            HAVING COUNT(*) = COUNT(cia.cpt_uid)
+        )
+        SELECT i.lrn_uid, i.scn_uid, i.result
+        FROM interacts i
+        JOIN scenes s ON i.scn_uid = s.scn_uid AND s.has_result = 1
+        JOIN scn_has_result shr ON i.scn_uid = shr.scn_uid
+        where i.created_at >= %s
+        ORDER BY i.created_at ASC;
         """
         if limit > 0:
             sql += f" limit {limit}"

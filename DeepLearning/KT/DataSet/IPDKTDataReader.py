@@ -29,10 +29,10 @@ class IPDKTDataReader():
     # 场景uid   - 数字id
     # 学习者数字id    场景数字id  知识点数字id，数字id...     正确与否
 
-    # 获得只包含当前领域相关知识点的场景的交互信息
-    def get_all_recordings(self, limit = -1):
+    # 获得只包含当前领域相关知识点的场景的交互信息 - 添加了has_result属性，要获取has_result为1的场景
+    def get_all_recordings_with_result(self, limit = -1):
         time_start = self.get_30days_before()
-        result = mysqldb.get_interacts_with_cpt_in_are_from(
+        result = mysqldb.get_interacts_with_cpt_in_are_from_with_result(
                 self.are_uid,
                 time_start,
                 limit
@@ -63,7 +63,7 @@ class IPDKTDataReader():
     def load_data_from_db(self):
         # 获取当前领域所有知识点相关的场景的交互信息
         # result = [(lrn_uid, scn_uid, correct),...]
-        interacts = self.get_all_recordings()
+        interacts = self.get_all_recordings_with_result()
         cpt_uids = self.get_all_concepts_of_area()
         self.cpt_uids = cpt_uids
         self.cpt_num = len(cpt_uids)
@@ -72,38 +72,28 @@ class IPDKTDataReader():
         # cpt_num = self.get_concept_num_of_area()
 
         # 构建lrn和scn的数字id -- 貌似，转化就行
-        lrn_uids = {}
-        self.lrn_id2uid = {}
-        scn_uids = set()
+        lrn_uids_set = set()
+        scn_uids_set = set()
+
         for interact in interacts:
-            if interact[0] not in lrn_uids:
-                temp_id = len(lrn_uids)
-                lrn_uids[interact[0]] = temp_id
-                self.lrn_id2uid[temp_id] = interact[0]
-            scn_uids.add(interact[1])
-            # if interact[1] not in scn_uids:
-            #     temp_id = len(scn_uids)
-            #     scn_uids[interact[1]] = temp_id
+            lrn_uids_set.add(interact[0])
+            scn_uids_set.add(interact[1])
+
+        lrn_uids_list = list(lrn_uids_set)
+        scn_uids = list(scn_uids_set)
+
+        lrn_uids = {lrn_uid : idx for idx, lrn_uid in enumerate(lrn_uids_list)}
+        self.lrn_id2uid = {idx : lrn_uid for idx, lrn_uid in enumerate(lrn_uids_list)}
+        
         scn_cpts = self.get_cpt_uid_of_scene(list(scn_uids))
-        data = []
-        current_pos = -1
-        current_lrn = -1
+        
+        data = [[lrn_uid, [], []] for lrn_uid in lrn_uids]
         for interact in interacts:
-            lrn_id = lrn_uids[interact[0]]
+            lrn_idx = lrn_uids[interact[0]]
             # scn_id = scn_uids[interact[1]]
             correct = float(interact[2])
-            if lrn_id != current_lrn:
-                current_lrn = lrn_id
-                data.append([])
-                current_pos += 1
-                data[current_pos].append(lrn_id)
-                # data[current_pos].append([]) # scn_uids
-                data[current_pos].append([]) # cpt_ids
-                data[current_pos].append([]) # corrects
-            # data[current_pos][1].append(scn_id)
-            # data[current_pos][1].append(cpt_uids[scn_cpts[interact[1]]])
-            data[current_pos][1].append([cpt_uids[cpt_uid] for cpt_uid in scn_cpts[interact[1]]])
-            data[current_pos][2].append(correct)
+            data[lrn_idx][1].append([cpt_uids[cpt_uid] for cpt_uid in scn_cpts[interact[1]]])
+            data[lrn_idx][2].append(correct)
 
         self.data = data
 
