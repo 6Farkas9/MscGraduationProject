@@ -68,10 +68,7 @@ class KCGE(nn.Module):
         self.conv2 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第2层
         self.conv3 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第3层
 
-    def forward(self, edge_index: torch.Tensor, edge_type: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
-
-        # x初始化为全1tensor
-        x = torch.ones((edge_index.size(1), self.embedding_dim), dtype=torch.float32, device=self.device)
+    def forward(self, x : torch.Tensor, edge_index: torch.Tensor, edge_type: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
 
         z_1 = self.conv1(x, edge_index, edge_type, edge_attr)
         z_2 = self.conv2(z_1, edge_index, edge_type, edge_attr)
@@ -85,7 +82,7 @@ class KCGE(nn.Module):
 if __name__ == '__main__':
     kcgedatareader = KCGEDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
 
-    _, _, edge_index, edge_attr, edge_type = kcgedatareader.load_data_from_db()
+    _, _, _, _, edge_index, edge_attr, edge_type = kcgedatareader.load_data_from_db()
 
     model_kcge = KCGE(32, 'cpu')
 

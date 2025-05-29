@@ -13,7 +13,10 @@ from Data.MongoDBOperator import mongodb
 from KCGE.DataSet.KCGEDataReader import KCGEDataReader
 
 class CDDataReader():
-    def __init__(self, are_uid):
+    def load_area_uids(self):
+        return mysqldb.get_areas_uid()
+
+    def set_are_uid(self, are_uid):
         self.are_uid = are_uid
         self.kcgedr = KCGEDataReader(are_uid)
 
@@ -30,7 +33,7 @@ class CDDataReader():
         return (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
 
     def load_Data_from_db(self):
-        cpt_uids, scn_uids, edge_index, edge_attr, edge_type = self.kcgedr.load_data_from_db()
+        cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = self.kcgedr.load_data_from_db()
 
         # 用来计算h_lrn
         interacts = self.get_all_recordings_with_result()
@@ -45,6 +48,8 @@ class CDDataReader():
         
         lrn_uids_list = list(lrn_scn.keys())
         lrn_uids = {lrn_uid : idx for idx, lrn_uid in enumerate(lrn_uids_list)}
+
+        # print(lrn_uids)
 
         # 按照8:2的比例获取train和master数据
         train_data = {lrn_uid : [[], []] for lrn_uid in lrn_uids}
@@ -69,7 +74,7 @@ class CDDataReader():
                 master_data[lrn_uid][1].append(results[i])
         
         # 实际上返回的这些值都是不变的，dataset中需要根据lrn_uid来获取对应的子集
-        return train_data, master_data, cpt_uids, lrn_uids, scn_uids, edge_index, edge_attr, edge_type 
+        return train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type
     
     def get_final_lrn_scn_index(self, lrn_uids, scn_uids):
 
@@ -103,9 +108,11 @@ class CDDataReader():
         mongodb.save_cd_final_r_pred_emb(r_pred_dict)
     
 if __name__ == '__main__':
-    cddr = CDDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
+    # cddr = CDDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
+    cddr = CDDataReader()
+    cddr.set_are_uid('are_3fee9e47d0f3428382f4afbcb1004117')
     
-    train_data, master_data, cpt_uids, lrn_uids, scn_uids, edge_index, edge_attr, edge_type = cddr.load_Data_from_db()
+    train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = cddr.load_Data_from_db()
 
     print(train_data)
 

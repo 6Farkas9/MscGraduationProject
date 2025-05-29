@@ -18,8 +18,9 @@ class KCGEDataReader():
     # 知识点 - 领域 : 双向边，边类型1，边权重1
     def get_cpt_uid_of_are(self):
         cpt_uids_list = mysqldb.get_cpt_uid_of_are(self.are_uid)
-        self.cpt_uids = {cpt_uid : idx + 1 for idx, cpt_uid in enumerate(cpt_uids_list)}
-        edge = [(self.cpt_uids[cpt_uid], 0) for cpt_uid in cpt_uids_list]
+        self.cpt_uidsinz = {cpt_uid : idx + 1 for idx, cpt_uid in enumerate(cpt_uids_list)}
+        self.cpt_uids = {cpt_uid : idx for idx, cpt_uid in enumerate(cpt_uids_list)}
+        edge = [(self.cpt_uidsinz[cpt_uid], 0) for cpt_uid in cpt_uids_list]
         edge = edge + [(0, cpt_id) for cpt_id, _ in edge]
         edge_index = torch.tensor(edge, dtype=torch.long).t()
         edge_attr = torch.ones(edge_index.size(1), dtype=torch.float32)
@@ -29,7 +30,7 @@ class KCGEDataReader():
     # 知识点 - 知识点 ： 单向边，边类型2，边权重1
     def get_cpt_cpt_of_are(self):
         cpt_cpt_tuple = mysqldb.get_cpt_cpt_of_are(self.are_uid)
-        edge = [(self.cpt_uids[item[0]], self.cpt_uids[item[1]]) for item in cpt_cpt_tuple]
+        edge = [(self.cpt_uidsinz[item[0]], self.cpt_uidsinz[item[1]]) for item in cpt_cpt_tuple]
         edge_index = torch.tensor(edge, dtype=torch.long).t()
         edge_attr = torch.ones(edge_index.size(1), dtype=torch.float32)
         edge_type = torch.full((edge_index.size(1),), fill_value = 2, dtype=torch.long)
@@ -41,8 +42,9 @@ class KCGEDataReader():
 
         unique_scn_uids = {item[0] for item in scn_cpt_diff_tuple}
 
-        cpt_num = len(self.cpt_uids)
-        self.scn_uids = {scn_uid : idx + cpt_num + 1 for idx, scn_uid in enumerate(unique_scn_uids)}
+        cpt_num = len(self.cpt_uidsinz)
+        self.scn_uidsinz = {scn_uid : idx + cpt_num + 1 for idx, scn_uid in enumerate(unique_scn_uids)}
+        self.scn_uids = {scn_uid : idx for idx, scn_uid in enumerate(unique_scn_uids)}
 
         self.scn_cpt = {}
         for scn_uid, cpt_uid, _ in scn_cpt_diff_tuple:
@@ -50,7 +52,7 @@ class KCGEDataReader():
                 self.scn_cpt[scn_uid] = []
             self.scn_cpt[scn_uid].append(cpt_uid)
 
-        edge = [(self.scn_uids[scn_uid], self.cpt_uids[cpt_uid]) for scn_uid, cpt_uid, _ in scn_cpt_diff_tuple]
+        edge = [(self.scn_uidsinz[scn_uid], self.cpt_uidsinz[cpt_uid]) for scn_uid, cpt_uid, _ in scn_cpt_diff_tuple]
         edge = edge + [(cpt_id, scn_id) for scn_id, cpt_id in edge]
 
         attr = [difficuty for _, _, difficuty in scn_cpt_diff_tuple]
@@ -64,7 +66,7 @@ class KCGEDataReader():
     
     # 自连接边：单向就行，边权重1，边类型0
     def add_self_link(self):
-        node_num = len(self.cpt_uids) + len(self.scn_uids) + 1
+        node_num = len(self.cpt_uidsinz) + len(self.scn_uidsinz) + 1
         edge = [(i, i) for i in range(node_num)]
 
         edge_index = torch.tensor(edge, dtype=torch.long).t()
@@ -125,7 +127,13 @@ class KCGEDataReader():
         edge_attr = torch.cat((edge_attr, temp_edge_attr), dim = 0)
         edge_type = torch.cat((edge_type, temp_edge_type), dim = 0)
 
-        return self.cpt_uids, self.scn_uids, edge_index, edge_attr, edge_type
+        cpt_idinz = [self.cpt_uidsinz[cpt_uid] for cpt_uid in self.cpt_uidsinz]
+        cpt_idx = torch.tensor(cpt_idinz, dtype=torch.long)
+
+        scn_idinz = [self.scn_uidsinz[scn_uid] for scn_uid in self.scn_uidsinz]
+        scn_idx = torch.tensor(scn_idinz, dtype=torch.long)
+
+        return self.cpt_uids, self.scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type
     
 if __name__ == '__main__':
     kcgedatareader =  KCGEDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
@@ -137,6 +145,6 @@ if __name__ == '__main__':
     print(d.shape, e.shape, f.shape)
     print(g.shape, h.shape, j.shape)
 
-    _, _, edge_index, edge_attr, edge_type = kcgedatareader.load_data_from_db()
+    _, _, _, _, edge_index, edge_attr, edge_type = kcgedatareader.load_data_from_db()
 
     print(edge_index.shape, edge_attr.shape, edge_type.shape)

@@ -111,7 +111,7 @@ parser.add_argument('--num_layers',type=int,default=2,help='the number of layers
 
 # parser.add_argument('--are_uid',type=str,default='are_3fee9e47d0f3428382f4afbcb1004117',help='the uid of area')
 
-def train_single_are(datareader, parsers):
+def train_single_are(datareader, parsers, are_uid):
     # train_data, master_data, cpt_uids = IPDKTDataReader(are_uid).load_data_from_db()
     train_data, master_data, cpt_uids = datareader.load_data_from_db()
     train_data_frame = pd.DataFrame(train_data, columns=['lrn_id','cpt_ids','correct']).set_index('lrn_id')
@@ -140,7 +140,7 @@ def train_single_are(datareader, parsers):
     IPDKT_pt_use_path = os.path.join(IPDKT_pt_path, are_uid + '_use.pt')
     # print(IPDKT_pt_use_path)
     IPDKT_pt_use_path = os.path.normpath(IPDKT_pt_use_path)
-    IPDKT_pt_temp_path = os.path.join(IPDKT_pt_path, 'IPDKT_train_temp.pt')
+    IPDKT_pt_temp_path = os.path.join(IPDKT_pt_path, 'IPDKT_temp.pt')
     IPDKT_pt_temp_path = os.path.normpath(IPDKT_pt_temp_path)
 
     if os.path.exists(IPDKT_pt_train_path):
@@ -276,7 +276,7 @@ if __name__ == '__main__':
             json.dump(are_uids_dict, f)
 
         datareader.set_are_uid(are_uid)
-        train_single_are(datareader, parsers)
+        train_single_are(datareader, parsers, are_uid)
 
         # 这里根据训练出的参数，保存所有学生在该领域的知识点的KT预测结果
         # save_final_predict(are_uid, datareader)

@@ -20,28 +20,20 @@ from CD.Dataset.CDDataReader import CDDataReader
 # 通过mirt计算出概率
 
 class CDDataset(Dataset):
-    def __init__(self, data, uids, lrn_init, max_step):
+    def __init__(self, data, lrn_uids, cpt_uids, scn_uids, max_step):
         super(CDDataset,self).__init__()
         self.data = data
         self.max_step = max_step
 
-        self.lrn_uids = uids[0]
-        self.scn_uids = uids[1]
-        self.cpt_uids = uids[2]
-
-        # datareader提供的：train_data, uids, inits, p_matrixes, lrn_scn_mat
-        # HGC需要的：
-        # 如果在dataset内提供scn的子集，那么随dataset返回的应该也包含每个的子图？（不定长）
-        # 所以只能在外面获取对应的scn集合，不能在内部返回，内部处理索引和掩码
-
-        self.idx2lrn_uid = {idx : lrn_uid for lrn_uid, idx in uids[0].items()}
-
-        self.lrn_init = lrn_init  # shape: [num_users, embed_dim]
+        self.lrn_uids = lrn_uids
+        self.cpt_uids = cpt_uids
+        self.scn_uids = scn_uids
 
         self.scn_seq_indices = torch.zeros(len(self.lrn_uids), self.max_step, dtype=torch.long)
         self.scn_seq_masks = torch.zeros(len(self.lrn_uids), self.max_step, dtype=torch.float32)
 
         self.results = torch.zeros(len(self.lrn_uids), self.max_step, dtype=torch.float32)
+
         for lrn_uid in self.data:
             scn_seq = self.data[lrn_uid][0]
             result = self.data[lrn_uid][1]
@@ -72,8 +64,6 @@ class CDDataset(Dataset):
 
         # lrn_uid = self.idx2lrn_uid[idx]
 
-        learner_init = self.lrn_init[idx]
-
         scn_seq_index = self.scn_seq_indices[idx]
         scn_seq_mask = self.scn_seq_masks[idx]
 
@@ -81,7 +71,6 @@ class CDDataset(Dataset):
 
         return {
             'learner_idx' : idx,
-            'learner_init' : learner_init,
             'scn_seq_index' : scn_seq_index,
             'scn_seq_mask' : scn_seq_mask,
             'result' : result
@@ -89,7 +78,6 @@ class CDDataset(Dataset):
     
     def collate_fn(self, batch):
         learner_idx = torch.stack([item['learner_idx'] for item in batch])
-        learner_init = torch.stack([item['learner_init'] for item in batch])
         scn_seq_index = torch.stack([item['scn_seq_index'] for item in batch])
         scn_seq_mask = torch.stack([item['scn_seq_mask'] for item in batch])
         result = torch.stack([item['result'] for item in batch])
@@ -98,7 +86,6 @@ class CDDataset(Dataset):
 
         return {
             'learner_idx' : learner_idx,
-            'learner_init' : learner_init,
             'scn_seq_index' : scn_seq_index,
             'scn_seq_mask' : scn_seq_mask,
             'result' : result
@@ -106,31 +93,25 @@ class CDDataset(Dataset):
     
 if __name__ == '__main__':
     cddr = CDDataReader()
+
+    cddr.set_are_uid('are_3fee9e47d0f3428382f4afbcb1004117')
     
-    td, md, uids, inits, p_matrixes = cddr.load_Data_from_db()
+    train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = cddr.load_Data_from_db()
 
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = 'cpu'
     dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}
 
-    cdds = CDDataset(md, uids, inits[0], 128)
+    cdds = CDDataset(train_data, lrn_uids, cpt_uids, scn_uids, 128)
     cddl = DataLoader(cdds, batch_size=32, shuffle=True, num_workers=3, **dataloader_kwargs)
 
     for item in tqdm(cddl):
         # print(item['scn_seq_index'].shape)
         lrn_idx = item['learner_idx']
-        learner_init = item['learner_init']
         scn_seq_index = item['scn_seq_index']
         scn_seq_mask = item['scn_seq_mask']
         result = item['result']
 
-        print(result.shape)
+        print(lrn_idx.shape, scn_seq_index.shape, scn_seq_mask.shape, result.shape)
 
-        # 这里要调用HGC获取静态嵌入也就是z，其中learner是子图调用，scn和cpt都是全图调用
-        # 实际使用的时候可以子图调用，这里是因为使用dataset无法返回
-
-        # 获得三个tensor ： lrn， scn， cpt，这个和batch_size无关
-        # 直接输入到cd中
-        # cd先拼接scn和cpt
-        # 然后根据
 

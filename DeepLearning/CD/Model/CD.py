@@ -4,8 +4,13 @@ deeplearning_root = str(Path(__file__).parent.parent.parent)
 if deeplearning_root not in sys.path:
     sys.path.insert(0, deeplearning_root)
 
+CDDataReader_path = deeplearning_root + '\\CD'
+sys.path.append(CDDataReader_path)
+
 import torch
 import torch.nn as nn
+
+from Dataset.CDDataReader import CDDataReader
 
 class DTR(nn.Module):
     def __init__(self, embedding_dim, devive):
@@ -23,23 +28,11 @@ class DTR(nn.Module):
                 h_scn :torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
 
-        # h_lrn_cpt = (h_lrn_cpt - h_lrn_cpt.mean()) / (h_lrn_cpt.std() + 1e-8)
-        # h_scn_cpt = (h_scn_cpt - h_scn_cpt.mean()) / (h_scn_cpt.std() + 1e-8)
-        # h_scn = (h_scn - h_scn.mean()) / (h_scn.std() + 1e-8)
-
-        print("h_lrn_cpt范围:", h_lrn_cpt.min(), h_lrn_cpt.max())
-        print("h_scn_cpt范围:", h_scn_cpt.min(), h_scn_cpt.max())
-        print("h_scn范围:", h_scn.min(), h_scn.max())
-
         p_lrn = torch.nn.functional.leaky_relu(self.l_p_lrn(h_lrn_cpt), negative_slope=0.01).squeeze(-1)
 
         d_scn = torch.nn.functional.leaky_relu(self.l_d_scn(h_scn_cpt), negative_slope=0.01).squeeze(-1)
 
         beta_scn = torch.nn.functional.leaky_relu(self.l_b_scn(h_scn), negative_slope=0.01).squeeze(-1)
-
-        print(p_lrn.min(), p_lrn.max(), torch.isnan(p_lrn).any(), torch.isinf(p_lrn).any())
-        print(d_scn.min(), d_scn.max(), torch.isnan(d_scn).any(), torch.isinf(d_scn).any())
-        print(beta_scn.min(), beta_scn.max(), torch.isnan(beta_scn).any(), torch.isinf(beta_scn).any())
 
         return p_lrn, d_scn, beta_scn
     
@@ -54,9 +47,9 @@ class MIRT(nn.Module):
         # result = torch.sigmoid(torch.einsum('bic,bc->bi', d_scn, p_lrn) + beta_scn)
 
         einsum_out = torch.einsum('bic,bc->bi', d_scn, p_lrn)
-        print("einsum 输出范围:", einsum_out.min(), einsum_out.max())
+        # print("einsum 输出范围:", einsum_out.min(), einsum_out.max())
         sigmoid_input = einsum_out + beta_scn
-        print("sigmoid 输入范围:", sigmoid_input.min(), sigmoid_input.max())
+        # print("sigmoid 输入范围:", sigmoid_input.min(), sigmoid_input.max())
         result = torch.sigmoid(sigmoid_input)
         return result
 
@@ -72,57 +65,56 @@ class CD(nn.Module):
     def forward(self, 
                 scn_seq_index : torch.Tensor, 
                 scn_seq_mask : torch.Tensor, 
-                lrn_static : torch.Tensor,
-                scn_emb : torch.Tensor, 
-                cpt_emb : torch.Tensor) -> torch.Tensor:
-        # 先计算h矩阵
-        # 然后拼接h矩阵
-        # 然后输入到dtr中获得p，d，β向量
-        # 最后输入到mirt中获得预测值
+                h_scn : torch.Tensor,
+                h_cpt : torch.Tensor) -> torch.Tensor:
+        # 模型外要根据kcge的输出从中提取
+        # 模型内部计算h，使用scn_seq_index进行计算
 
-        # print(scn_seq_index.shape, scn_seq_mask.shape)
+        # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
+        selected = h_scn[scn_seq_index]  # 形状 (lrn_num, max_step, embedding_dim)
+        # 2. 计算加权和（利用广播机制）
+        weighted_sum = (selected * scn_seq_mask.unsqueeze(-1)).sum(dim=1)  # (lrn_num, embedding_dim)
+        # 3. 计算有效计数（每行有多少个 1）
+        valid_counts = scn_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
+        # 4. 直接归一化
+        h_lrn = weighted_sum / valid_counts  # (lrn_num, embedding_dim)
 
-        h_lrn = (scn_emb[scn_seq_index] * scn_seq_mask.unsqueeze(-1)).sum(dim=1) / scn_seq_mask.sum(dim=1, keepdim=True)
-        h_lrn.add_(lrn_static).div_(2.0)
-        # print('h_lrn:', h_lrn.shape)
+        lrn_num = h_lrn.size(0)
+        scn_num = h_scn.size(0)
+        cpt_num = h_cpt.size(0)
 
-        h_scn = scn_emb
-        h_cpt = cpt_emb
+        # 1. 计算 h_lrn_cpt
+        h_lrn_expanded = h_lrn.repeat_interleave(cpt_num, dim=0)  # (lrn_num * cpt_num, emb_dim)
+        h_cpt_expanded = h_cpt.repeat(lrn_num, 1)                 # (lrn_num * cpt_num, emb_dim)
+        h_lrn_cpt = torch.cat([h_lrn_expanded, h_cpt_expanded], dim=1)  # (lrn_num * cpt_num, emb_dim * 2)
 
-        num_lrn = h_lrn.size(0)
-        num_scn = h_scn.size(0)
-        num_cpt = h_cpt.size(0)
-
-        h_lrn_expended = h_lrn.unsqueeze(1).expand(-1, num_cpt, -1)
-        h_cpt_expended = h_cpt.unsqueeze(0).expand(num_lrn, -1, -1)
-        h_lrn_cpt = torch.cat((h_lrn_expended, h_cpt_expended), dim=-1).view(-1, 2 * self.embedding_dim)
-
-        h_scn_expended = h_scn.unsqueeze(1).expand(-1, num_cpt, -1)
-        h_cpt_expended = h_cpt.unsqueeze(0).expand(num_scn, -1, -1)
-        h_scn_cpt = torch.cat((h_scn_expended, h_cpt_expended), dim=-1).view(-1, 2 * self.embedding_dim)
+        # 2. 计算 h_scn_cpt
+        h_scn_expanded = h_scn.repeat_interleave(cpt_num, dim=0)  # (scn_num * cpt_num, emb_dim)
+        h_cpt_expanded_scn = h_cpt.repeat(scn_num, 1)             # (scn_num * cpt_num, emb_dim)
+        h_scn_cpt = torch.cat([h_scn_expanded, h_cpt_expanded_scn], dim=1)  # (scn_num * cpt_num, emb_dim * 2)
 
         p_lrn, d_scn, beta_scn = self.dtr(h_lrn_cpt, h_scn_cpt, h_scn)
-        
-        p_lrn = p_lrn.view(num_lrn, num_cpt)
-        d_scn = d_scn.view(num_scn, num_cpt)
 
-        # p_lrn : lrn_num * cpt_num
-        # d_scn : scn_num * cpt_num
-        # beta_scn : scn_num
-        # print(p_lrn.shape, d_scn.shape, beta_scn.shape)
-        
-        # 是不是应该根据lrn_id和scn_id来获取对应的向量？yes,yes,yes
-        
-        # print(scn_seq_index.max(), scn_seq_index.min())
+        # p_lrn (lrn_num * cpt_num)
+        p_lrn = p_lrn.reshape(lrn_num, cpt_num)
+        # d_scn (scn_num * cpt_num)
+        d_scn = d_scn.reshape(scn_num, cpt_num)
+        # beta_scn (scn_num * 1)
 
         d_scn = d_scn[scn_seq_index]
         beta_scn = beta_scn[scn_seq_index]
 
-        # print(d_scn.shape, beta_scn.shape)
+        # # print(d_scn.shape, beta_scn.shape)
 
         result = self.mirt(p_lrn, d_scn, beta_scn) * scn_seq_mask
 
-        print("MIRT 输出范围:", result.min(), result.max())
-        assert not torch.isnan(result).any(), "MIRT 输出包含 NaN!"
-
+        # print("MIRT 输出范围:", result.min(), result.max())
+        # assert not torch.isnan(result).any(), "MIRT 输出包含 NaN!"
         return result
+
+if __name__ == '__main__':
+    cddr = CDDataReader()
+    cddr.set_are_uid('are_3fee9e47d0f3428382f4afbcb1004117')
+    
+    train_data, master_data, cpt_uids, lrn_uids, scn_uids, edge_index, edge_attr, edge_type = cddr.load_Data_from_db()
+
