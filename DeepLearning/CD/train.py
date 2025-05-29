@@ -76,7 +76,7 @@ def train_single_are(cddatareader, parsers, are_uid):
     optimizer = torch.optim.Adam([{'params':model_kcge.parameters()},
                                 {'params':model_cd.parameters()}], lr= parsers.lr)
 
-    criterion = nn.BCELoss().to(device)
+    criterion = nn.BCEWithLogitsLoss().to(device)
 
     KCGE_pt_path = os.path.join(deeplearning_root, 'KCGE', 'PT')
     KCGE_train_path = os.path.join(KCGE_pt_path, 'KCGE_train.pt')
@@ -140,7 +140,13 @@ def train_single_are(cddatareader, parsers, are_uid):
         check_nan(model_kcge, "损失计算")
         check_nan(model_cd, "损失计算")
 
+        check_grad_stats(model_kcge)
+        check_grad_stats(model_cd)
+
         optimizer.zero_grad()
+
+        check_grad_stats(model_kcge)
+        check_grad_stats(model_cd)
 
         loss.backward()
 
