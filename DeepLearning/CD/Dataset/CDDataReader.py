@@ -107,7 +107,7 @@ class CDDataReader():
         # 预先将scn_uids转换为defaultdict提高查找效率
         scn_uids_default = defaultdict(int, self.scn_uids)  # 不存在的key返回0
         
-        for i, (_, (scn_list, _)) in enumerate(self.lrn_scn.items()):
+        for i, (lrn_uid, (scn_list, _)) in enumerate(self.lrn_scn.items()):
             seq_len = min(len(scn_list), self.max_scn_num)
             
             # 一次性处理所有场景
@@ -116,7 +116,7 @@ class CDDataReader():
             scn_mask[i, :seq_len] = 1.0
 
         # 这个变量用来获取之后的h_scn和h_cpt
-        special_scn_cpt_uids =  mysqldb.get_all_special_scn_cpt_uid()
+        special_scn_cpt_uids = mysqldb.get_all_special_scn_cpt_uid()
 
         cpt_num = len(special_scn_cpt_uids)
         scn_mask_special  = torch.ones(len(self.lrn_uids), cpt_num, dtype=torch.float32)
@@ -137,8 +137,9 @@ class CDDataReader():
                 cpt_uid: float(r_pred[i, j])  # 显式转换为Python float
                 for j, cpt_uid in enumerate(self.cpt_uids_list_orderd)
             }
-            for i, lrn_uid in enumerate(lrn_uids)
+            for i, lrn_uid in enumerate(list(self.lrn_uids.keys()))
         }
+
         mongodb.save_cd_final_r_pred_emb(r_pred_dict)
     
 if __name__ == '__main__':

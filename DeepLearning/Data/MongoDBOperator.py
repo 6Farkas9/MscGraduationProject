@@ -95,16 +95,20 @@ class MongoDB:
     def save_cd_final_r_pred_emb(self, r_pred_dict):
         collection = self.mongo_db["learners"]
 
-        operations = [
-            UpdateOne(
-                {"_id": lrn_uid},  # 查询条件
-                {"$set": {
-                    "CD" : data
-                }},    # 更新内容（完全替换匹配字段）
-                upsert=True        # 有则更新无则插入
+        operations = []
+    
+        for lrn_uid, cpt_values in r_pred_dict.items():
+            # 为每个cpt_uid创建更新路径
+            update_fields = {f"CD.{cpt_uid}": value for cpt_uid, value in cpt_values.items()}
+            
+            # 添加更新操作到批量列表
+            operations.append(
+                UpdateOne(
+                    {"_id": lrn_uid},  # 匹配条件
+                    {"$set": update_fields},  # 更新操作
+                    upsert=True  # 插入新文档，更新现有文档
+                )
             )
-            for lrn_uid, data in r_pred_dict.items()
-        ]
 
         result = collection.bulk_write(operations)
 
