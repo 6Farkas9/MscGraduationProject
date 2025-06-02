@@ -63,7 +63,7 @@ def save_final_data(x, datareader : CDDataReader):
     
     # print(r_pred.shape)
 
-    cddatareader.save_final_data(r_pred)
+    cddatareader.save_final_data(r_pred, h_scn, h_cpt)
 
 def train_single_are(cddatareader, parsers, are_uid):
     train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = cddatareader.load_Data_from_db()

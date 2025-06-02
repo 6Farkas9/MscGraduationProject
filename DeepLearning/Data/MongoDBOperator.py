@@ -96,17 +96,6 @@ class MongoDB:
                 )
             )
 
-        # operations = [
-        #     UpdateOne(
-        #         {"_id": lrn_uid},  # 查询条件
-        #         {"$set": {
-        #             "RR" : data
-        #         }},    # 更新内容（完全替换匹配字段）
-        #         upsert=True        # 有则更新无则插入
-        #     )
-        #     for lrn_uid, data in r_pred_dict.items()
-        # ]
-
         result = collection.bulk_write(operations)
 
     def save_cd_final_r_pred_emb(self, r_pred_dict):
@@ -125,6 +114,38 @@ class MongoDB:
                     upsert=True  # 插入新文档，更新现有文档
                 )
             )
+
+        result = collection.bulk_write(operations)
+
+    def save_kcge_final_scn_emb(self, scn_emb_dict):
+        collection = self.mongo_db["scenes"]
+
+        operations = [
+            UpdateOne(
+                {"_id": cpt_uid},  # 查询条件
+                {"$set": {
+                    "KCGE_Emb" : data
+                }},    # 更新内容（完全替换匹配字段）
+                upsert=True        # 有则更新无则插入
+            )
+            for cpt_uid, data in scn_emb_dict.items()
+        ]
+
+        result = collection.bulk_write(operations)
+
+    def save_kcge_final_cpt_emb(self, cpt_emb_dict):
+        collection = self.mongo_db["concepts"]
+
+        operations = [
+            UpdateOne(
+                {"_id": cpt_uid},  # 查询条件
+                {"$set": {
+                    "KCGE_Emb" : data
+                }},    # 更新内容（完全替换匹配字段）
+                upsert=True        # 有则更新无则插入
+            )
+            for cpt_uid, data in cpt_emb_dict.items()
+        ]
 
         result = collection.bulk_write(operations)
 

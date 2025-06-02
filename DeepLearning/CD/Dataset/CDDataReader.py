@@ -129,7 +129,7 @@ class CDDataReader():
 
         return scn_index, scn_mask, scn_index_special, scn_mask_special, self.scn_idx ,self.cpt_idx
     
-    def save_final_data(self, r_pred):
+    def save_final_data(self, r_pred, h_scn, h_cpt):
 
         # cd不同于其他的模型，最终的结果计算要计算学习者关于特定场景的正确概率
         r_pred_dict = {
@@ -139,8 +139,18 @@ class CDDataReader():
             }
             for i, lrn_uid in enumerate(list(self.lrn_uids.keys()))
         }
-
         mongodb.save_cd_final_r_pred_emb(r_pred_dict)
+
+        scn_emb_dict = {
+            scn_uid : h_scn[self.scn_uids[scn_uid]].tolist() for scn_uid in self.scn_uids
+        }
+        mongodb.save_kcge_final_scn_emb(scn_emb_dict)
+
+        cpt_emb_dict = {
+            cpt_uid : h_cpt[self.cpt_uids[cpt_uid]].tolist() for cpt_uid in self.cpt_uids
+        }
+        mongodb.save_kcge_final_cpt_emb(cpt_emb_dict)
+
     
 if __name__ == '__main__':
     # cddr = CDDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
