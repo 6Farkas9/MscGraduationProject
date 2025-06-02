@@ -247,7 +247,6 @@ def save_final_predict(are_uid, datareader: IPDKTDataReader):
     # 保存到MongoDB中
     datareader.save_final_data(pre_result)
 
-
 if __name__ == '__main__': 
     parsers = parser.parse_args()
     IPDKT_pt_path = os.path.join('PT')
