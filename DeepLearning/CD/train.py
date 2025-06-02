@@ -8,6 +8,7 @@ import os
 import torch
 import argparse
 import sys
+import json
 import numpy as np
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -21,36 +22,6 @@ from CD.Dataset.CDDataSet import CDDataset
 from CD.Model.CD import CD
 from KCGE.Model.KCGE import KCGE
 
-def protect_norm(models):
-    return
-    for model in models:
-        for name, param in model.named_parameters():
-            if torch.isnan(param).any():
-                param.data = torch.nan_to_num(param.data, nan=0.0, posinf=1e4, neginf=-1e4)
-
-def check_nan(model, step_name):
-    for name, param in model.named_parameters():
-        if torch.isnan(param).any() or torch.isinf(param).any():
-            print(f"NaN/Inf in {step_name}: {name}")
-            raise ValueError(f"参数 {name} 在 {step_name} 出现NaN/Inf")
-
-def check_grad_stats(model):
-    stats = {}
-    for name, param in model.named_parameters():
-        if param.grad is not None:
-            grad = param.grad.data
-            stats[name] = {
-                "norm": grad.norm(2).item(),
-                "max": grad.max().item(),
-                "min": grad.min().item(),
-                "mean": grad.mean().item()
-            }
-    print(stats)
-
-def check_data(inputs):
-    assert torch.isfinite(inputs).all(), "数据包含 NaN/Inf!"
-    print(f"输入范围: [{inputs.min():.4f}, {inputs.max():.4f}]")
-
 parser = argparse.ArgumentParser(description='CD')
 parser.add_argument('--batch_size',type=int,default=32,help='number of batch size to train (defauly 32 )')
 parser.add_argument('--epochs',type=int,default=2,help='number of epochs to train (defauly 32 )')
@@ -60,6 +31,8 @@ parser.add_argument('--num_workers',type=int,default=3,help='num of workers')
 parser.add_argument('--max_step',type=int,default=128,help='num of max_step')
 
 def save_final_data(datareader : CDDataReader):
+    get_final_lrn_scn_index
+    
     return 0
 
 def train_single_are(cddatareader, parsers, are_uid):
@@ -69,6 +42,7 @@ def train_single_are(cddatareader, parsers, are_uid):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}
+    print(f'current device:{device}')
 
     model_kcge = KCGE(parsers.embedding_dim, device).to(device)
     model_cd = CD(parsers.embedding_dim, device).to(device)
@@ -81,102 +55,232 @@ def train_single_are(cddatareader, parsers, are_uid):
     KCGE_pt_path = os.path.join(deeplearning_root, 'KCGE', 'PT')
     KCGE_train_path = os.path.join(KCGE_pt_path, 'KCGE_train.pt')
     KCGE_use_path = os.path.join(KCGE_pt_path, 'KCGE_use.pt')
-    KCGE_temp_path = os.path.join(KCGE_pt_path, 'KCGE_temp.pt')
 
     CD_pt_path = os.path.join(deeplearning_root, 'CD', 'PT')
-    CD_train_path = os.path.join(CD_pt_path, 'CD_train.pt')
+    CD_train_path = os.path.join(CD_pt_path, are_uid + '_train.pt')
     CD_use_path = os.path.join(CD_pt_path, are_uid + '_use.pt')
     CD_temp_path = os.path.join(CD_pt_path, 'CD_temp.pt')
+
+    continue_train = False
+    epoch_start = 0
+    if os.path.exists(CD_temp_path):
+        print('继续训练')
+        continue_train = True
+        check_point = torch.load(CD_temp_path, map_location=device)
+        model_kcge.load_state_dict(check_point['model_state_dict_kcge'])
+        model_cd.load_state_dict(check_point['model_state_dict_cd'])
+        optimizer.load_state_dict(check_point['optimizer_state_dict'])
+        epoch_start = check_point['epoch'] + 1
+
+    update_train = False
+    loss_last = None
+    if not continue_train:
+        if os.path.exists(KCGE_train_path):
+            print('KCGE增量训练')
+            # update_train = True
+            checkpoint = torch.load(KCGE_train_path, map_location=device)
+            model_kcge.load_state_dict(checkpoint['model_kcge'])
+        else:
+            print('KCGE初始训练')
+
+        if os.path.exists(CD_train_path):
+            print('CD增量训练')
+            update_train = True
+            checkpoint = torch.load(CD_train_path, map_location=device)
+            model_cd.load_state_dict(checkpoint['model_cd'])
+            loss_last = checkpoint['loss']
+        else:
+            print('CD初始训练')
 
     # x初始化为全1tensor
     # 比较特殊，这个x既是输入又是优化参数，所以这个x是不是也应该注册到优化器中？
     # 不是，x在训练过程中就会更新？并不会更新
     # 可以让x每次最后更新为z，dropout是否会有影响？应该没有
     # x在模型外初始化，每次进行更新，在final保存的时候保存最终的矩阵
+    # 这个x的初始化很特殊，需要从数据库中读取，交给datareader完成
     x = torch.ones((edge_index.size(1), parsers.embedding_dim), dtype=torch.float32, device=device)
+    # 这个x一直用到最后
 
-    # for ep
-    # batch...
+    epoch_tqdm = tqdm(range(epoch_start, parsers.epochs))
 
-    model_kcge.train()
-    model_cd.train()
+    for epoch in epoch_tqdm:
+        epoch_tqdm.set_description('epoch {} - train'.format(epoch))
 
-    train_dataset = CDDataset(train_data, lrn_uids, cpt_uids, scn_uids, parsers.max_step)
-    train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
+        model_kcge.train()
+        model_cd.train()
 
-    batch_tqdm = tqdm(train_dataloader)
+        train_dataset = CDDataset(train_data, lrn_uids, cpt_uids, scn_uids, parsers.max_step)
+        train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
 
-    for item in batch_tqdm:
-        # 'learner_idx' : learner_idx,
-        # 'scn_seq_index' : scn_seq_index,
-        # 'scn_seq_mask' : scn_seq_mask,
-        # 'result' : result
+        batch_tqdm = tqdm(train_dataloader)
 
-        lrn_idx = item['learner_idx']
-        scn_seq_idx = item['scn_seq_index']
-        scn_seq_mask = item['scn_seq_mask']
-        result = item['result']
+        num_correct = 0
+        num_total = 0
+        loss_train = []
 
-        z = model_kcge(x, edge_index.to(device), edge_type.to(device), edge_attr.to(device))
-        x = z.clone()
+        for item in batch_tqdm:
+            # 'learner_idx' : learner_idx,
+            # 'scn_seq_index' : scn_seq_index,
+            # 'scn_seq_mask' : scn_seq_mask,
+            # 'result' : result
+            lrn_idx = item['learner_uid']
+            scn_seq_idx = item['scn_seq_index']
+            scn_seq_mask = item['scn_seq_mask']
+            result = item['result']
 
-        h_scn = z[scn_idx]
-        h_cpt = z[cpt_idx]
+            z = model_kcge(x, edge_index.to(device), edge_type.to(device), edge_attr.to(device))
+            x = z.detach().clone()
 
-        r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_scn, h_cpt)
+            h_scn = z[scn_idx]
+            h_cpt = z[cpt_idx]
 
-        print(result.shape, r_pred.shape)
+            r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_scn, h_cpt)
 
-        result = result.flatten().to(device)
-        r_pred = r_pred.flatten()
+            result = result.flatten().to(device)
+            r_pred = r_pred.flatten()
 
-        # print(result.max(), result.min())
-        # print(result_pred.max(), result_pred.min())
+            loss = criterion(result, r_pred)
 
-        loss = criterion(result, r_pred)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-        print(f"损失值: {loss.item()}")
-
-        check_nan(model_kcge, "损失计算")
-        check_nan(model_cd, "损失计算")
-
-        check_grad_stats(model_kcge)
-        check_grad_stats(model_cd)
-
-        optimizer.zero_grad()
-
-        check_grad_stats(model_kcge)
-        check_grad_stats(model_cd)
-
-        loss.backward()
-
-        check_nan(model_kcge, "反向传播")
-        check_nan(model_cd, "反向传播")
-
-        check_grad_stats(model_kcge)
-        check_grad_stats(model_cd)
-
-        # protect_norm([model_hgc_lrn, model_hgc_scn, model_hgc_cpt, model_cd])
+            num_correct += ((r_pred >= 0.5).long() == result).sum().item()
+            num_total += len(result)
+            loss_train.append(loss.detach().cpu().numpy())
+            batch_tqdm.set_description('loss:{:.4f}'.format(loss))
         
-        optimizer.step()
+        acc = num_correct / num_total
+        loss = np.average(loss_train)
+        epoch_tqdm.set_description('epoch {} - train - loss:{:.4f} - acc:{:.4f}'.format(epoch, loss, acc))
 
-        return
+        del train_dataloader
 
+        epoch_tqdm.set_description('epoch {} - master'.format(epoch))
 
+        model_kcge.eval()
+        model_cd.eval()
 
+        master_dataset = CDDataset(master_data, lrn_uids, cpt_uids, scn_uids, parsers.max_step)
+        master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
 
+        batch_tqdm = tqdm(master_dataloader)
+
+        num_correct = 0
+        num_total = 0
+        loss_master = []
+
+        for item in batch_tqdm:
+            # 'learner_idx' : learner_idx,
+            # 'scn_seq_index' : scn_seq_index,
+            # 'scn_seq_mask' : scn_seq_mask,
+            # 'result' : result
+            lrn_idx = item['learner_uid']
+            scn_seq_idx = item['scn_seq_index']
+            scn_seq_mask = item['scn_seq_mask']
+            result = item['result']
+
+            with torch.no_grad():
+
+                z = model_kcge(x, edge_index.to(device), edge_type.to(device), edge_attr.to(device))
+                x = z.detach().clone()
+
+                h_scn = z[scn_idx]
+                h_cpt = z[cpt_idx]
+
+                r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_scn, h_cpt)
+
+            result = result.flatten().to(device)
+            r_pred = r_pred.flatten()
+
+            loss = criterion(result, r_pred)
+
+            num_correct += ((r_pred >= 0.5).long() == result).sum().item()
+            num_total += len(result)
+            loss_master.append(loss.detach().cpu().numpy())
+            batch_tqdm.set_description('loss:{:.4f}'.format(loss))
+        
+        acc = num_correct / num_total
+        loss = np.average(loss_master)
+        epoch_tqdm.set_description('epoch {} - master - loss:{:.4f} - acc:{:.4f}'.format(epoch, loss, acc))
+
+        del master_dataloader
+
+        if (epoch + 1) % 8 == 0:
+            torch.save({
+                'model_kcge': model_kcge.state_dict(),
+                'model_cd': model_cd.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'epoch': epoch
+            }, CD_temp_path)
+
+        # 这里要暂时保存一下x，先不管
+
+    if os.path.exists(CD_temp_path):
+        os.remove(CD_temp_path)
+
+    if not update_train or loss < loss_last:
+        torch.save({
+            'model_kcge': model_kcge.state_dict(),
+        }, KCGE_train_path)
+        torch.save({
+            'model_cd': model_cd.state_dict(),
+            'loss' : loss
+        }, CD_train_path)
+
+        scripted_model = torch.jit.script(model_kcge)
+        scripted_model = torch.jit.optimize_for_inference(scripted_model)
+        scripted_model.save(KCGE_use_path)
+        scripted_model = torch.jit.script(model_cd)
+        scripted_model = torch.jit.optimize_for_inference(scripted_model)
+        scripted_model.save(CD_use_path)
+
+    save_final_data(cddatareader)
 
 
 if __name__ == '__main__':
     parsers = parser.parse_args()
 
+    CD_pt_path = os.path.join('PT')
+    CD_are_schedule_path = os.path.join(CD_pt_path, 'CD_schedule.json')
+
     cddatareader = CDDataReader()
 
-    are_uids = cddatareader.load_area_uids()
-
+    are_uids = []
+    are_uids_dict = {}
+    if os.path.exists(CD_are_schedule_path):
+        with open(CD_are_schedule_path, 'r') as f:
+            are_uids_dict = json.load(f)
+            for are_uid in are_uids_dict:
+                if are_uids_dict[are_uid] == 0:
+                    are_uids.append(are_uid)
+                elif are_uids_dict[are_uid] == 1:
+                    are_uids.insert(0, are_uid)
+                else:
+                    continue
+    else:
+        are_uids = cddatareader.load_area_uids()
+        are_uids_dict = {are_uid : 0 for are_uid in are_uids}
+    
     for are_uid in are_uids:
+        are_uids_dict[are_uid] = 1
+
+        with open(CD_are_schedule_path, 'w') as f:
+            json.dump(are_uids_dict, f)
+
         cddatareader.set_are_uid(are_uid)
         train_single_are(cddatareader, parsers, are_uid)
+
+        # 这里根据训练出的参数，保存所有学生在该领域的知识点的KT预测结果
+        # save_final_predict(are_uid, datareader)
+
+        are_uids_dict[are_uid] = 2
+
+        with open(CD_are_schedule_path, 'w') as f:
+            json.dump(are_uids_dict, f)
+    
+    if os.path.exists(CD_are_schedule_path):
+        os.remove(CD_are_schedule_path)
     
     # if os.path.exists(CD_temp_path):
     #     print('继续训练')

@@ -29,6 +29,8 @@ class CDDataset(Dataset):
         self.cpt_uids = cpt_uids
         self.scn_uids = scn_uids
 
+        self.lrn_id2uid = {lrn_uids[lrn_uid] : lrn_uid for lrn_uid in lrn_uids}
+
         self.scn_seq_indices = torch.zeros(len(self.lrn_uids), self.max_step, dtype=torch.long)
         self.scn_seq_masks = torch.zeros(len(self.lrn_uids), self.max_step, dtype=torch.float32)
 
@@ -70,14 +72,14 @@ class CDDataset(Dataset):
         result = self.results[idx]
 
         return {
-            'learner_idx' : idx,
+            'learner_uid' : self.lrn_id2uid[idx],
             'scn_seq_index' : scn_seq_index,
             'scn_seq_mask' : scn_seq_mask,
             'result' : result
         }
     
     def collate_fn(self, batch):
-        learner_idx = torch.stack([item['learner_idx'] for item in batch])
+        learner_idx = torch.stack([item['learner_uid'] for item in batch])
         scn_seq_index = torch.stack([item['scn_seq_index'] for item in batch])
         scn_seq_mask = torch.stack([item['scn_seq_mask'] for item in batch])
         result = torch.stack([item['result'] for item in batch])
@@ -85,7 +87,7 @@ class CDDataset(Dataset):
         # sub_p_lsl = subgraph(learner_idx, edge_index=self.p_lsl.edge_index, edge_attr=self.p_lsl.edge_attr, num_nodes=self.p_lsl.x.size(0))
 
         return {
-            'learner_idx' : learner_idx,
+            'learner_uid' : learner_idx,
             'scn_seq_index' : scn_seq_index,
             'scn_seq_mask' : scn_seq_mask,
             'result' : result

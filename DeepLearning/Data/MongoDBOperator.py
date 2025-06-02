@@ -108,6 +108,24 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
+    def get_cd_emb_of_scn_uids(self, scn_uids):
+        collection = self.mongo_db["scnenes"]
+
+
+        return 0
+    
+    def get_cd_emb_of_cpt_uids(self, cpt_uids):
+        collection = self.mongo_db["concepts"]
+
+        cursor = collection.find(
+            {"_id": {"$in": cpt_uids}},
+            {"_id": 1, "cd": 1}  # 只返回_id和cd字段
+        )
+        
+        # 将结果转换为列表
+        results = list(cursor)
+
+        return 0
 
 mongodb = MongoDB()
     

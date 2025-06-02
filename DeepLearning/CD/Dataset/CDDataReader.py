@@ -31,6 +31,9 @@ class CDDataReader():
     
     def get_30days_before(self):
         return (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
+    
+    # def get_cd_emb_of_scn_uids(self, scn_uids):
+    #     return mongodb.get_cd_emb_of_scn_uids(scn_uids)
 
     def load_Data_from_db(self):
         cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = self.kcgedr.load_data_from_db()

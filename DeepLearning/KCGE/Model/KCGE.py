@@ -69,7 +69,7 @@ class KCGE(nn.Module):
         self.conv3 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第3层
 
     def forward(self, x : torch.Tensor, edge_index: torch.Tensor, edge_type: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
-
+        
         z_1 = self.conv1(x, edge_index, edge_type, edge_attr)
         z_2 = self.conv2(z_1, edge_index, edge_type, edge_attr)
         z_3 = self.conv3(z_2, edge_index, edge_type, edge_attr)
