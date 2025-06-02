@@ -209,7 +209,12 @@ def train_single_are(datareader, parsers, are_uid):
         # torch.save(model.state_dict(), IPDKT_pt_use_path)
 
         model = model.to('cpu')
-        scripted_model = torch.jit.script(model)
+        torch.cuda.empty_cache()
+
+        with torch.no_grad():  # 禁用梯度计算
+            with torch.jit.optimized_execution(False):  # 禁止优化时隐式转移到GPU
+                scripted_model = torch.jit.script(model)
+    
         scripted_model = torch.jit.optimize_for_inference(scripted_model)
         scripted_model.save(IPDKT_pt_use_path)
 

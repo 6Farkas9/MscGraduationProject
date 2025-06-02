@@ -293,12 +293,6 @@ def train_single_are(cddatareader, parsers, are_uid):
                 scripted_model_kcge = torch.jit.script(model_kcge)
                 scripted_model_cd = torch.jit.script(model_cd)
 
-        for param in scripted_model_kcge.parameters():
-            assert param.device.type == 'cpu', "参数不在CPU上！"
-
-        for param in scripted_model_cd.parameters():
-            assert param.device.type == 'cpu', "参数不在CPU上！"
-
         scripted_model_kcge = torch.jit.optimize_for_inference(scripted_model_kcge)
         scripted_model_kcge.save(KCGE_use_path)
         scripted_model_cd = torch.jit.optimize_for_inference(scripted_model_cd)

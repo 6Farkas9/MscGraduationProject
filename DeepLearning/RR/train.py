@@ -47,6 +47,8 @@ def save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDat
     # 得出四个结果
     # 学习者、知识点、场景的嵌入式表达直接保存
     # 推荐得分按学习者分类保存
+    device = 'cpu'
+
     lrn_uids, scn_uids, cpt_uids = uids
     learners_init, scenes_init, concepts_init = inits
 
@@ -70,6 +72,11 @@ def save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDat
     model_hgc_cpt = torch.jit.load(HGC_CPT_use_path)
     model_rr = torch.jit.load(RR_use_path)
 
+    model_hgc_lrn = model_hgc_lrn.to(device)
+    model_hgc_scn = model_hgc_scn.to(device)
+    model_hgc_cpt = model_hgc_cpt.to(device)
+    model_rr = model_rr.to(device)
+
     model_hgc_lrn.eval()
     model_hgc_scn.eval()
     model_hgc_cpt.eval()
@@ -77,27 +84,27 @@ def save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDat
 
     with torch.no_grad():
 
-        lrn_emb = model_hgc_lrn(learners_init.to(device), 
-                                p_lsl_edge_index.to(device), p_lsl_edge_attr.to(device)
+        lrn_emb = model_hgc_lrn(learners_init, 
+                                p_lsl_edge_index, p_lsl_edge_attr
                                 )
-        scn_emb = model_hgc_scn(scenes_init.to(device), 
-                                p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
-                                p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+        scn_emb = model_hgc_scn(scenes_init, 
+                                p_scs_edge_index, p_scs_edge_attr,
+                                p_sls_edge_index, p_sls_edge_attr
                                 )
-        cpt_emb = model_hgc_cpt(concepts_init.to(device), 
-                                p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
-                                p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
-                                p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+        cpt_emb = model_hgc_cpt(concepts_init, 
+                                p_cc_edge_index, p_cc_edge_attr,
+                                p_cac_edge_index, p_cac_edge_attr, 
+                                p_csc_edge_index, p_csc_edge_attr
                                 )
 
-        scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
+        scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat, cpt_emb)
 
         scn_index, scn_mask = datareader.get_final_lrn_scn_index(lrn_uids, scn_uids)
 
         r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
                                     scn_dynamic_emb, 
-                                    scn_index.to(device),
-                                    scn_mask.to(device),
+                                    scn_index,
+                                    scn_mask,
                                     cpt_emb)
 
     lrn_uids_list = [lrn_uid for lrn_uid, _ in sorted(lrn_uids.items(), key=itemgetter(1))]
@@ -134,11 +141,11 @@ if __name__ == '__main__':
 
     # model_hgc = HGC(parsers.embedding_dim, device).to(device)
     
-    model_hgc_lrn = HGC_LRN(parsers.embedding_dim, device).to(device)
-    model_hgc_scn = HGC_SCN(parsers.embedding_dim, device).to(device)
-    model_hgc_cpt = HGC_CPT(parsers.embedding_dim, device).to(device)
+    model_hgc_lrn = HGC_LRN(parsers.embedding_dim).to(device)
+    model_hgc_scn = HGC_SCN(parsers.embedding_dim).to(device)
+    model_hgc_cpt = HGC_CPT(parsers.embedding_dim).to(device)
 
-    model_rr = RR(parsers.embedding_dim, parsers.hidden_dim, device).to(device)
+    model_rr = RR(parsers.embedding_dim, parsers.hidden_dim).to(device)
 
     print(model_hgc_lrn)
     print(model_hgc_scn)
@@ -365,19 +372,31 @@ if __name__ == '__main__':
         }, RR_train_path)
     
         # torch.save(model.state_dict(), IPDKT_pt_use_path)
+        model_hgc_lrn = model_hgc_lrn.to('cpu')
+        model_hgc_scn = model_hgc_scn.to('cpu')
+        model_hgc_cpt = model_hgc_cpt.to('cpu')
+        model_rr = model_rr.to('cpu')
 
-        scripted_model = torch.jit.script(model_hgc_lrn)
-        scripted_model = torch.jit.optimize_for_inference(scripted_model)
-        scripted_model.save(HGC_LRN_use_path)
-        scripted_model = torch.jit.script(model_hgc_scn)
-        scripted_model = torch.jit.optimize_for_inference(scripted_model)
-        scripted_model.save(HGC_SCN_use_path)
-        scripted_model = torch.jit.script(model_hgc_cpt)
-        scripted_model = torch.jit.optimize_for_inference(scripted_model)
-        scripted_model.save(HGC_CPT_use_path)
-        scripted_model = torch.jit.script(model_rr)
-        scripted_model = torch.jit.optimize_for_inference(scripted_model)
-        scripted_model.save(RR_use_path)
+        torch.cuda.empty_cache()
+
+        with torch.no_grad():  # 禁用梯度计算
+            with torch.jit.optimized_execution(False):  # 禁止优化时隐式转移到GPU
+                scripted_model_hgc_lrn = torch.jit.script(model_hgc_lrn)
+                scripted_model_hgc_scn = torch.jit.script(model_hgc_scn)
+                scripted_model_hgc_cpt = torch.jit.script(model_hgc_cpt)
+                scripted_model_rr = torch.jit.script(model_rr)
+        
+        scripted_model_hgc_lrn = torch.jit.optimize_for_inference(scripted_model_hgc_lrn)
+        scripted_model_hgc_lrn.save(HGC_LRN_use_path)
+
+        scripted_model_hgc_scn = torch.jit.optimize_for_inference(scripted_model_hgc_scn)
+        scripted_model_hgc_scn.save(HGC_SCN_use_path)
+
+        scripted_model_hgc_cpt = torch.jit.optimize_for_inference(scripted_model_hgc_cpt)
+        scripted_model_hgc_cpt.save(HGC_CPT_use_path)
+
+        scripted_model_rr = torch.jit.optimize_for_inference(scripted_model_rr)
+        scripted_model_rr.save(RR_use_path)
 
     # 在这里保存mongo数据
     # 保存 1.学习者嵌入式表达2.场景嵌入式表达3.知识点嵌入式表达

@@ -38,7 +38,7 @@ class RRGRU(nn.Module):
         - h_last: 最终时刻的隐藏状态 (batch_size, hidden_size)
         """
         # 初始化隐藏状态（论文未明确初始化方式，默认全零）
-        h0 = torch.zeros(self.gru.num_layers, x.size(0), self.gru.hidden_size).to(x.device)
+        h0 = torch.zeros(self.gru.num_layers, x.size(0), self.gru.hidden_size, device=x.device)
         
         # GRU前向传播
         # out: (batch_size, seq_len, hidden_size)
@@ -51,16 +51,15 @@ class RRGRU(nn.Module):
 
 class RR(nn.Module):
     
-    def __init__(self, embedding_dim, hidden_dim, device):
+    def __init__(self, embedding_dim, hidden_dim):
         super(RR, self).__init__()
-        self.device = device
-        self.gru = RRGRU(embedding_dim, embedding_dim, 1).to(device)
-        self.project = nn.Linear(embedding_dim, hidden_dim).to(device)
+        self.gru = RRGRU(embedding_dim, embedding_dim, 1)
+        self.project = nn.Linear(embedding_dim, hidden_dim)
 
-        self.w = nn.Parameter(torch.Tensor(embedding_dim * 2, embedding_dim)).to(device)
+        self.w = nn.Parameter(torch.Tensor(embedding_dim * 2, embedding_dim))
 
-        self.lrn_lmd = nn.Parameter(torch.Tensor(embedding_dim * 2, hidden_dim)).to(device)
-        self.cpt_lmd = nn.Parameter(torch.Tensor(hidden_dim, embedding_dim)).to(device)
+        self.lrn_lmd = nn.Parameter(torch.Tensor(embedding_dim * 2, hidden_dim))
+        self.cpt_lmd = nn.Parameter(torch.Tensor(hidden_dim, embedding_dim))
         self.reset_parameters()
         
     def reset_parameters(self):

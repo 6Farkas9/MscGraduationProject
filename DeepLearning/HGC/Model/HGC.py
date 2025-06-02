@@ -122,14 +122,11 @@ class Projection(nn.Module):
         return torch.cat(embeddings, dim=0)
 
 class HGC_LRN(nn.Module):
-    def __init__(self, embedding_dim, device):
+    def __init__(self, embedding_dim):
         super(HGC_LRN, self).__init__()
-        self.device = device
-        self.embedding_dim = embedding_dim
 
-        self.proj_lrn = Projection(embedding_dim).to(device)
-
-        self.GCN_lsl = GCNConvEmbedding(embedding_dim).to(device)
+        self.proj_lrn = Projection(embedding_dim)
+        self.GCN_lsl = GCNConvEmbedding(embedding_dim)
 
     def forward(self,
                 init : torch.Tensor,
@@ -145,17 +142,15 @@ class HGC_LRN(nn.Module):
         return out_lsl
     
 class HGC_SCN(nn.Module):
-    def __init__(self, embedding_dim, device):
+    def __init__(self, embedding_dim):
         super(HGC_SCN, self).__init__()
-        self.device = device
-        self.embedding_dim = embedding_dim
 
-        self.proj_scn = Projection(embedding_dim).to(device)
+        self.proj_scn = Projection(embedding_dim)
 
-        self.GCN_scs = GCNConvEmbedding(embedding_dim).to(device)
-        self.GCN_sls = GCNConvEmbedding(embedding_dim).to(device)
+        self.GCN_scs = GCNConvEmbedding(embedding_dim)
+        self.GCN_sls = GCNConvEmbedding(embedding_dim)
 
-        self.attention_scn = MetaPathAttention(embedding_dim).to(device)
+        self.attention_scn = MetaPathAttention(embedding_dim)
 
     def forward(self, 
                 init : torch.Tensor,
@@ -180,18 +175,16 @@ class HGC_SCN(nn.Module):
         return fin_out_scn
 
 class HGC_CPT(nn.Module):
-    def __init__(self, embedding_dim, device):
+    def __init__(self, embedding_dim):
         super(HGC_CPT, self).__init__()
-        self.device = device
-        self.embedding_dim = embedding_dim
 
-        self.proj_cpt = Projection(embedding_dim).to(device)
+        self.proj_cpt = Projection(embedding_dim)
 
-        self.GCN_cc = GCNConvEmbedding(embedding_dim).to(device)
-        self.GCN_cac = GCNConvEmbedding(embedding_dim).to(device)
-        self.GCN_csc = GCNConvEmbedding(embedding_dim).to(device)
+        self.GCN_cc = GCNConvEmbedding(embedding_dim)
+        self.GCN_cac = GCNConvEmbedding(embedding_dim)
+        self.GCN_csc = GCNConvEmbedding(embedding_dim)
 
-        self.attention_cpt = MetaPathAttention(embedding_dim).to(device)
+        self.attention_cpt = MetaPathAttention(embedding_dim)
 
     def forward(self, 
                 init : torch.Tensor, 
@@ -218,86 +211,8 @@ class HGC_CPT(nn.Module):
 
         return fin_out_cpt
 
-class HGC_ALL(nn.Module):
-    def __init__(self, embedding_dim, device):
-        super(HGC_ALL, self).__init__()
-        self.device = device
-        self.embedding_dim = embedding_dim
-
-        self.proj_lrn = Projection(embedding_dim).to(device)
-        self.proj_scn = Projection(embedding_dim).to(device)
-        self.proj_cpt = Projection(embedding_dim).to(device)
-
-        self.GCN_lsl = GCNConvEmbedding(embedding_dim).to(device)
-
-        self.GCN_cc = GCNConvEmbedding(embedding_dim).to(device)
-        self.GCN_cac = GCNConvEmbedding(embedding_dim).to(device)
-        self.GCN_csc = GCNConvEmbedding(embedding_dim).to(device)
-
-        self.GCN_scs = GCNConvEmbedding(embedding_dim).to(device)
-        self.GCN_sls = GCNConvEmbedding(embedding_dim).to(device)
-
-        self.attention_cpt = MetaPathAttention(embedding_dim).to(device)
-        self.attention_scn = MetaPathAttention(embedding_dim).to(device)
-
-    def forward(self, 
-                lrn_init : torch.Tensor, 
-                scn_init : torch.Tensor, 
-                cpt_init : torch.Tensor, 
-                p_lsl_edge_index : torch.Tensor, p_lsl_edge_attr : torch.Tensor,
-                p_scs_edge_index : torch.Tensor, p_scs_edge_attr : torch.Tensor,
-                p_sls_edge_index : torch.Tensor, p_sls_edge_attr : torch.Tensor,
-                p_cc_edge_index : torch.Tensor, p_cc_edge_attr : torch.Tensor,
-                p_cac_edge_index : torch.Tensor, p_cac_edge_attr : torch.Tensor,
-                p_csc_edge_index : torch.Tensor, p_csc_edge_attr : torch.Tensor
-                ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-
-        embeddings_lrn = self.proj_lrn(lrn_init)
-        embeddings_scn = self.proj_scn(scn_init)
-        embeddings_cpt = self.proj_cpt(cpt_init)
-
-        out_lsl = self.GCN_lsl(embeddings_lrn.to(self.device),
-                               p_lsl_edge_index.to(self.device),
-                               p_lsl_edge_attr.to(self.device))
-        
-        out_scs = self.GCN_scs(embeddings_scn.clone().to(self.device),
-                                p_scs_edge_index.to(self.device),
-                                p_scs_edge_attr.to(self.device))
-        out_sls = self.GCN_sls(embeddings_scn.to(self.device),
-                                p_sls_edge_index.to(self.device),
-                                p_sls_edge_attr.to(self.device))
-        
-        out_cc  = self.GCN_cc(embeddings_cpt.clone().to(self.device),
-                                p_cc_edge_index.to(self.device),
-                                p_cc_edge_attr.to(self.device))
-        out_cac = self.GCN_cac(embeddings_cpt.clone().to(self.device),
-                                p_cac_edge_index.to(self.device),
-                                p_cac_edge_attr.to(self.device))
-        out_csc = self.GCN_csc(embeddings_cpt.to(self.device),
-                                p_csc_edge_index.to(self.device),
-                                p_csc_edge_attr.to(self.device))
-        
-        combined_cpt = torch.stack([out_cc, out_cac, out_csc], dim=0)
-        combined_scn = torch.stack([out_scs, out_sls], dim=0)
-
-        fin_out_cpt = self.attention_cpt(combined_cpt)
-        fin_out_scn = self.attention_scn(combined_scn)
-
-        return out_lsl, fin_out_scn, fin_out_cpt
-
 if __name__ == '__main__':
     hgcdr = HGCDataReader()
     uids, inits, p_matrixes = hgcdr.load_data_from_db()
-    model = HGC_ALL(32, 'cpu')
 
-    lrn_, scn_, cpt_ = model(inits[0], inits[1], inits[2],
-                              p_matrixes[0][0], p_matrixes[0][1],
-                              p_matrixes[1][0], p_matrixes[1][1],
-                              p_matrixes[2][0], p_matrixes[2][1],
-                              p_matrixes[3][0], p_matrixes[3][1],
-                              p_matrixes[4][0], p_matrixes[4][1],
-                              p_matrixes[5][0], p_matrixes[5][1],
-                            )
-
-    print(lrn_.sum(), scn_.sum(), cpt_.sum())
 
