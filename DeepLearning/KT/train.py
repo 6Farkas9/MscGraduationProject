@@ -208,24 +208,26 @@ def train_single_are(datareader, parsers, are_uid):
     
         # torch.save(model.state_dict(), IPDKT_pt_use_path)
 
+        model = model.to('cpu')
         scripted_model = torch.jit.script(model)
         scripted_model = torch.jit.optimize_for_inference(scripted_model)
         scripted_model.save(IPDKT_pt_use_path)
 
     datareader.make_cpt_trained()
 
-    save_final_predict(are_uid, datareader, device)
+    save_final_predict(are_uid, datareader)
 
 
-def save_final_predict(are_uid, datareader: IPDKTDataReader, device):
+def save_final_predict(are_uid, datareader: IPDKTDataReader):
     # 获取当前领域的所有学生的各自的数据 - 因为是最终预测，不需要数据大小对齐，所以获取所有数据就行
-    final_data, cpt_id2uid = datareader.load_final_data(device)
+    final_data, cpt_id2uid = datareader.load_final_data('cpu')
     
     # 然后加载模型，
     IPDKT_pt_path = os.path.join('PT')
     IPDKT_pt_use_path = os.path.join(IPDKT_pt_path, are_uid + '_use.pt')
 
     model_ipdkt = torch.jit.load(IPDKT_pt_use_path)
+    model_ipdkt = model_ipdkt.to('cpu')
 
     model_ipdkt.eval()
 

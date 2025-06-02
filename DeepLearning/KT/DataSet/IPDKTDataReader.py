@@ -136,7 +136,7 @@ class IPDKTDataReader():
         final_data = {}
 
         for onelrndata in self.data:
-            lrn_uid = self.lrn_id2uid[onelrndata[0]]
+            lrn_uid = onelrndata[0]
             interact_num = len(onelrndata[1])
 
             final_data[lrn_uid] = torch.zeros(interact_num, self.cpt_num * 2, dtype=torch.float32, device=device)
