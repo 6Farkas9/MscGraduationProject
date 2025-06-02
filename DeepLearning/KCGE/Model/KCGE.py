@@ -59,17 +59,15 @@ class ECGEConv(MessagePassing):
         return aggr_out + self.bias
 
 class KCGE(nn.Module):
-    def __init__(self, embedding_dim, device):
+    def __init__(self, embedding_dim):
         super(KCGE, self).__init__()
-        self.embedding_dim = embedding_dim
-        self.device = device
         # 三层卷积
-        self.conv1 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第1层
-        self.conv2 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第2层
-        self.conv3 = ECGEConv(embedding_dim, embedding_dim).to(device)  # 第3层
+        self.conv1 = ECGEConv(embedding_dim, embedding_dim)  # 第1层
+        self.conv2 = ECGEConv(embedding_dim, embedding_dim)  # 第2层
+        self.conv3 = ECGEConv(embedding_dim, embedding_dim)  # 第3层
 
     def forward(self, x : torch.Tensor, edge_index: torch.Tensor, edge_type: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
-        
+
         z_1 = self.conv1(x, edge_index, edge_type, edge_attr)
         z_2 = self.conv2(z_1, edge_index, edge_type, edge_attr)
         z_3 = self.conv3(z_2, edge_index, edge_type, edge_attr)

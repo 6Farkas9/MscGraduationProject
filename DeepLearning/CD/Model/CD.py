@@ -13,13 +13,12 @@ import torch.nn as nn
 from Dataset.CDDataReader import CDDataReader
 
 class DTR(nn.Module):
-    def __init__(self, embedding_dim, devive):
+    def __init__(self, embedding_dim):
         super(DTR,self).__init__()
         self.embedding_dim = embedding_dim
-        self.device = devive
-        self.l_p_lrn = nn.Linear(2 * self.embedding_dim, 1).to(self.device)
-        self.l_d_scn = nn.Linear(2 * self.embedding_dim, 1).to(self.device)
-        self.l_b_scn = nn.Linear(self.embedding_dim, 1).to(self.device)
+        self.l_p_lrn = nn.Linear(2 * self.embedding_dim, 1)
+        self.l_d_scn = nn.Linear(2 * self.embedding_dim, 1)
+        self.l_b_scn = nn.Linear(self.embedding_dim, 1)
 
     # def forward(self, x):
     def forward(self, 
@@ -54,30 +53,21 @@ class MIRT(nn.Module):
         return result
 
 class CD(nn.Module):
-    def __init__(self, embedding_dim, device):
+    def __init__(self, embedding_dim):
         super(CD, self).__init__()
         self.embedding_dim = embedding_dim
-        self.device = device
 
-        self.dtr = DTR(self.embedding_dim, self.device).to(self.device)
-        self.mirt = MIRT().to(self.device)
+        self.dtr = DTR(self.embedding_dim)
+        self.mirt = MIRT()
 
     def forward(self, 
-                scn_seq_index : torch.Tensor, 
-                scn_seq_mask : torch.Tensor, 
+                scn_seq_index : torch.Tensor,
+                scn_seq_mask : torch.Tensor,
+                h_lrn : torch.Tensor,
                 h_scn : torch.Tensor,
                 h_cpt : torch.Tensor) -> torch.Tensor:
         # 模型外要根据kcge的输出从中提取
-        # 模型内部计算h，使用scn_seq_index进行计算
-
-        # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
-        selected = h_scn[scn_seq_index]  # 形状 (lrn_num, max_step, embedding_dim)
-        # 2. 计算加权和（利用广播机制）
-        weighted_sum = (selected * scn_seq_mask.unsqueeze(-1)).sum(dim=1)  # (lrn_num, embedding_dim)
-        # 3. 计算有效计数（每行有多少个 1）
-        valid_counts = scn_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
-        # 4. 直接归一化
-        h_lrn = weighted_sum / valid_counts  # (lrn_num, embedding_dim)
+        # 模型外部计算h，使用scn_seq_index进行计算
 
         lrn_num = h_lrn.size(0)
         scn_num = h_scn.size(0)
