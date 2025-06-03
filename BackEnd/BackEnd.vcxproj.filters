@@ -42,28 +42,31 @@
     <ClInclude Include="include\api\crow.h">
       <Filter>include\api</Filter>
     </ClInclude>
-    <ClInclude Include="include\database\DBOperator.h">
-      <Filter>include\database</Filter>
-    </ClInclude>
     <ClInclude Include="include\utils\MLSTimer.h">
       <Filter>include\utils</Filter>
     </ClInclude>
     <ClInclude Include="include\core\MLS_config.h">
       <Filter>include\core</Filter>
     </ClInclude>
+    <ClInclude Include="include\database\MySQLOperator.h">
+      <Filter>include\database</Filter>
+    </ClInclude>
+    <ClInclude Include="include\models\KT.h">
+      <Filter>include\models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
       <Filter>src</Filter>
-    </ClCompile>
-    <ClCompile Include="src\database\DBOperator.cpp">
-      <Filter>src\database</Filter>
     </ClCompile>
     <ClCompile Include="src\models\KT.cpp">
       <Filter>src\models</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\MLSTimer.cpp">
       <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\database\MySQLOperator.cpp">
+      <Filter>src\database</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

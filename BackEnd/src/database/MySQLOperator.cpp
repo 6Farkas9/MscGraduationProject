@@ -1,12 +1,12 @@
-#include "DBOperator.h"
+#include "MySQLOperator.h"
 
 #include <iostream>
 
 // 初始化静态成员
-std::mutex DBOperator::instanceMutex_;
+std::mutex MySQLOperator::instanceMutex_;
 
 // PIMPL实现结构体
-struct DBOperator::Impl {
+struct MySQLOperator::Impl {
     sql::mysql::MySQL_Driver* driver;
     std::unique_ptr<sql::Connection> conn;
     std::mutex dbMutex;
@@ -16,24 +16,24 @@ struct DBOperator::Impl {
 };
 
 // 单例实例获取
-DBOperator& DBOperator::getInstance() {
+MySQLOperator& MySQLOperator::getInstance() {
     std::lock_guard<std::mutex> lock(instanceMutex_);
-    static DBOperator instance;
+    static MySQLOperator instance;
     return instance;
 }
 
 // 构造函数
-DBOperator::DBOperator() : pImpl_(std::make_unique<Impl>()) {
+MySQLOperator::MySQLOperator() : pImpl_(std::make_unique<Impl>()) {
     pImpl_->driver = sql::mysql::get_mysql_driver_instance();
 }
 
 // 析构函数
-DBOperator::~DBOperator() {
+MySQLOperator::~MySQLOperator() {
     close();
 }
 
 // 初始化数据库连接
-bool DBOperator::initialize() {
+bool MySQLOperator::initialize() {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
     try {
         // 构建连接字符串
@@ -65,7 +65,7 @@ bool DBOperator::initialize() {
 }
 
 // 事务支持
-bool DBOperator::beginTransaction() {
+bool MySQLOperator::beginTransaction() {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
     try {
         if (pImpl_->conn && !pImpl_->conn->isClosed()) {
@@ -79,7 +79,7 @@ bool DBOperator::beginTransaction() {
     }
 }
 
-bool DBOperator::commit() {
+bool MySQLOperator::commit() {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
     try {
         if (pImpl_->conn && !pImpl_->conn->isClosed() && pImpl_->isTransactionActive) {
@@ -94,7 +94,7 @@ bool DBOperator::commit() {
     }
 }
 
-bool DBOperator::rollback() {
+bool MySQLOperator::rollback() {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
     try {
         if (pImpl_->conn && !pImpl_->conn->isClosed() && pImpl_->isTransactionActive) {
@@ -110,13 +110,13 @@ bool DBOperator::rollback() {
 }
 
 // 检查连接状态
-bool DBOperator::isConnected() const {
+bool MySQLOperator::isConnected() const {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
     return pImpl_->conn && !pImpl_->conn->isClosed();
 }
 
 // 关闭连接
-void DBOperator::close() {
+void MySQLOperator::close() {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
     try {
         if (pImpl_->isTransactionActive) {
@@ -132,7 +132,7 @@ void DBOperator::close() {
 
 // ========== 私有通用执行方法 ==========
 
-std::vector<std::vector<std::string>> DBOperator::executeQuery(const std::string& query) {
+std::vector<std::vector<std::string>> MySQLOperator::executeQuery(const std::string& query) {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
     std::vector<std::vector<std::string>> results;
     try {
@@ -163,7 +163,7 @@ std::vector<std::vector<std::string>> DBOperator::executeQuery(const std::string
     return results;
 }
 
-int DBOperator::executeUpdate(const std::string& sql) {
+int MySQLOperator::executeUpdate(const std::string& sql) {
     std::lock_guard<std::mutex> lock(pImpl_->dbMutex);
     
     try {
@@ -182,7 +182,7 @@ int DBOperator::executeUpdate(const std::string& sql) {
     }
 }
 
-void DBOperator::testSelect(std::string table, int limit) {
+void MySQLOperator::testSelect(std::string table, int limit) {
     std::string sql = "select * from " + table + " limit " + std::to_string(limit);
     std::cout << sql << std::endl;
     auto res = executeQuery(sql);
@@ -194,7 +194,7 @@ void DBOperator::testSelect(std::string table, int limit) {
     }
 }
 
-std::vector<std::vector<std::string>> DBOperator::get_Are_lrn_Interacts_Time(const std::string &are_uid, const std::string &lrn_uid, const std::string &time_start, const std::string &time_end){
+std::vector<std::vector<std::string>> MySQLOperator::get_Are_lrn_Interacts_Time(const std::string &are_uid, const std::string &lrn_uid, const std::string &time_start, const std::string &time_end){
     std::string sql = R"(
         SELECT 
             i.scn_uid, 
@@ -235,7 +235,7 @@ std::vector<std::vector<std::string>> DBOperator::get_Are_lrn_Interacts_Time(con
     return ans;
 }
 
-std::unordered_map<std::string, int> DBOperator::get_cpt_uid_id_of_area(const std::string &are_uid){
+std::unordered_map<std::string, int> MySQLOperator::get_cpt_uid_id_of_area(const std::string &are_uid){
     std::string sql = 
         R"(select cpt.cpt_uid, cpt.id_in_area
         from concepts cpt
@@ -258,7 +258,7 @@ std::unordered_map<std::string, int> DBOperator::get_cpt_uid_id_of_area(const st
     return ans;
 }
 
-std::unordered_map<std::string, std::unordered_set<std::string>> DBOperator::get_Cpt_of_Scn(const std::unordered_set<std::string> &scn_uids){
+std::unordered_map<std::string, std::unordered_set<std::string>> MySQLOperator::get_Cpt_of_Scn(const std::unordered_set<std::string> &scn_uids){
     std::string sql = R"(
         select scn_uid, cpt_uid
         from graph_involve

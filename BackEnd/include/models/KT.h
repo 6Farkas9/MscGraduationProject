@@ -11,14 +11,14 @@
 #include <unordered_map>
 #include <sstream>
 
-#include "DBOperator.h"
+#include "MySQLOperator.h"
 #include "MLS_config.h"
 #include "MLSTimer.h"
 
 class KT{
 
 public:
-    KT(DBOperator &db);
+    KT(MySQLOperator &db);
     ~KT();
 
     std::vector<float> forward(const std::string &are_uid, const std::string &lrn_uid);
@@ -27,7 +27,7 @@ private:
     std::string now_time;
     std::string thirty_days_ago_time;
 
-    DBOperator &db; 
+    MySQLOperator &db; 
 };
 
 #endif //ifndef KT_H

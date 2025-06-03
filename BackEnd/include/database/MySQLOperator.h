@@ -15,11 +15,11 @@
 #include <mutex>
 #include <sstream>
 
-class DBOperator {
+class MySQLOperator {
 private:
     // 私有构造/析构
-    DBOperator();
-    ~DBOperator();
+    MySQLOperator();
+    ~MySQLOperator();
 
     // 事务支持
     bool beginTransaction();
@@ -37,10 +37,10 @@ private:
     static std::mutex instanceMutex_;
 
 public:
-    DBOperator(const DBOperator&) = delete;
-    DBOperator& operator=(const DBOperator&) = delete;
+    MySQLOperator(const MySQLOperator&) = delete;
+    MySQLOperator& operator=(const MySQLOperator&) = delete;
     // 获取单例实例
-    static DBOperator& getInstance();
+    static MySQLOperator& getInstance();
     // 初始化数据库连接
     bool initialize();
     // 检查连接状态

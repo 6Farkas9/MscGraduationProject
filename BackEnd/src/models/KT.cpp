@@ -1,6 +1,6 @@
 #include "KT.h"
 
-KT::KT(DBOperator &db) :
+KT::KT(MySQLOperator &db) :
     db(db)
 {
     auto twotime = MLSTimer().getCurrentand30daysTime();
@@ -70,12 +70,10 @@ std::vector<float> KT::forward(const std::string &are_uid, const std::string &lr
         }
     }
 
-    input_tensor = input_tensor.to(torch::kCUDA);
-
     std::vector<torch::jit::IValue> input_data;
     input_data.push_back(input_tensor);
     torch::jit::IValue output_data = IPDKT.forward(input_data);
-    torch::Tensor output_tensor = output_data.toTensor().to(torch::kCPU);
+    torch::Tensor output_tensor = output_data.toTensor();
 
     std::vector<float> ans(cpt_num);
 
