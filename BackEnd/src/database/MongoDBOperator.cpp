@@ -86,7 +86,7 @@ std::optional<bsoncxx::document::value> MongoDBOperator::findOne(
     }
 }
 
-std::vector<bsoncxx::document::value> MongoDBOperator::findMany(
+std::optional<mongocxx::cursor> MongoDBOperator::findMany(
     const std::string& collection, 
     bsoncxx::document::view_or_value filter,
     bsoncxx::document::view_or_value projection,
@@ -112,16 +112,16 @@ std::vector<bsoncxx::document::value> MongoDBOperator::findMany(
         }
         
         auto cursor = coll.find(filter.view(), opts);
+
+        return std::make_optional<mongocxx::cursor>(std::move(cursor));
         
-        for (auto&& doc : cursor) {
-            results.emplace_back(bsoncxx::document::value{doc});
-        }
+        // for (auto&& doc : cursor) {
+        //     results.emplace_back(bsoncxx::document::value{doc});
+        // }
     } catch (const std::exception& e) {
         std::cerr << "MongoDB Query Error: " << e.what() << std::endl;
         throw;
     }
-    
-    return results;
 }
 
 std::optional<bsoncxx::document::value> MongoDBOperator::insertOne(
@@ -201,6 +201,91 @@ bool MongoDBOperator::deleteOne(
 }
 
 // ========== 业务方法示例 ==========
+
+std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_scn_kcge_by_scn_uid(const std::unordered_set<std::string> &scn_uids) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+    try {
+        // 1. 构建查询条件：_id 在 scn_uids 集合中
+        bsoncxx::builder::basic::array in_array;
+        for (const auto& uid : scn_uids) {
+            in_array.append(uid);
+        }
+        auto filter = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 
+                bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("$in", in_array)
+                )
+            )
+        );
+        // 2. 内部构造其他参数
+        auto projection = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 1),
+            bsoncxx::builder::basic::kvp("KCGE_Emb", 1)
+        ); // 返回KCGE字段
+        std::optional<int64_t> limit = std::nullopt; // 不限制结果数量
+        std::optional<mongocxx::cursor> res = findMany("scenes", filter.view(), projection.view(), limit);
+        std::unordered_map<std::string, std::vector<float>> ans;
+        if (res == std::nullopt || res->begin() == res->end()) {
+            return ans;
+        }
+        for (auto &&doc : *res){
+            std::string scn_uid = doc["_id"].get_string().value.data();
+            ans[scn_uid] = std::vector<float>();
+            for (auto & ele : doc["KCGE_Emb"].get_array().value){
+                ans[scn_uid].emplace_back(ele.get_double().value);
+            }
+        }
+        return ans;
+    } catch (const std::exception& e) {
+        std::cerr << "System error: " << e.what() << std::endl;
+        throw;
+    }
+}
+
+std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_cpt_kcge_by_cpt_uid(const std::unordered_set<std::string> &cpt_uids) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+    try {
+        // 1. 构建查询条件：_id 在 scn_uids 集合中
+        bsoncxx::builder::basic::array in_array;
+        for (const auto& uid : cpt_uids) {
+            in_array.append(uid);
+        }
+        auto filter = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 
+                bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("$in", in_array)
+                )
+            )
+        );
+        // 2. 内部构造其他参数
+        auto projection = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 1),
+            bsoncxx::builder::basic::kvp("KCGE_Emb", 1)
+        ); // 返回KCGE字段
+        std::optional<int64_t> limit = std::nullopt; // 不限制结果数量
+        std::optional<mongocxx::cursor> res = findMany("concepts", filter.view(), projection.view(), limit);
+        std::unordered_map<std::string, std::vector<float>> ans;
+        if (res == std::nullopt || res->begin() == res->end()) {
+            return ans;
+        }
+        for (auto &&doc : *res){
+            std::string scn_uid = doc["_id"].get_string().value.data();
+            ans[scn_uid] = std::vector<float>();
+            for (auto & ele : doc["KCGE_Emb"].get_array().value){
+                ans[scn_uid].emplace_back(ele.get_double().value);
+            }
+        }
+        return ans;
+
+    } catch (const std::exception& e) {
+        std::cerr << "System error: " << e.what() << std::endl;
+        throw;
+    }
+}
 
 std::optional<std::unordered_map<std::string, float>> MongoDBOperator::testGetLearnerInfo(const std::string& lrn_uid) {
     auto filter = document{} 

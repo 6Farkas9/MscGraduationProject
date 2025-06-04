@@ -50,11 +50,17 @@ public:
 
     void testSelect(std::string table, int limit);
 
+    // 获取指定学习者在指定领域下的时间区间内的交互记录
     std::vector<std::vector<std::string>> get_Are_lrn_Interacts_Time(const std::string &are_uid, const std::string &lrn_uid, const std::string &time_start, const std::string &time_end);
 
+    // 获取指定scn所涉及的cpt
     std::unordered_map<std::string, std::unordered_set<std::string>> get_Cpt_of_Scn(const std::unordered_set<std::string> &scn_uids);
 
+    // 获取指定领域的所有cpt
     std::unordered_map<std::string, int> get_cpt_uid_id_of_area(const std::string &are_uid);
+
+    // 获取指定领域的所有特殊scn和其对应的cpt
+    std::unordered_map<std::string, std::string> get_special_scn_cpt_uid_of_are(const std::string &are_uid);
 };
 
 #endif

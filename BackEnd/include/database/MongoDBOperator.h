@@ -5,8 +5,11 @@
 #include <mongocxx/instance.hpp>
 #include <mongocxx/pool.hpp>
 #include <mongocxx/uri.hpp>
+#include <mongocxx/cursor.hpp>
 
+#include <bsoncxx/document/element.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/document/view.hpp>
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/document/view_or_value.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
@@ -55,7 +58,7 @@ public:
         bsoncxx::document::view_or_value projection = {});
     
     // 查询多个文档
-    std::vector<bsoncxx::document::value> findMany(
+    std::optional<mongocxx::cursor> findMany(
         const std::string& collection, 
         bsoncxx::document::view_or_value filter,
         bsoncxx::document::view_or_value projection = {},
@@ -79,6 +82,12 @@ public:
         bsoncxx::document::view_or_value filter);
 
     // ========== 业务方法示例 ==========
+
+    // 获取指定scn的kcge嵌入表达
+    std::unordered_map<std::string, std::vector<float>> get_scn_kcge_by_scn_uid(const std::unordered_set<std::string> &scn_uids);
+    
+    // 获取指定cpt的kcge嵌入表达
+    std::unordered_map<std::string, std::vector<float>> get_cpt_kcge_by_cpt_uid(const std::unordered_set<std::string> &cpt_uids);
     
     // 示例1: 获取用户信息（返回可选文档）
     std::optional<std::unordered_map<std::string, float>> testGetLearnerInfo(const std::string& lrn_uid);

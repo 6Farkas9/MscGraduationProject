@@ -385,14 +385,16 @@ class MySQLDB():
         cursor.close()
         return result
     
-    # 获取special_scenes中的所有scn_uid和cpt_uid
-    def get_all_special_scn_cpt_uid(self):
+    # 获取指定are下的special_scenes中的所有scn_uid和cpt_uid
+    def get_special_scn_cpt_uid_of_are(self, are_uid):
         sql = f"""
-        select scn_uid, cpt_uid
-        from special_scenes
+        SELECT ss.scn_uid, ss.cpt_uid
+        FROM special_scenes ss
+        JOIN graph_belong gb ON ss.cpt_uid = gb.cpt_uid
+        WHERE gb.are_uid = %s;
         """
         cursor = self.con.cursor()
-        cursor.execute(sql)
+        cursor.execute(sql, [are_uid])
         result = cursor.fetchall()
         cursor.close()
         return result

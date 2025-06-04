@@ -69,6 +69,12 @@ class CD(nn.Module):
         # 模型外要根据kcge的输出从中提取
         # 模型外部计算h，使用scn_seq_index进行计算
 
+        # print(scn_seq_index.shape)
+        # print(scn_seq_mask.shape)
+        # print(h_lrn.shape)
+        # print(h_scn.shape)
+        # print(h_cpt.shape)
+
         lrn_num = h_lrn.size(0)
         scn_num = h_scn.size(0)
         cpt_num = h_cpt.size(0)

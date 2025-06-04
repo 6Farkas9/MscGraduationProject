@@ -283,3 +283,18 @@ std::unordered_map<std::string, std::unordered_set<std::string>> MySQLOperator::
     }
     return ans;
 }
+
+std::unordered_map<std::string, std::string> MySQLOperator::get_special_scn_cpt_uid_of_are(const std::string &are_uid) {
+    std::string sql = R"(
+        SELECT ss.scn_uid, ss.cpt_uid
+        FROM special_scenes ss
+        JOIN graph_belong gb ON ss.cpt_uid = gb.cpt_uid
+        WHERE gb.are_uid = ")";
+    sql = sql + are_uid + R"(";)";
+    auto result = executeQuery(sql);
+    std::unordered_map<std::string, std::string> ans;
+    for(auto &row : result){
+        ans[row[0]] = row[1];
+    }
+    return ans;
+}

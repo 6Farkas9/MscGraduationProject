@@ -1,6 +1,8 @@
 #ifndef CD_H
 #define CD_H
 
+#include "MongoDBOperator.h"
+
 #include <vector>
 #include <string>
 #include <torch/script.h>
@@ -11,23 +13,24 @@
 #include <unordered_map>
 #include <sstream>
 
-#include "DBOperator.h"
+#include "MySQLOperator.h"
 #include "MLS_config.h"
 #include "MLSTimer.h"
 
 class CD{
 
 public:
-    CD(DBOperator &db);
+    CD(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~CD();
 
-    std::vector<float> forward();
+    std::vector<float> forward(const std::string are_uid, const std::string lrn_uid);
 
 private:
     std::string now_time;
     std::string thirty_days_ago_time;
 
-    DBOperator &db; 
+    MySQLOperator &mysqlop;
+    MongoDBOperator &mongodbop; 
 };
 
 #endif //ifndef CD_H

@@ -1,21 +1,36 @@
 ﻿#include <iostream>
-// #include "MySQLOperator.h"
-// #include "KT.h"
 #include "MongoDBOperator.h"
+#include "MySQLOperator.h"
+#include "KT.h"
+#include "CD.h"
 
 int main(){
+    MySQLOperator& mysqldb = MySQLOperator::getInstance();
+    mysqldb.initialize();
     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
     mongodbop.initialize();
 
-    auto res = mongodbop.testGetLearnerInfo("lrn_aee0624932cf4affa00626e8f038c4e8");
-    if (res == std::nullopt) {
-        std::cout << "no res" << std::endl;
-    }
-    else {
-        for (auto & kv : *res) {
-            std::cout << kv.first << " : " << kv.second << std::endl;
-        }
-    }
+    CD cd(mysqldb, mongodbop);
+
+    cd.forward(
+        "are_3fee9e47d0f3428382f4afbcb1004117",
+        "lrn_aee0624932cf4affa00626e8f038c4e8"
+    );
+
+    // std::unordered_set<std::string> scn_uids;
+    // scn_uids.insert("scn_001acf4b24634b2fbffba06cde8bdf22");
+    // scn_uids.insert("scn_0021344e8a874fc38732f7694adcc83d");
+
+    // auto res = mongodbop.get_scn_kcge_by_scn_uid(scn_uids);
+    
+    // for (auto &kv : res) {
+    //     std::cout << kv.first << std::endl;
+    //     for (auto & ele : kv.second) {
+    //         std::cout << ele << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
     return 0;
 }
 

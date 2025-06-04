@@ -116,7 +116,7 @@ class CDDataReader():
             scn_mask[i, :seq_len] = 1.0
 
         # 这个变量用来获取之后的h_scn和h_cpt
-        special_scn_cpt_uids = mysqldb.get_all_special_scn_cpt_uid()
+        special_scn_cpt_uids = mysqldb.get_special_scn_cpt_uid_of_are(self.are_uid)
 
         cpt_num = len(special_scn_cpt_uids)
         scn_mask_special  = torch.ones(len(self.lrn_uids), cpt_num, dtype=torch.float32)
