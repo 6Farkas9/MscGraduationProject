@@ -1,33 +1,96 @@
-#ifndef MONGO_H
-#define MONGO_H
- 
-#include <QObject>
-#include <QDebug>
-#include <bsoncxx/builder/stream/document.hpp>
-#include <bsoncxx/types.hpp>
+#ifndef MONGODBOPERATOR_H
+#define MONGODBOPERATOR_H
+
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
+#include <mongocxx/pool.hpp>
 #include <mongocxx/uri.hpp>
+
+#include <bsoncxx/builder/stream/document.hpp>
 #include <bsoncxx/json.hpp>
- 
- 
-// #pragma execution_character_set("utf-8");
- 
-class Mongo : public QObject
-{
-    Q_OBJECT
-public:
-    explicit Mongo(QObject *parent = nullptr);
-    ~Mongo();
- 
-    static void connectToMongoDB();
-    bool connectToHost(QString m_hostName, QString m_port);
- 
+#include <bsoncxx/document/view_or_value.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
+
+#include <memory>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
+#include <mutex>
+#include <optional>
+
+class MongoDBOperator {
 private:
-    mongocxx::instance* m_dbInstance = nullptr;
-    mongocxx::client* m_client = nullptr;
- 
-signals:
+    // 私有构造/析构
+    MongoDBOperator();
+    ~MongoDBOperator();
+
+    // PIMPL模式隐藏实现细节
+    struct Impl;
+    std::unique_ptr<Impl> pImpl_;
+    static std::mutex instanceMutex_;
+
+public:
+    MongoDBOperator(const MongoDBOperator&) = delete;
+    MongoDBOperator& operator=(const MongoDBOperator&) = delete;
+    
+    // 获取单例实例
+    static MongoDBOperator& getInstance();
+    
+    // 初始化数据库连接
+    bool initialize();
+    
+    // 检查连接状态
+    bool isConnected() const;
+    
+    // 关闭连接池
+    void close();
+
+    // ========== 通用操作方法 ==========
+    
+    // 查询文档（返回可选值）
+    std::optional<bsoncxx::document::value> findOne(
+        const std::string& collection, 
+        bsoncxx::document::view_or_value filter,
+        bsoncxx::document::view_or_value projection = {});
+    
+    // 查询多个文档
+    std::vector<bsoncxx::document::value> findMany(
+        const std::string& collection, 
+        bsoncxx::document::view_or_value filter,
+        bsoncxx::document::view_or_value projection = {},
+        std::optional<int64_t> limit = std::nullopt);
+    
+    // 插入单个文档
+    std::optional<bsoncxx::document::value> insertOne(
+        const std::string& collection, 
+        bsoncxx::document::view_or_value document);
+    
+    // 更新文档
+    bool updateOne(
+        const std::string& collection, 
+        bsoncxx::document::view_or_value filter,
+        bsoncxx::document::view_or_value update,
+        bool upsert = false);
+    
+    // 删除文档
+    bool deleteOne(
+        const std::string& collection, 
+        bsoncxx::document::view_or_value filter);
+
+    // ========== 业务方法示例 ==========
+    
+    // 示例1: 获取用户信息（返回可选文档）
+    std::optional<std::unordered_map<std::string, float>> testGetLearnerInfo(const std::string& lrn_uid);
+    
+    // 示例2: 记录用户活动（返回插入的文档ID）
+    std::optional<std::string> logUserActivity(
+        const std::string& userId, 
+        const std::string& activityType,
+        const std::string& details);
+    
+    // 示例3: 获取用户收藏项
+    std::vector<std::string> getUserFavorites(const std::string& userId);
 };
- 
-#endif // MONGO_H
+
+#endif

@@ -54,6 +54,9 @@
     <ClInclude Include="include\models\KT.h">
       <Filter>include\models</Filter>
     </ClInclude>
+    <ClInclude Include="include\database\MongoDBOperator.h">
+      <Filter>include\database</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -66,6 +69,9 @@
       <Filter>src\utils</Filter>
     </ClCompile>
     <ClCompile Include="src\database\MySQLOperator.cpp">
+      <Filter>src\database</Filter>
+    </ClCompile>
+    <ClCompile Include="src\database\MongoDBOperator.cpp">
       <Filter>src\database</Filter>
     </ClCompile>
   </ItemGroup>

@@ -163,11 +163,13 @@
   <ItemGroup>
     <ClInclude Include="include\api\crow.h" />
     <ClInclude Include="include\core\MLS_config.h" />
+    <ClInclude Include="include\database\MongoDBOperator.h" />
     <ClInclude Include="include\database\MySQLOperator.h" />
     <ClInclude Include="include\models\KT.h" />
     <ClInclude Include="include\utils\MLSTimer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\database\MongoDBOperator.cpp" />
     <ClCompile Include="src\database\MySQLOperator.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\models\KT.cpp" />

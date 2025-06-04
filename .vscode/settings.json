@@ -78,6 +78,11 @@
         "io_context": "cpp",
         "netfwd": "cpp",
         "timer": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "any": "cpp",
+        "strstream": "cpp",
+        "coroutine": "cpp",
+        "csignal": "cpp",
+        "source_location": "cpp"
     }
 }

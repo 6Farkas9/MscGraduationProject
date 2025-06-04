@@ -1,7 +1,7 @@
 #include "KT.h"
 
-KT::KT(MySQLOperator &db) :
-    db(db)
+KT::KT(MySQLOperator &mysqlop) :
+    mysqlop(mysqlop)
 {
     auto twotime = MLSTimer().getCurrentand30daysTime();
     now_time = twotime[0];
@@ -38,9 +38,9 @@ std::vector<float> KT::forward(const std::string &are_uid, const std::string &lr
 
     // 构建输入数据
     // 获取当前领域的所有知识点
-    auto cpt_uids = db.get_cpt_uid_id_of_area(are_uid);
+    auto cpt_uids = mysqlop.get_cpt_uid_id_of_area(are_uid);
     // 获取当前领域的知识点的该学生的一个月内的交互数据
-    auto interacts = db.get_Are_lrn_Interacts_Time(
+    auto interacts = mysqlop.get_Are_lrn_Interacts_Time(
         are_uid,
         lrn_uid,
         thirty_days_ago_time,
@@ -52,7 +52,7 @@ std::vector<float> KT::forward(const std::string &are_uid, const std::string &lr
         scn_uids.insert(interact[0]);
     }
     // 获取每个场景所涉及的知识点
-    auto scn_cpt = db.get_Cpt_of_Scn(scn_uids);
+    auto scn_cpt = mysqlop.get_Cpt_of_Scn(scn_uids);
 
     int interact_num = interacts.size();
     int cpt_num = cpt_uids.size();

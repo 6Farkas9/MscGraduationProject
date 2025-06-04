@@ -27,7 +27,7 @@ private:
     std::string now_time;
     std::string thirty_days_ago_time;
 
-    MySQLOperator &db; 
+    MySQLOperator &mysqlop; 
 };
 
 #endif //ifndef KT_H
