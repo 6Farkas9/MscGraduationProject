@@ -3,26 +3,44 @@
 #include "MySQLOperator.h"
 #include "KT.h"
 #include "CD.h"
+#include "RR.h"
 
-int main(){
+int main() {
     MySQLOperator& mysqldb = MySQLOperator::getInstance();
     mysqldb.initialize();
     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
     mongodbop.initialize();
 
-    CD cd(mysqldb, mongodbop);
+    RR rr(mysqldb, mongodbop);
 
-    std::unordered_map<std::string, float> cd_pred =  cd.forward(
-        "are_3fee9e47d0f3428382f4afbcb1004117",
-        "lrn_aee0624932cf4affa00626e8f038c4e8"
-    );
+    std::unordered_map<std::string, float> rr_pred =  rr.forward("lrn_aee0624932cf4affa00626e8f038c4e8");
 
-    for (auto & kv : cd_pred){
+    for (auto & kv : rr_pred){
         std::cout << kv.first << " - " << kv.second << std::endl;
     }
 
     return 0;
 }
+
+// int main(){
+//     MySQLOperator& mysqldb = MySQLOperator::getInstance();
+//     mysqldb.initialize();
+//     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
+//     mongodbop.initialize();
+
+//     CD cd(mysqldb, mongodbop);
+
+//     std::unordered_map<std::string, float> cd_pred =  cd.forward(
+//         "are_3fee9e47d0f3428382f4afbcb1004117",
+//         "lrn_aee0624932cf4affa00626e8f038c4e8"
+//     );
+
+//     for (auto & kv : cd_pred){
+//         std::cout << kv.first << " - " << kv.second << std::endl;
+//     }
+
+//     return 0;
+// }
 
 // int main() {
 //     try{

@@ -80,6 +80,12 @@ class RR(nn.Module):
         # scn_seq_mask : 指名scn_seq_index中的有效位
         # -> 返回的应该是计算出的r_uk
 
+        # print(lrn_static.shape)
+        # print(scn_dynamic.shape)
+        # print(scn_seq_index.shape)
+        # print(scn_seq_mask.shape)
+        # print(cpt_static.shape)
+
         # 只能假定知识点是相对稳定，不会随时变化的，那么将知识点的潜在嵌入直接作为参数
         # 学习者的潜在嵌入通过在HGC中类似的投影手段来获得
 

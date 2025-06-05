@@ -23,7 +23,7 @@ public:
     RR(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~RR();
 
-    std::unordered_map<std::string, float> forward(const std::string are_uid, const std::string lrn_uid);
+    std::unordered_map<std::string, float> forward(const std::string lrn_uid);
 
 private:
     std::string now_time;

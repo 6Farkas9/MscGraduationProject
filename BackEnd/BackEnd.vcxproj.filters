@@ -60,6 +60,9 @@
     <ClInclude Include="include\models\CD.h">
       <Filter>include\models</Filter>
     </ClInclude>
+    <ClInclude Include="include\models\RR.h">
+      <Filter>include\models</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -78,6 +81,9 @@
       <Filter>src\database</Filter>
     </ClCompile>
     <ClCompile Include="src\models\CD.cpp">
+      <Filter>src\models</Filter>
+    </ClCompile>
+    <ClCompile Include="src\models\RR.cpp">
       <Filter>src\models</Filter>
     </ClCompile>
   </ItemGroup>

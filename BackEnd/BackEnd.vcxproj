@@ -167,6 +167,7 @@
     <ClInclude Include="include\database\MySQLOperator.h" />
     <ClInclude Include="include\models\CD.h" />
     <ClInclude Include="include\models\KT.h" />
+    <ClInclude Include="include\models\RR.h" />
     <ClInclude Include="include\utils\MLSTimer.h" />
   </ItemGroup>
   <ItemGroup>
@@ -175,6 +176,7 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\models\CD.cpp" />
     <ClCompile Include="src\models\KT.cpp" />
+    <ClCompile Include="src\models\RR.cpp" />
     <ClCompile Include="src\utils\MLSTimer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

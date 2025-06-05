@@ -14,89 +14,83 @@ RR::~RR(){
 }
 
 std::unordered_map<std::string, float> RR::forward(const std::string lrn_uid){
-    // 获取近30天内关于are_uid的交互记录
-    auto interacts = mysqlop.get_Are_lrn_Interacts_Time(thirty_days_ago_time, now_time);
-    // 从交互记录中获取交互的scn_uid
-    std::unordered_set<std::string> scn_uids, cpt_uids;
+    // 获取指定lrn的HGC_Emb
+    std::unordered_set<std::string> lrn_uids, scn_uids, cpt_uids;
+    lrn_uids.insert(lrn_uid);
+    std::unordered_map<std::string, std::vector<float>> lrn_emb_map = mongodbop.get_lrn_hgc_by_lrn_uid(lrn_uids);
+    // 构建lrn_emb的tensor
+    torch::Tensor lrn_emb = torch::from_blob(
+        const_cast<float*>(lrn_emb_map[lrn_uid].data()),  // 避免拷贝数据
+        {static_cast<int64_t>(lrn_emb_map[lrn_uid].size())},
+        torch::kFloat32
+    );
+    // 获取近30天内lrn_uid的交互记录
+    auto interacts = mysqlop.get_lrn_interacts_time(lrn_uid, thirty_days_ago_time, now_time);
+    // 获取交互记录中的scn_uids
     for(auto & interact : interacts) {
         scn_uids.insert(interact[0]);
     }
-    // 获取对应scn_uid的KCGE_Emb
-    std::unordered_map<std::string, std::vector<float>> interact_scn_emb = mongodbop.get_scn_kcge_by_scn_uid(scn_uids);
-    // 根据interact_scn_emb构建对应的tensor
-    std::vector<torch::Tensor> interact_h_scn;
-    for (const auto &kv : interact_scn_emb){
-        interact_h_scn.push_back(torch::from_blob(
+    // 获取scn_uids对应的HGC_Emb
+    std::unordered_map<std::string, std::vector<float>> scn_emb_map = mongodbop.get_scn_hgc_by_scn_uid(scn_uids);
+    std::unordered_map<std::string, int> scn_uid2idx;
+    std::vector<torch::Tensor> scn_emb_vec;
+    int idx = 0;
+    for (const auto &kv : scn_emb_map){
+        scn_emb_vec.push_back(torch::from_blob(
             const_cast<float*>(kv.second.data()),  // 避免拷贝数据
             {static_cast<int64_t>(kv.second.size())},
             torch::kFloat32
         ));
+        scn_uid2idx[kv.first] = idx;
+        ++idx;
     }
-    // 计算出h_lrn
-    torch::Tensor h_lrn = torch::sum(torch::stack(interact_h_scn), 0);
-    interact_scn_emb.clear();
-    interact_h_scn.clear();
-    scn_uids.clear();
-    // 获取are_uid相关的所有special_scn及其对应的cpt
-    std::unordered_map<std::string, std::string> special_scn_cpt = mysqlop.get_special_scn_cpt_uid_of_are(are_uid);
-    // 获取special_scn和cpt的KCGE_Emb - h_scn和h_cpt
-    for (auto &scn_cpt : special_scn_cpt) {
-        scn_uids.insert(scn_cpt.first);
-        cpt_uids.insert(scn_cpt.second);
+    torch::Tensor scn_emb = torch::stack(scn_emb_vec);
+    // 构建scn_index和scn_mask
+    int interact_num = interacts.size();
+    std::vector<int> scn_index_vec;
+    for (auto &interact : interacts) {
+        scn_index_vec.emplace_back(scn_uid2idx[interact[0]]);
     }
-    std::unordered_map<std::string, std::vector<float>> scn_emb = mongodbop.get_scn_kcge_by_scn_uid(scn_uids);
-    std::unordered_map<std::string, std::vector<float>> cpt_emb = mongodbop.get_cpt_kcge_by_cpt_uid(cpt_uids);
-    std::vector<std::string> ordered_scn_uids, ordered_cpt_uids;
-    std::vector<torch::Tensor> h_scn_stack;
-    for (const auto &kv : scn_emb){
-        ordered_scn_uids.emplace_back(kv.first);
-        h_scn_stack.push_back(torch::from_blob(
+    torch::Tensor scn_index = torch::tensor(scn_index_vec, torch::kLong);
+    torch::Tensor scn_mask = torch::ones(interact_num, torch::kFloat32);
+    // 获取所有知识点（涉及推荐范围）的HGC_Emb
+    std::unordered_map<std::string, std::vector<float>> cpt_emb_map = mongodbop.get_all_cpt_hgc();
+    std::vector<std::string> ordered_cpt_uid;
+    std::vector<torch::Tensor> cpt_emb_vec;
+    for (const auto &kv : cpt_emb_map){
+        cpt_emb_vec.push_back(torch::from_blob(
             const_cast<float*>(kv.second.data()),  // 避免拷贝数据
             {static_cast<int64_t>(kv.second.size())},
             torch::kFloat32
         ));
+        ordered_cpt_uid.emplace_back(kv.first);
     }
-    torch::Tensor h_scn = torch::stack(h_scn_stack);
-    std::vector<torch::Tensor> h_cpt_stack;
-    for (const auto &kv : cpt_emb){
-        ordered_cpt_uids.emplace_back(kv.first);
-        h_cpt_stack.push_back(torch::from_blob(
-            const_cast<float*>(kv.second.data()),  // 避免拷贝数据
-            {static_cast<int64_t>(kv.second.size())},
-            torch::kFloat32
-        ));
-    }
-    torch::Tensor h_cpt = torch::stack(h_cpt_stack);
-    scn_emb.clear();
-    cpt_emb.clear();
-    // 构建0-special_scn_num - 1的tensor：index和全1tensormask
-    int scn_num = ordered_scn_uids.size();
-    torch::Tensor scn_index = torch::arange(scn_num, torch::kLong);
-    torch::Tensor scn_mask = torch::ones(scn_num, torch::kFloat32);
-    // 加载model
-    torch::jit::Module model_cd;
-    std::string pt_path = R"(\RR\PT\)" + are_uid + "_use.pt";
+    torch::Tensor cpt_emb = torch::stack(cpt_emb_vec);
+    // 加载模型
+    torch::jit::Module model_rr;
+    std::string pt_path = R"(\RR\PT\RR_use.pt)";
     pt_path = DEEPLEARNING_ROOT + pt_path;
-    model_cd = torch::jit::load(pt_path);
-    model_cd.eval();
-    // 构建输入数据
+    model_rr = torch::jit::load(pt_path);
+    model_rr.eval();
+    // 构建输入
+    lrn_emb = lrn_emb.unsqueeze(0);
     scn_index = scn_index.unsqueeze(0);
     scn_mask = scn_mask.unsqueeze(0);
-    h_lrn = h_lrn.unsqueeze(0);
     std::vector<torch::jit::IValue> input_data;
+    input_data.push_back(lrn_emb);
+    input_data.push_back(scn_emb);
     input_data.push_back(scn_index);
     input_data.push_back(scn_mask);
-    input_data.push_back(h_lrn);
-    input_data.push_back(h_scn);
-    input_data.push_back(h_cpt);
-    torch::jit::IValue output_data = model_cd.forward(input_data);
-    // 输入model获得r_pred
-    torch::Tensor r_pred = output_data.toTensor();
+    input_data.push_back(cpt_emb);
+    // 数据输入模型
+    torch::jit::IValue output_data = model_rr.forward(input_data);
+    // 构建输出
+    torch::Tensor r_pred = output_data.toTuple()->elements()[0].toTensor();
     // 构建结果
     std::unordered_map<std::string, float> ans;
     auto r_pred_accessor = r_pred.accessor<float, 2>();
-    int idx = -1;
-    for (auto & cpt_uid : ordered_cpt_uids) {
+    idx = -1;
+    for (auto & cpt_uid : ordered_cpt_uid) {
         ans[cpt_uid] = r_pred_accessor[0][++idx];
     }
     return ans;

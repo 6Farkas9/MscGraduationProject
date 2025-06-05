@@ -89,10 +89,10 @@ std::unordered_map<std::string, float> CD::forward(const std::string are_uid, co
     input_data.push_back(h_lrn);
     input_data.push_back(h_scn);
     input_data.push_back(h_cpt);
-    torch::jit::IValue output_data = model_cd.forward(input_data);
     // 输入model获得r_pred
-    torch::Tensor r_pred = output_data.toTensor();
+    torch::jit::IValue output_data = model_cd.forward(input_data);
     // 构建结果
+    torch::Tensor r_pred = output_data.toTensor();
     std::unordered_map<std::string, float> ans;
     auto r_pred_accessor = r_pred.accessor<float, 2>();
     int idx = -1;

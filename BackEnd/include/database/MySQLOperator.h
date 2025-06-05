@@ -61,6 +61,9 @@ public:
 
     // 获取指定领域的所有特殊scn和其对应的cpt
     std::unordered_map<std::string, std::string> get_special_scn_cpt_uid_of_are(const std::string &are_uid);
+
+    // 获取指定lrn的近一个月内的交互记录
+    std::vector<std::vector<std::string>> get_lrn_interacts_time(const std::string &lrn_uid, const std::string &time_start, const std::string &time_end);
 };
 
 #endif

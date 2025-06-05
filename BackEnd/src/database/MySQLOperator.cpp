@@ -298,3 +298,36 @@ std::unordered_map<std::string, std::string> MySQLOperator::get_special_scn_cpt_
     }
     return ans;
 }
+
+std::vector<std::vector<std::string>> MySQLOperator::get_lrn_interacts_time(const std::string &lrn_uid, const std::string &time_start, const std::string &time_end) {
+        std::string sql = R"(
+        SELECT 
+            scn_uid, 
+            result
+        FROM 
+            interacts
+        WHERE 
+            lrn_uid = ")";
+    sql += lrn_uid  + R"(" 
+        AND created_at >= ")";
+    sql += time_start + R"(" 
+        AND created_at <= ")";
+    sql += time_end + R"(" 
+        ORDER BY 
+        created_at ASC;)";
+
+    auto result = executeQuery(sql);
+    
+    std::vector<std::vector<std::string>> ans;
+
+    for(auto &row : result){
+        ans.emplace_back(std::vector<std::string>());
+        for(auto &item : row){
+            ans.back().emplace_back(item);
+            // std::cout << item << " ";
+        }
+        // std::cout << std::endl;
+    }
+
+    return ans;
+}
