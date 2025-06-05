@@ -12,24 +12,14 @@ int main(){
 
     CD cd(mysqldb, mongodbop);
 
-    cd.forward(
+    std::unordered_map<std::string, float> cd_pred =  cd.forward(
         "are_3fee9e47d0f3428382f4afbcb1004117",
         "lrn_aee0624932cf4affa00626e8f038c4e8"
     );
 
-    // std::unordered_set<std::string> scn_uids;
-    // scn_uids.insert("scn_001acf4b24634b2fbffba06cde8bdf22");
-    // scn_uids.insert("scn_0021344e8a874fc38732f7694adcc83d");
-
-    // auto res = mongodbop.get_scn_kcge_by_scn_uid(scn_uids);
-    
-    // for (auto &kv : res) {
-    //     std::cout << kv.first << std::endl;
-    //     for (auto & ele : kv.second) {
-    //         std::cout << ele << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+    for (auto & kv : cd_pred){
+        std::cout << kv.first << " - " << kv.second << std::endl;
+    }
 
     return 0;
 }

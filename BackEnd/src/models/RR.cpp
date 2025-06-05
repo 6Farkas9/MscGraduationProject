@@ -1,6 +1,6 @@
-#include "CD.h"
+#include "RR.h"
 
-CD::CD(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
+RR::RR(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
     mysqlop(mysqlop),
     mongodbop(mongodbop)
 {
@@ -9,11 +9,11 @@ CD::CD(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
     thirty_days_ago_time = twotime[1];
 }
 
-CD::~CD(){
+RR::~RR(){
 
 }
 
-std::unordered_map<std::string, float> CD::forward(const std::string are_uid, const std::string lrn_uid){
+std::unordered_map<std::string, float> RR::forward(const std::string are_uid, const std::string lrn_uid){
     // 获取近30天内关于are_uid的交互记录
     auto interacts = mysqlop.get_Are_lrn_Interacts_Time(are_uid, lrn_uid, thirty_days_ago_time, now_time);
     // 从交互记录中获取交互的scn_uid
@@ -75,7 +75,7 @@ std::unordered_map<std::string, float> CD::forward(const std::string are_uid, co
     torch::Tensor scn_mask = torch::ones(scn_num, torch::kFloat32);
     // 加载model
     torch::jit::Module model_cd;
-    std::string pt_path = R"(\CD\PT\)" + are_uid + "_use.pt";
+    std::string pt_path = R"(\RR\PT\)" + are_uid + "_use.pt";
     pt_path = DEEPLEARNING_ROOT + pt_path;
     model_cd = torch::jit::load(pt_path);
     model_cd.eval();

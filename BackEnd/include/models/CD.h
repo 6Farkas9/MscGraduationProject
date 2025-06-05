@@ -23,7 +23,7 @@ public:
     CD(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~CD();
 
-    std::vector<float> forward(const std::string are_uid, const std::string lrn_uid);
+    std::unordered_map<std::string, float> forward(const std::string are_uid, const std::string lrn_uid);
 
 private:
     std::string now_time;
