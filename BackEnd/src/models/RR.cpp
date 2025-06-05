@@ -13,9 +13,9 @@ RR::~RR(){
 
 }
 
-std::unordered_map<std::string, float> RR::forward(const std::string are_uid, const std::string lrn_uid){
+std::unordered_map<std::string, float> RR::forward(const std::string lrn_uid){
     // 获取近30天内关于are_uid的交互记录
-    auto interacts = mysqlop.get_Are_lrn_Interacts_Time(are_uid, lrn_uid, thirty_days_ago_time, now_time);
+    auto interacts = mysqlop.get_Are_lrn_Interacts_Time(thirty_days_ago_time, now_time);
     // 从交互记录中获取交互的scn_uid
     std::unordered_set<std::string> scn_uids, cpt_uids;
     for(auto & interact : interacts) {

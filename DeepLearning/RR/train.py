@@ -114,7 +114,7 @@ def save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDat
 
     # 保存lrn_emb，scn_emb，cpt_emb
     datareader.save_final_data(lrn_uids_list, scn_uids_list, cpt_uids_list, 
-                               lrn_emb, scn_emb, cpt_emb,
+                               lrn_emb, scn_dynamic_emb, cpt_emb,
                                r_pred)
 
 if __name__ == '__main__':
