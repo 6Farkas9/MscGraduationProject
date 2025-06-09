@@ -459,18 +459,12 @@ class MySQLDB():
         cursor.close()
         return result
     
-    # 从graph_involve中获取are相关的所有记录 - 添加有result约束
+    # 从graph_involve中获取are相关的所有记录
     def get_scn_cpt_uid_of_are(self, are_uid):
         sql = f"""
-        WITH scn_has_result AS (
-            SELECT scn_uid
-            FROM scenes
-            WHERE has_result = 1
-        )
         SELECT gi.scn_uid, gi.cpt_uid, gi.difficulty
         FROM graph_involve AS gi
         JOIN graph_belong AS gb ON gb.cpt_uid = gi.cpt_uid
-        JOIN scn_has_result shr ON gi.scn_uid = shr.scn_uid
         WHERE gb.are_uid = %s
         """
         cursor = self.con.cursor()

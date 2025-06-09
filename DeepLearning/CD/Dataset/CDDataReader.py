@@ -45,17 +45,13 @@ class CDDataReader():
         self.cpt_idx = cpt_idx
 
         # 用来计算h_lrn
-
-        # TODO:
         # 这里要改为获取所有的交互数据，然后根据是否有result来修改对应的mask
         interacts = self.get_all_recording()
-        print(1)
         # 获取当前are下的所有有result的scn，不对，mask不是在这里搞的，实在dataset里搞的，dataset哪里默认是0，那么一个取巧的方法是让interacts里的默认值是0
         # 理论上special_scene下的所有scn都是没有result的
         # 还是要获取所有有或者所有没有result的scn，然后将对应的lrn_scn的对应位置的结果置为-1
         # 然后在dataset根据这个-1的位置来对对应的mask位置置0
         scn_uids_withresult = self.get_scn_of_are_with_result()
-        print(2)
 
         lrn_scn = {}
         self.max_scn_num = 0
