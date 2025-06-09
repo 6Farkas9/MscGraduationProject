@@ -300,14 +300,14 @@ std::unordered_map<std::string, std::string> MySQLOperator::get_special_scn_cpt_
 }
 
 std::vector<std::vector<std::string>> MySQLOperator::get_lrn_interacts_time(const std::string &lrn_uid, const std::string &time_start, const std::string &time_end) {
-        std::string sql = R"(
-        SELECT 
-            scn_uid, 
-            result
-        FROM 
-            interacts
-        WHERE 
-            lrn_uid = ")";
+    std::string sql = R"(
+    SELECT 
+        scn_uid, 
+        result
+    FROM 
+        interacts
+    WHERE 
+        lrn_uid = ")";
     sql += lrn_uid  + R"(" 
         AND created_at >= ")";
     sql += time_start + R"(" 
@@ -330,4 +330,64 @@ std::vector<std::vector<std::string>> MySQLOperator::get_lrn_interacts_time(cons
     }
 
     return ans;
+}
+
+// 通用的执行函数
+bool MySQLOperator::judgeHadUid(std::string &table, std::string &pre, std::string &uid) {
+    std::string sql = R"(
+        select count(*)
+        from )" + table + R"(
+        where )" + pre + R"(uid = ")" + uid + R"(")";
+
+    auto result = executeQuery(sql);
+    return (result[0][0] != "0");
+}
+
+// 判断learners中是否有重复uid
+bool MySQLOperator::judgeLearnersHadUid(std::string &uid) {
+    std::string table = "Learners";
+    std::string pre = "lrn_";
+    return judgeHadUid(table, pre, uid);
+}
+
+// 判断scenes中是否有重复uid
+bool MySQLOperator::judgeScenesHadUid(std::string &uid) {
+    std::string table = "Scenes";
+    std::string pre = "scn_";
+    return judgeHadUid(table, pre, uid);
+}
+
+// 判断concepts中是否有重复uid
+bool MySQLOperator::judgeConceptsHadUid(std::string &uid) {
+    std::string table = "Concepts";
+    std::string pre = "cpt_";
+    return judgeHadUid(table, pre, uid);
+}
+
+// 判断areas中是否有重复uid
+bool MySQLOperator::judgeAreasHadUid(std::string &uid) {
+    std::string table = "Areas";
+    std::string pre = "are_";
+    return judgeHadUid(table, pre, uid);
+}
+
+int MySQLOperator::insertNewScn(std::string scn_uid, bool has_result) {
+    std::string sql = R"(
+        insert into Scenes (scn_uid, has_result)
+        values (")" + scn_uid + R"(", )";
+    if (has_result) {
+        sql += R"(1))";
+    }
+    else {
+        sql += R"(0))";
+    }
+
+    return executeUpdate(sql);
+}
+
+int MySQLOperator::delete_scn_from_scenes(std::string scn_uid) {
+    std::string sql = R"(
+        delete from Scenes
+        where scn_uid = ")" + scn_uid + R"(")";
+    return executeUpdate(sql);
 }

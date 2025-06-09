@@ -13,10 +13,10 @@ public:
     MLSTimer();
     ~MLSTimer();
 
-    std::vector<std::string> getCurrentand30daysTime();
+    static std::vector<std::string> getCurrentand30daysTime();
 
 private:
-    std::string format_time(const std::chrono::system_clock::time_point& time_point);
+    static std::string format_time(const std::chrono::system_clock::time_point& time_point);
 };
 
 #endif // #ifndef MLSTIMER_H

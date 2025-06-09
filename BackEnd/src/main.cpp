@@ -1,9 +1,11 @@
 ﻿#include <iostream>
 #include "MongoDBOperator.h"
 #include "MySQLOperator.h"
-#include "KT.h"
-#include "CD.h"
-#include "RR.h"
+// #include "KT.h"
+// #include "CD.h"
+// #include "RR.h"
+// #include "UidCreator.h"
+#include "SceneService.h"
 
 int main() {
     MySQLOperator& mysqldb = MySQLOperator::getInstance();
@@ -11,16 +13,33 @@ int main() {
     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
     mongodbop.initialize();
 
-    RR rr(mysqldb, mongodbop);
+    SceneService scn_ser = SceneService(mysqldb, mongodbop);
 
-    std::unordered_map<std::string, float> rr_pred =  rr.forward("lrn_aee0624932cf4affa00626e8f038c4e8");
+    std::unordered_map<std::string, float> cpt_uid2diff;
 
-    for (auto & kv : rr_pred){
-        std::cout << kv.first << " - " << kv.second << std::endl;
-    }
+    std::string scn_uid = scn_ser.addNewScene(false, cpt_uid2diff);
+
+    scn_ser.deleteOneScene(scn_uid);
 
     return 0;
 }
+
+// int main() {
+//     MySQLOperator& mysqldb = MySQLOperator::getInstance();
+//     mysqldb.initialize();
+//     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
+//     mongodbop.initialize();
+
+//     RR rr(mysqldb, mongodbop);
+
+//     std::unordered_map<std::string, float> rr_pred =  rr.forward("lrn_aee0624932cf4affa00626e8f038c4e8");
+
+//     for (auto & kv : rr_pred){
+//         std::cout << kv.first << " - " << kv.second << std::endl;
+//     }
+
+//     return 0;
+// }
 
 // int main(){
 //     MySQLOperator& mysqldb = MySQLOperator::getInstance();

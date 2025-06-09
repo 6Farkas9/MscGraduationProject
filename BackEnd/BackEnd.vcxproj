@@ -162,22 +162,34 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\api\crow.h" />
+    <ClInclude Include="include\core\ConceptsService.h" />
+    <ClInclude Include="include\core\LearnerService.h" />
     <ClInclude Include="include\core\MLS_config.h" />
+    <ClInclude Include="include\core\SceneService.h" />
     <ClInclude Include="include\database\MongoDBOperator.h" />
     <ClInclude Include="include\database\MySQLOperator.h" />
     <ClInclude Include="include\models\CD.h" />
+    <ClInclude Include="include\models\HGC.h" />
+    <ClInclude Include="include\models\KCGE.h" />
     <ClInclude Include="include\models\KT.h" />
     <ClInclude Include="include\models\RR.h" />
     <ClInclude Include="include\utils\MLSTimer.h" />
+    <ClInclude Include="include\utils\UidCreator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\core\ConceptsService.cpp" />
+    <ClCompile Include="src\core\LearnerService.cpp" />
+    <ClCompile Include="src\core\SceneService.cpp" />
     <ClCompile Include="src\database\MongoDBOperator.cpp" />
     <ClCompile Include="src\database\MySQLOperator.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\models\CD.cpp" />
+    <ClCompile Include="src\models\HGC.cpp" />
+    <ClCompile Include="src\models\KCGE.cpp" />
     <ClCompile Include="src\models\KT.cpp" />
     <ClCompile Include="src\models\RR.cpp" />
     <ClCompile Include="src\utils\MLSTimer.cpp" />
+    <ClCompile Include="src\utils\UidCreator.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

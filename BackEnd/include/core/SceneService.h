@@ -16,6 +16,7 @@
 #include "MySQLOperator.h"
 #include "MLS_config.h"
 #include "MLSTimer.h"
+#include "UidCreator.h"
 
 class SceneService{
 
@@ -23,12 +24,10 @@ public:
     SceneService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~SceneService();
 
-    std::string addNewScene();
+    std::string addNewScene(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);
+    bool deleteOneScene(std::string scn_uid);
 
 private:
-    std::string now_time;
-    std::string thirty_days_ago_time;
-
     MySQLOperator &mysqlop; 
     MongoDBOperator &mongodbop;
 };

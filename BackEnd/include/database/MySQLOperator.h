@@ -36,6 +36,8 @@ private:
     std::unique_ptr<Impl> pImpl_;
     static std::mutex instanceMutex_;
 
+    bool judgeHadUid(std::string &table, std::string &pre, std::string &uid);
+
 public:
     MySQLOperator(const MySQLOperator&) = delete;
     MySQLOperator& operator=(const MySQLOperator&) = delete;
@@ -64,6 +66,21 @@ public:
 
     // 获取指定lrn的近一个月内的交互记录
     std::vector<std::vector<std::string>> get_lrn_interacts_time(const std::string &lrn_uid, const std::string &time_start, const std::string &time_end);
+
+    // 判断learners中是否有重复uid
+    bool judgeLearnersHadUid(std::string &uid);
+    // 判断scenes中是否有重复uid
+    bool judgeScenesHadUid(std::string &uid);
+    // 判断concepts中是否有重复uid
+    bool judgeConceptsHadUid(std::string &uid);
+    // 判断areas中是否有重复uid
+    bool judgeAreasHadUid(std::string &uid);
+
+    // 向scenes中插入新的scn
+    int insertNewScn(std::string scn_uid, bool has_result);
+    // 从scenes中删除scn
+    int delete_scn_from_scenes(std::string scn_uid);
+
 };
 
 #endif

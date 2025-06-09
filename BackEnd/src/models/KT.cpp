@@ -4,7 +4,7 @@ KT::KT(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
     mysqlop(mysqlop),
     mongodbop(mongodbop)
 {
-    auto twotime = MLSTimer().getCurrentand30daysTime();
+    auto twotime = MLSTimer::getCurrentand30daysTime();
     now_time = twotime[0];
     thirty_days_ago_time = twotime[1];
 
