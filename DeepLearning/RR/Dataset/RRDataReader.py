@@ -56,10 +56,17 @@ class RRDataReader():
             self.max_interact_num = max(self.max_interact_num, len(scn_uids))
 
             # 训练集
-            for i in range(len(scn_uids) - 1):
+            for i in range(len(scn_uids) - 2):
                 train_data[lrn_uid][0].append(scn_uids[i])
                 for cpt_uid in scn_cpt[scn_uids[i]]:
                     train_data[lrn_uid][1][uids[2][cpt_uid]] += 1
+                    # 统计学习次数的话对于master_data不能只统计最后一次
+                    master_data[lrn_uid][1][uids[2][cpt_uid]] += 1
+
+            for cpt_uid in scn_cpt[scn_uids[-2]]:
+                train_data[lrn_uid][1][uids[2][cpt_uid]] += 1
+                master_data[lrn_uid][1][uids[2][cpt_uid]] += 1
+            
             # 添加训练集负采样
             non_zero_num = np.count_nonzero(train_data[lrn_uid][1] != 0)
             neg_num = max(0, self.sample_num - non_zero_num)
