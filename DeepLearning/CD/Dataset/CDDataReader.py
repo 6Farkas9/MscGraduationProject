@@ -21,9 +21,9 @@ class CDDataReader():
         self.are_uid = are_uid
         self.kcgedr = KCGEDataReader(are_uid)
 
-    def get_all_recordings_with_result(self, limit = -1):
+    def get_all_recording(self, limit = -1):
         time_start = self.get_30days_before()
-        result = mysqldb.get_interacts_with_cpt_in_are_from_with_result(
+        result = mysqldb.get_interacts_of_are(
                 self.are_uid,
                 time_start,
                 limit
@@ -33,8 +33,8 @@ class CDDataReader():
     def get_30days_before(self):
         return (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S')
     
-    # def get_cd_emb_of_scn_uids(self, scn_uids):
-    #     return mongodb.get_cd_emb_of_scn_uids(scn_uids)
+    def get_scn_of_are_with_result(self):
+        return mysqldb.get_scn_of_are_with_result(self.are_uid)
 
     def load_Data_from_db(self):
         cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = self.kcgedr.load_data_from_db()
@@ -45,7 +45,15 @@ class CDDataReader():
         self.cpt_idx = cpt_idx
 
         # 用来计算h_lrn
-        interacts = self.get_all_recordings_with_result()
+
+        # TODO:
+        # 这里要改为获取所有的交互数据，然后根据是否有result来修改对应的mask
+        interacts = self.get_all_recording()
+        # 获取当前are下的所有有result的scn，不对，mask不是在这里搞的，实在dataset里搞的，dataset哪里默认是0，那么一个取巧的方法是让interacts里的默认值是0
+        # 理论上special_scene下的所有scn都是没有result的
+        # 还是要获取所有有或者所有没有result的scn，然后将对应的lrn_scn的对应位置的结果置为-1
+        # 然后在dataset根据这个-1的位置来对对应的mask位置置0
+        scn_uids_withresult = self.get_scn_of_are_with_result()
 
         lrn_scn = {}
         self.max_scn_num = 0
@@ -54,7 +62,10 @@ class CDDataReader():
             if lrn_uid not in lrn_scn:
                 lrn_scn[lrn_uid] = [[], []]
             lrn_scn[lrn_uid][0].append(interact[1])
-            lrn_scn[lrn_uid][1].append(interact[2])
+            if interact[1] in scn_uids_withresult:
+                lrn_scn[lrn_uid][1].append(interact[2])
+            else:
+                lrn_scn[lrn_uid][1].append(-1)
 
         self.lrn_scn = lrn_scn
         

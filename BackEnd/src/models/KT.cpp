@@ -1,7 +1,8 @@
 #include "KT.h"
 
-KT::KT(MySQLOperator &mysqlop) :
-    mysqlop(mysqlop)
+KT::KT(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
+    mysqlop(mysqlop),
+    mongodbop(mongodbop)
 {
     auto twotime = MLSTimer().getCurrentand30daysTime();
     now_time = twotime[0];

@@ -1,6 +1,8 @@
 #ifndef KT_H
 #define KT_H
 
+#include "MongoDBOperator.h"
+
 #include <vector>
 #include <string>
 #include <torch/script.h>
@@ -18,7 +20,7 @@
 class KT{
 
 public:
-    KT(MySQLOperator &db);
+    KT(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~KT();
 
     std::vector<float> forward(const std::string &are_uid, const std::string &lrn_uid);
@@ -28,6 +30,7 @@ private:
     std::string thirty_days_ago_time;
 
     MySQLOperator &mysqlop; 
+    MongoDBOperator &mongodbop;
 };
 
 #endif //ifndef KT_H

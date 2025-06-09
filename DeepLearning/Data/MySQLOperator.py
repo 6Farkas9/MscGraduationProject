@@ -46,7 +46,43 @@ class MySQLDB():
         return result
 
     # 获取are_uid下的知识点相关的所有从time_start开始的交互数据
-    def get_interacts_with_cpt_in_are_from_with_result(self, are_uid, time_start, limit = -1):
+    def get_interacts_of_are(self, are_uid, time_start, limit = -1):
+        sql = f"""
+        WITH cpt_in_are AS (
+            SELECT cpt_uid 
+            FROM graph_belong 
+            WHERE are_uid = %s
+        ),
+        scn_of_are AS (
+            SELECT gi.scn_uid
+            FROM graph_involve gi
+            LEFT JOIN cpt_in_are cia ON gi.cpt_uid = cia.cpt_uid
+        )
+        SELECT i.lrn_uid, i.scn_uid, i.result
+        FROM interacts i
+        JOIN scenes s ON i.scn_uid = s.scn_uid
+        JOIN scn_of_are soa ON i.scn_uid = soa.scn_uid
+        WHERE i.created_at >= %s and i.lrn_uid IN (
+            SELECT i2.lrn_uid
+            FROM interacts i2
+            JOIN scenes s2 ON i2.scn_uid = s2.scn_uid
+            JOIN scn_of_are soa2 ON i2.scn_uid = soa2.scn_uid
+            WHERE i2.created_at >= %s
+            GROUP BY i2.lrn_uid
+            HAVING COUNT(*) >= 4
+        )
+        ORDER BY i.created_at ASC;
+        """
+        if limit > 0:
+            sql += f" limit {limit}"
+        cursor = self.con.cursor()
+        cursor.execute(sql, [are_uid, time_start, time_start])
+        result = cursor.fetchall()
+        cursor.close()
+        return result
+
+    # 获取are_uid下的知识点相关的所有从time_start开始的有result的交互数据
+    def get_interacts_with_cpt_in_are_with_result(self, are_uid, time_start, limit = -1):
         sql = f"""
         WITH cpt_in_are AS (
             SELECT cpt_uid 
@@ -463,6 +499,23 @@ class MySQLDB():
         cursor = self.con.cursor()
         cursor.execute(sql, [are_uid])
         result = cursor.fetchall()
+        cursor.close()
+        return result
+    
+    # 获取are下的所有有result的scn的uid
+    def get_scn_of_are_with_result(self, are_uid):
+        sql = f"""
+        SELECT DISTINCT s.scn_uid
+        FROM graph_belong gb
+        JOIN graph_involve gi ON gb.cpt_uid = gi.cpt_uid
+        JOIN scenes s ON gi.scn_uid = s.scn_uid
+        WHERE gb.are_uid = %s AND s.has_result = 1;
+        """
+        cursor = self.con.cursor()
+        cursor.execute(sql, [are_uid])
+        result = []
+        for item in cursor.fetchall():
+            result.append(item[0])
         cursor.close()
         return result
 

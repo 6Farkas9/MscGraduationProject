@@ -32,7 +32,7 @@ class IPDKTDataReader():
     # 获得只包含当前领域相关知识点的场景的交互信息 - 添加了has_result属性，要获取has_result为1的场景
     def get_all_recordings_with_result(self, limit = -1):
         time_start = self.get_30days_before()
-        result = mysqldb.get_interacts_with_cpt_in_are_from_with_result(
+        result = mysqldb.get_interacts_with_cpt_in_are_with_result(
                 self.are_uid,
                 time_start,
                 limit

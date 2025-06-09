@@ -50,6 +50,10 @@ class CDDataset(Dataset):
 
             self.scn_seq_masks[row][start_idx:] = 1.0
 
+            # 将无结果位置置为无效
+            without_result_mask = (self.results[row] == -1)
+            self.results[row][without_result_mask] = 0
+            self.scn_seq_masks[row][without_result_mask] = 0.0
     
     def __len__(self):
         return len(self.lrn_uids)
