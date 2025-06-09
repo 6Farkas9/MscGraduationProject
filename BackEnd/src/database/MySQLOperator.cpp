@@ -371,7 +371,7 @@ bool MySQLOperator::judgeAreasHadUid(std::string &uid) {
     return judgeHadUid(table, pre, uid);
 }
 
-int MySQLOperator::insertNewScn(std::string scn_uid, bool has_result) {
+int MySQLOperator::insertNewScn(std::string &scn_uid, bool has_result) {
     std::string sql = R"(
         insert into Scenes (scn_uid, has_result)
         values (")" + scn_uid + R"(", )";
@@ -385,9 +385,31 @@ int MySQLOperator::insertNewScn(std::string scn_uid, bool has_result) {
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_scn_from_scenes(std::string scn_uid) {
+int MySQLOperator::delete_scn_from_scenes(std::string &scn_uid) {
     std::string sql = R"(
         delete from Scenes
+        where scn_uid = ")" + scn_uid + R"(")";
+    return executeUpdate(sql);
+}
+
+int MySQLOperator::insert_scn_cpt_record(std::string &scn_uid, std::unordered_map<std::string, float> &cpt_uid2diff) {
+    std::string sql = R"(
+        insert into graph_involve(scn_uid, cpt_uid, difficulty)
+        values )";
+    int cpt_num = cpt_uid2diff.size();
+    int count = 0;
+    for (auto &cpt_dif : cpt_uid2diff) {
+        sql += R"((")" + scn_uid + R"(", ")" + cpt_dif.first + R"(", )" + std::to_string(cpt_dif.second) + R"())";
+        if (++count != cpt_num) {
+            sql += R"(,)";
+        }
+    }
+    return executeUpdate(sql);
+}
+
+int MySQLOperator::delete_scn_cpt_by_scn_uid(std::string &scn_uid) {
+    std::string sql = R"(
+        delete from graph_involve
         where scn_uid = ")" + scn_uid + R"(")";
     return executeUpdate(sql);
 }

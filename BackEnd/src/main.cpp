@@ -16,6 +16,16 @@ int main() {
     SceneService scn_ser = SceneService(mysqldb, mongodbop);
 
     std::unordered_map<std::string, float> cpt_uid2diff;
+    // cpt_f4e10b32f85746d7900fdbff3b27276e
+    // cpt_5a315add91b0469f8537cb37feb0dc0c
+    // cpt_a86e9f3aff6245979bf1c8a9454b5dde
+    cpt_uid2diff["cpt_f4e10b32f85746d7900fdbff3b27276e"] = 0.1;
+    cpt_uid2diff["cpt_5a315add91b0469f8537cb37feb0dc0c"] = 0.2;
+    cpt_uid2diff["cpt_a86e9f3aff6245979bf1c8a9454b5dde"] = 0.3;
+
+    for (auto &kv : cpt_uid2diff) {
+        std::cout << kv.first << " , " << kv.second << std::endl;
+    }
 
     std::string scn_uid = scn_ser.addNewScene(false, cpt_uid2diff);
 
