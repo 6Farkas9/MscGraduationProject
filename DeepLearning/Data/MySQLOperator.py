@@ -48,30 +48,26 @@ class MySQLDB():
     # 获取are_uid下的知识点相关的所有从time_start开始的交互数据
     def get_interacts_of_are(self, are_uid, time_start, limit = -1):
         sql = f"""
-        WITH cpt_in_are AS (
-            SELECT cpt_uid 
-            FROM graph_belong 
-            WHERE are_uid = %s
+        WITH relevant_scenes AS (
+            SELECT DISTINCT gi.scn_uid
+            FROM graph_belong gb
+            JOIN graph_involve gi ON gb.cpt_uid = gi.cpt_uid
+            WHERE gb.are_uid = %s
         ),
-        scn_of_are AS (
-            SELECT gi.scn_uid
-            FROM graph_involve gi
-            LEFT JOIN cpt_in_are cia ON gi.cpt_uid = cia.cpt_uid
+        qualified_learners AS (
+            SELECT i.lrn_uid
+            FROM interacts i
+            JOIN relevant_scenes rs ON i.scn_uid = rs.scn_uid
+            WHERE i.created_at > %s
+            GROUP BY i.lrn_uid
+            HAVING COUNT(*) >= 4
         )
         SELECT i.lrn_uid, i.scn_uid, i.result
         FROM interacts i
-        JOIN scenes s ON i.scn_uid = s.scn_uid
-        JOIN scn_of_are soa ON i.scn_uid = soa.scn_uid
-        WHERE i.created_at >= %s and i.lrn_uid IN (
-            SELECT i2.lrn_uid
-            FROM interacts i2
-            JOIN scenes s2 ON i2.scn_uid = s2.scn_uid
-            JOIN scn_of_are soa2 ON i2.scn_uid = soa2.scn_uid
-            WHERE i2.created_at >= %s
-            GROUP BY i2.lrn_uid
-            HAVING COUNT(*) >= 4
-        )
-        ORDER BY i.created_at ASC;
+        JOIN relevant_scenes rs ON i.scn_uid = rs.scn_uid
+        JOIN qualified_learners ql ON i.lrn_uid = ql.lrn_uid
+        WHERE i.created_at > %s
+        ORDER BY i.created_at;
         """
         if limit > 0:
             sql += f" limit {limit}"
@@ -513,9 +509,8 @@ class MySQLDB():
         """
         cursor = self.con.cursor()
         cursor.execute(sql, [are_uid])
-        result = []
-        for item in cursor.fetchall():
-            result.append(item[0])
+        result = [item[0] for item in cursor.fetchall()]
+        result = set(result)
         cursor.close()
         return result
 

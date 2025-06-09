@@ -17,7 +17,7 @@
 #include "MLS_config.h"
 #include "MLSTimer.h"
 
-class {
+class KCGE{
 
 public:
     KCGE(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
