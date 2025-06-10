@@ -70,7 +70,59 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_kt_in_are(con
 }
 
 std::unordered_map<std::string, float> LearnerService::predicr_lrn_cd_in_are(const std::string &lrn_uid, const std::string &are_uid) {
-
+    auto twotime = MLSTimer::getCurrentand30daysTime();
+    auto end_time = twotime[0];
+    auto start_time = twotime[1];
+    // 获取近30天内关于are_uid的交互记录
+    auto interacts = mysqlop.get_Are_lrn_Interacts_Time(
+        are_uid, lrn_uid, 
+        start_time, 
+        end_time
+    );
+    // 从交互记录中获取交互的scn_uid
+    std::unordered_set<std::string> scn_uids, cpt_uids;
+    for(auto & interact : interacts) {
+        scn_uids.insert(interact[0]);
+    }
+    // 获取对应scn_uid的KCGE_Emb
+    auto interact_scn_emb_temp = mongodbop.get_scn_kcge_by_scn_uid(scn_uids);
+    scn_uids.clear();
+    std::vector<std::vector<float>> interact_scn_emb;
+    for (auto & kv : interact_scn_emb_temp) {
+        interact_scn_emb.emplace_back(std::move(kv.second));
+    }
+    // 获取are_uid相关的所有special_scn及其对应的cpt
+    std::unordered_map<std::string, std::string> special_scn_cpt = mysqlop.get_special_scn_cpt_uid_of_are(are_uid);
+    // 获取special_scn和cpt的KCGE_Emb - h_scn和h_cpt
+    for (auto &scn_cpt : special_scn_cpt) {
+        scn_uids.insert(std::move(scn_cpt.first));
+        cpt_uids.insert(std::move(scn_cpt.second));
+    }
+    std::unordered_map<std::string, std::vector<float>> scn_emb_temp = mongodbop.get_scn_kcge_by_scn_uid(scn_uids);
+    std::unordered_map<std::string, std::vector<float>> cpt_emb_temp = mongodbop.get_cpt_kcge_by_cpt_uid(cpt_uids);
+    std::vector<std::vector<float>> scn_emb, cpt_emb;
+    std::vector<std::string> ordered_cpt_uid;
+    for (auto &scn_e : scn_emb_temp) {
+        scn_emb.emplace_back(std::move(scn_e.second));
+    }
+    for (auto &cpt_e : cpt_emb_temp) {
+        ordered_cpt_uid.emplace_back(std::move(cpt_e.first));
+        cpt_emb.emplace_back(std::move(cpt_e.second));
+    }
+    // 调用模型
+    CD cd = CD(mysqlop, mongodbop);
+    auto r_pred = cd.forward(
+        are_uid,
+        interact_scn_emb,
+        scn_emb,
+        cpt_emb
+    );
+    std::unordered_map<std::string, float> ans;
+    int cpt_num = cpt_emb.size();
+    for (int i = 0; i < cpt_num; ++i) {
+        ans[ordered_cpt_uid[i]] = r_pred[i];
+    }
+    return ans;
 }
 
 std::unordered_map<std::string, float> LearnerService::predict_lrn_rr(const std::string &lrn_uid) {

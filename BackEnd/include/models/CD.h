@@ -23,14 +23,18 @@ public:
     CD(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~CD();
 
-    std::unordered_map<std::string, float> forward(const std::string are_uid, const std::string lrn_uid);
+    std::vector<float> forward(
+        const std::string &are_uid, 
+        const std::vector<std::vector<float>> &interact_scn_emb,
+        const std::vector<std::vector<float>> &scn_emb,
+        const std::vector<std::vector<float>> &cpt_emb
+    );
 
 private:
-    std::string now_time;
-    std::string thirty_days_ago_time;
-
     MySQLOperator &mysqlop;
     MongoDBOperator &mongodbop; 
+
+    torch::jit::Module model_cd;
 };
 
 #endif //ifndef CD_H

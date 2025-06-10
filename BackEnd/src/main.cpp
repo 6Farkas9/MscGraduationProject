@@ -13,7 +13,7 @@ int main() {
 
     LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
 
-    auto res = lrn_ser.predict_lrn_kt_in_are(
+    auto res = lrn_ser.predicr_lrn_cd_in_are(
         "lrn_aee0624932cf4affa00626e8f038c4e8",
         "are_3fee9e47d0f3428382f4afbcb1004117"
     );
