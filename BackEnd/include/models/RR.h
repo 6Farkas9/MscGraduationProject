@@ -23,14 +23,18 @@ public:
     RR(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~RR();
 
-    std::unordered_map<std::string, float> forward(const std::string lrn_uid);
+    std::vector<float> forward(
+        const std::vector<float> &lrn_emb_in,
+        const std::vector<std::vector<float>> &scn_emb_in,
+        const std::vector<std::vector<float>> &cpt_emb_in,
+        const std::vector<int> &scn_index_vec
+    );
 
 private:
-    std::string now_time;
-    std::string thirty_days_ago_time;
-
     MySQLOperator &mysqlop;
     MongoDBOperator &mongodbop; 
+
+    torch::jit::Module model_rr;
 };
 
 #endif //ifndef RR_H
