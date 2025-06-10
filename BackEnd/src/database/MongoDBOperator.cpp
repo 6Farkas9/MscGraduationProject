@@ -150,6 +150,50 @@ std::optional<bsoncxx::document::value> MongoDBOperator::insertOne(
     }
 }
 
+std::optional<std::vector<bsoncxx::document::value>> MongoDBOperator::insertMany(
+    const std::string& collection,
+    const std::vector<bsoncxx::document::view_or_value>& documents) {
+    
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+
+    if (documents.empty()) {
+        return std::vector<bsoncxx::document::value>{}; // 空输入返回空数组
+    }
+
+    try {
+        auto client = pImpl_->pool->acquire();
+        auto db = (*client)[pImpl_->databaseName];
+        auto coll = db[collection];
+
+        // 转换为view数组
+        std::vector<bsoncxx::document::view> views;
+        views.reserve(documents.size());
+        for (const auto& doc : documents) {
+            views.push_back(doc.view());
+        }
+
+        auto result = coll.insert_many(views);
+        if (!result) {
+            return std::nullopt;
+        }
+
+        // 构建返回结果（包含所有生成的_id）
+        std::vector<bsoncxx::document::value> insertedIds;
+        for (const auto& idPair : result->inserted_ids()) {
+            auto doc = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("_id", idPair.second.get_oid().value));
+            insertedIds.emplace_back(std::move(doc));
+        }
+
+        return insertedIds;
+    } catch (const std::exception& e) {
+        std::cerr << "MongoDB Insert Error: " << e.what() << std::endl;
+        return std::nullopt;
+    }
+}
+
 bool MongoDBOperator::updateOne(
     const std::string& collection, 
     bsoncxx::document::view_or_value filter,
@@ -176,6 +220,42 @@ bool MongoDBOperator::updateOne(
     }
 }
 
+int MongoDBOperator::updateMany(
+    const std::string& collection,
+    bsoncxx::document::view_or_value filter,
+    bsoncxx::document::view_or_value update,
+    bool upsert) {
+    
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+
+    try {
+        auto client = pImpl_->pool->acquire();
+        auto db = (*client)[pImpl_->databaseName];
+        auto coll = db[collection];
+
+        auto opts = mongocxx::options::update{};
+        opts.upsert(upsert);
+
+        auto result = coll.update_many(filter.view(), update.view(), opts);
+        if (!result) {
+            return -1;
+        }
+
+        // 计算受影响总数 = 修改数 + (upsert是否发生?1:0)
+        int affectedCount = result->modified_count();
+        if (upsert && result->upserted_id()) {
+            affectedCount += 1;
+        }
+
+        return affectedCount;
+    } catch (const std::exception& e) {
+        std::cerr << "MongoDB Update Error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
 bool MongoDBOperator::deleteOne(
     const std::string& collection, 
     bsoncxx::document::view_or_value filter) {
@@ -194,6 +274,27 @@ bool MongoDBOperator::deleteOne(
     } catch (const std::exception& e) {
         std::cerr << "MongoDB Delete Error: " << e.what() << std::endl;
         return false;
+    }
+}
+
+int MongoDBOperator::deleteMany(
+    const std::string& collection, 
+    bsoncxx::document::view_or_value filter) {
+    
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+    
+    try {
+        auto client = pImpl_->pool->acquire();
+        auto db = (*client)[pImpl_->databaseName];
+        auto coll = db[collection];
+        
+        auto result = coll.delete_many(filter.view());
+        return result ? result->deleted_count() : 0;
+    } catch (const std::exception& e) {
+        std::cerr << "MongoDB Delete Error: " << e.what() << std::endl;
+        return -1;  // 用-1表示错误
     }
 }
 
@@ -445,7 +546,32 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_all_cpt
     }
 }
 
+int MongoDBOperator::delete_scn_from_scenes(const std::vector<std::string> &scn_uids) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+    
+    try {
+        // 构建过滤条件：_id等于输入字符串
+        auto in_array = bsoncxx::builder::basic::array{};
+        for (const auto& id : scn_uids) {
+            in_array.append(id);
+        }
 
+        auto filter = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 
+                bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("$in", in_array)
+                )
+            )
+        );
+        
+        return deleteMany("scenes", filter.view());
+    } catch (const std::exception& e) {
+        std::cerr << "MongoDB Delete Scene Error: " << e.what() << std::endl;
+        return -1;
+    }
+}
 
 
 

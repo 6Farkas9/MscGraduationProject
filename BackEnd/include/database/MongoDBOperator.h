@@ -68,6 +68,11 @@ public:
     std::optional<bsoncxx::document::value> insertOne(
         const std::string& collection, 
         bsoncxx::document::view_or_value document);
+
+    // 插入多个文档
+    std::optional<std::vector<bsoncxx::document::value>> insertMany(
+        const std::string& collection,
+        const std::vector<bsoncxx::document::view_or_value>& documents);
     
     // 更新文档
     bool updateOne(
@@ -76,8 +81,20 @@ public:
         bsoncxx::document::view_or_value update,
         bool upsert = false);
     
+    // 更新多个文档
+    int MongoDBOperator::updateMany(
+        const std::string& collection,
+        bsoncxx::document::view_or_value filter,
+        bsoncxx::document::view_or_value update,
+        bool upsert);
+    
     // 删除文档
     bool deleteOne(
+        const std::string& collection, 
+        bsoncxx::document::view_or_value filter);
+
+    // 删除多个文档
+    int deleteMany(
         const std::string& collection, 
         bsoncxx::document::view_or_value filter);
 
@@ -100,6 +117,9 @@ public:
 
     // 获取所有cpt的HGC嵌入表达
     std::unordered_map<std::string, std::vector<float>> get_all_cpt_hgc();
+
+    // 从scenes中删除指定scn_uid的文档
+    int delete_scn_from_scenes(const std::vector<std::string> &scn_uids);
 
 
     

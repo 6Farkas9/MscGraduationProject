@@ -44,4 +44,5 @@ bool SceneService::deleteOneScene(std::string scn_uid) {
     mysqlop.delete_scn_from_scenes(scn_uid);
 
     // 从mongodb中删除对应的记录
+    mongodbop.delete_scn_from_scenes(std::vector<std::string>{scn_uid});
 }
