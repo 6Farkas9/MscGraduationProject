@@ -61,6 +61,9 @@ public:
     // 获取指定领域的所有cpt
     std::unordered_map<std::string, int> get_cpt_uid_id_of_area(const std::string &are_uid);
 
+    // 获取指定领域的cpt数量
+    int get_cpt_num_of_area(const std::string &are_uid);
+
     // 获取指定领域的所有特殊scn和其对应的cpt
     std::unordered_map<std::string, std::string> get_special_scn_cpt_uid_of_are(const std::string &are_uid);
 
@@ -77,21 +80,43 @@ public:
     bool judgeAreasHadUid(std::string &uid);
 
     // 向scenes中插入新的scn
-    int insertNewScn(std::string &scn_uid, bool has_result);
+    int insertNewScn_one(std::string &scn_uid, bool has_result);
+
     // 从scenes中删除scn
-    int delete_scn_from_scenes(std::string &scn_uid);
+    int delete_scn_from_scenes_one(std::string &scn_uid);
+
     // 从interacts中删除scn
-    int delete_scn_from_interacts(std::string &scn_uid);
+    int delete_scn_from_interacts_one(std::string &scn_uid);
+
     // 从graph_interact中删除scn
-    int delete_scn_from_graph_interact(std::string &scn_uid);
+    int delete_scn_from_graph_interact_one(std::string &scn_uid);
 
     // 向graph_involve中添加数据
-    int insert_scn_cpt_record(std::string &scn_uid, std::unordered_map<std::string, float> &cpt_uid2diff);
+    int insert_scn_cpt_one(std::string &scn_uid, std::unordered_map<std::string, float> &cpt_uid2diff);
 
     // 根据scn_uid从graph_involve中删除数据
-    int delete_scn_cpt_by_scn_uid(std::string &scn_uid);
-    
-    
+    int delete_scn_cpt_by_scn_uid_one(std::string &scn_uid);
+
+    // 向concepts中插入新的cpt
+    int insertNewCpt_one(std::string &are_uid, std::string &cpt_uid, std::string &name);
+
+    // 向graph_precondition中插入多条新的记录
+    int insert_cpt_cpt_many(std::vector<std::pair<std::string, std::string>> cpt_cpt);
+
+    // 向graph_belong中插入新的记录
+    int insert_are_cpt_one(std::string &are_uid, std::string &cpt_uid);
+
+    // 从concept中删除cpt
+    int delete_cpt_from_concepts_one(std::string &cpt_uid);
+
+    // 从graph_belong中根据cpt删除记录
+    int delete_cpt_from_graph_belong_one(std::string &cpt_uid);
+
+    // 根据cpt_uid从graph_involve中删除数据
+    int delete_scn_cpt_by_cpt_uid_one(std::string &cpt_uid);
+
+    // 从graph_precondition中删除数据
+    int delete_cpt_cpt_by_cpt_uid_one(std::string &cpt_uid);
 };
 
 #endif

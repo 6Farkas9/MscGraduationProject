@@ -30,6 +30,8 @@ public:
 private:
     MySQLOperator &mysqlop; 
     MongoDBOperator &mongodbop;
+
+    bool update_after_add_scn(std::string scn_uid);
 };
 
 #endif //ifndef SCENE_SERVICE_H

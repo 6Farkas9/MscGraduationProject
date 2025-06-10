@@ -24,8 +24,14 @@ public:
     ConceptService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~ConceptService();
 
-    std::string addOneConcept(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);
-    bool deleteOneConcept(std::string scn_uid);
+    std::string addOneConcept(
+        std::string &are_uid, 
+        std::vector<std::string> &pre_cpt_uids, 
+        std::vector<std::string> &aft_cpt_uids,
+        std::string &name
+    );
+
+    bool deleteOneConcept(std::string cpt_uid);
 
 private:
     MySQLOperator &mysqlop; 
