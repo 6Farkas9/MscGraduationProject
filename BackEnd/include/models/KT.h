@@ -15,7 +15,6 @@
 
 #include "MySQLOperator.h"
 #include "MLS_config.h"
-#include "MLSTimer.h"
 
 class KT{
 
@@ -23,14 +22,17 @@ public:
     KT(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~KT();
 
-    std::vector<float> forward(const std::string &are_uid, const std::string &lrn_uid);
+    std::vector<float> forward(
+        const std::string &are_uid, 
+        const std::vector<std::vector<int>> &interacts, 
+        const int &cpt_num  
+    );
 
 private:
-    std::string now_time;
-    std::string thirty_days_ago_time;
-
     MySQLOperator &mysqlop; 
     MongoDBOperator &mongodbop;
+
+    torch::jit::Module IPDKT;
 };
 
 #endif //ifndef KT_H

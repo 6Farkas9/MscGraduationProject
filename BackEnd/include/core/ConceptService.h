@@ -1,5 +1,5 @@
-#ifndef SCENE_SERVICE_H
-#define SCENE_SERVICE_H
+#ifndef CONCEPT_SERVICE_H
+#define CONCEPT_SERVICE_H
 
 #include "MongoDBOperator.h"
 
@@ -18,18 +18,18 @@
 #include "MLSTimer.h"
 #include "UidCreator.h"
 
-class SceneService{
+class ConceptService{
 
 public:
-    SceneService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
-    ~SceneService();
+    ConceptService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
+    ~ConceptService();
 
-    std::string addOneScene(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);
-    bool deleteOneScene(std::string scn_uid);
+    std::string addOneConcept(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);
+    bool deleteOneConcept(std::string scn_uid);
 
 private:
     MySQLOperator &mysqlop; 
     MongoDBOperator &mongodbop;
 };
 
-#endif //ifndef SCENE_SERVICE_H
+#endif //ifndef CONCEPT_SERVICE_H

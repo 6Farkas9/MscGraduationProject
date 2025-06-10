@@ -1,16 +1,16 @@
-#include "SceneService.h"
+#include "ConceptService.h"
 
-SceneService::SceneService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
+ConceptService::ConceptService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
     mysqlop(mysqlop),
     mongodbop(mongodbop) {
 
 }
 
-SceneService::~SceneService(){
+ConceptService::~ConceptService(){
 
 }
 
-std::string SceneService::addOneScene(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff) {
+std::string ConceptService::addOneConcept(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff) {
     /*
         1. scene的基本信息
         2. scene的cpt难度信息
@@ -19,7 +19,7 @@ std::string SceneService::addOneScene(bool has_result, std::unordered_map<std::s
     // 向mysql-scenes中添加新的scn
     // 新建uid
     std::string scn_uid = UidCreator::generate_uuid_winapi();
-    while (mysqlop.judgeScenesHadUid(scn_uid)) {
+    while (mysqlop.judgeConceptsHadUid(scn_uid)) {
         scn_uid = UidCreator::generate_uuid_winapi();
     }
     scn_uid = std::string("scn_") + scn_uid;
@@ -32,7 +32,7 @@ std::string SceneService::addOneScene(bool has_result, std::unordered_map<std::s
     return scn_uid;
 }
 
-bool SceneService::deleteOneScene(std::string scn_uid) {
+bool ConceptService::deleteOneConcept(std::string scn_uid) {
     // 从graph_involve中删除scn_uid
     mysqlop.delete_scn_cpt_by_scn_uid(scn_uid);
     // 既然上面的都删除了，那么从interacts中删除scn_uid

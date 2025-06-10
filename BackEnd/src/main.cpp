@@ -27,7 +27,7 @@ int main() {
         std::cout << kv.first << " , " << kv.second << std::endl;
     }
 
-    std::string scn_uid = scn_ser.addNewScene(false, cpt_uid2diff);
+    std::string scn_uid = scn_ser.addOneScene(false, cpt_uid2diff);
 
     scn_ser.deleteOneScene(scn_uid);
 

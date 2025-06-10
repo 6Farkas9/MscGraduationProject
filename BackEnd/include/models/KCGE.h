@@ -23,20 +23,15 @@ public:
     KCGE(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~KCGE();
 
-    // 本质上的功能就是增删改对应的嵌入
-    // 其中不应该存在单纯的修改的情况
-    // 先不管删除的情况
-    // 就是新增场景和知识点
-    // 对于新增场景和知识点 -- 不应该在这里完成所有的新增工作，这里的工作是为新增的场景/知识点计算对应的KCGE嵌入表达
-    // 在SceneService中完成场景的初步新增，然后在这里完成KCGE的计算
-    // 新增场景或者知识点的工作流程实际相同，都是构建数据，计算
-    
-    // 先决条件：已通过Service类完成对场景、知识点的初步构建 -- 已经有初步的异构网络
     std::unordered_map<std::string, float> forward(const std::string are_uid, const std::string lrn_uid);
 
+    // 新增scn后的重新计算
+    // 删除scn后的重新计算
+    // 新增cpt后的重新计算
+    // 删除cpt后的重新计算
+
+
 private:
-    std::string now_time;
-    std::string thirty_days_ago_time;
 
     MySQLOperator &mysqlop;
     MongoDBOperator &mongodbop; 
