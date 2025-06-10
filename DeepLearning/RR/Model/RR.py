@@ -111,5 +111,6 @@ class RR(nn.Module):
         temp_ = lrn @ self.w @ cpt_static.t()
 
         r = h + temp_
+        # 虽然，在计算上，推荐的结果和cpt数量或者其他数量无关，但是，不知道效果会怎么样
 
         return r, h_lrn, h_cpt

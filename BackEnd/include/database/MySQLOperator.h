@@ -80,12 +80,18 @@ public:
     int insertNewScn(std::string &scn_uid, bool has_result);
     // 从scenes中删除scn
     int delete_scn_from_scenes(std::string &scn_uid);
+    // 从interacts中删除scn
+    int delete_scn_from_interacts(std::string &scn_uid);
+    // 从graph_interact中删除scn
+    int delete_scn_from_graph_interact(std::string &scn_uid);
 
     // 向graph_involve中添加数据
     int insert_scn_cpt_record(std::string &scn_uid, std::unordered_map<std::string, float> &cpt_uid2diff);
 
     // 根据scn_uid从graph_involve中删除数据
     int delete_scn_cpt_by_scn_uid(std::string &scn_uid);
+    
+    
 };
 
 #endif

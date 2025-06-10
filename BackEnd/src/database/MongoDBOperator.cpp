@@ -114,10 +114,7 @@ std::optional<mongocxx::cursor> MongoDBOperator::findMany(
         auto cursor = coll.find(filter.view(), opts);
 
         return std::make_optional<mongocxx::cursor>(std::move(cursor));
-        
-        // for (auto&& doc : cursor) {
-        //     results.emplace_back(bsoncxx::document::value{doc});
-        // }
+
     } catch (const std::exception& e) {
         std::cerr << "MongoDB Query Error: " << e.what() << std::endl;
         throw;

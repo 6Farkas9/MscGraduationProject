@@ -37,9 +37,9 @@ bool SceneService::deleteOneScene(std::string scn_uid) {
     // 从graph_involve中删除scn_uid
     mysqlop.delete_scn_cpt_by_scn_uid(scn_uid);
     // 既然上面的都删除了，那么从interacts中删除scn_uid
-
+    mysqlop.delete_scn_from_interacts(scn_uid);
     // 从graph_interact中删除scn_uid
-
+    mysqlop.delete_scn_from_graph_interact(scn_uid);
     // 从scenes中删除scn_uid
     mysqlop.delete_scn_from_scenes(scn_uid);
 

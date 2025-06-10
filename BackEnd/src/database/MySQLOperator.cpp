@@ -345,35 +345,35 @@ bool MySQLOperator::judgeHadUid(std::string &table, std::string &pre, std::strin
 
 // 判断learners中是否有重复uid
 bool MySQLOperator::judgeLearnersHadUid(std::string &uid) {
-    std::string table = "Learners";
+    std::string table = "learners";
     std::string pre = "lrn_";
     return judgeHadUid(table, pre, uid);
 }
 
 // 判断scenes中是否有重复uid
 bool MySQLOperator::judgeScenesHadUid(std::string &uid) {
-    std::string table = "Scenes";
+    std::string table = "scenes";
     std::string pre = "scn_";
     return judgeHadUid(table, pre, uid);
 }
 
 // 判断concepts中是否有重复uid
 bool MySQLOperator::judgeConceptsHadUid(std::string &uid) {
-    std::string table = "Concepts";
+    std::string table = "concepts";
     std::string pre = "cpt_";
     return judgeHadUid(table, pre, uid);
 }
 
 // 判断areas中是否有重复uid
 bool MySQLOperator::judgeAreasHadUid(std::string &uid) {
-    std::string table = "Areas";
+    std::string table = "areas";
     std::string pre = "are_";
     return judgeHadUid(table, pre, uid);
 }
 
 int MySQLOperator::insertNewScn(std::string &scn_uid, bool has_result) {
     std::string sql = R"(
-        insert into Scenes (scn_uid, has_result)
+        insert into scenes (scn_uid, has_result)
         values (")" + scn_uid + R"(", )";
     if (has_result) {
         sql += R"(1))";
@@ -387,7 +387,7 @@ int MySQLOperator::insertNewScn(std::string &scn_uid, bool has_result) {
 
 int MySQLOperator::delete_scn_from_scenes(std::string &scn_uid) {
     std::string sql = R"(
-        delete from Scenes
+        delete from scenes
         where scn_uid = ")" + scn_uid + R"(")";
     return executeUpdate(sql);
 }
@@ -410,6 +410,20 @@ int MySQLOperator::insert_scn_cpt_record(std::string &scn_uid, std::unordered_ma
 int MySQLOperator::delete_scn_cpt_by_scn_uid(std::string &scn_uid) {
     std::string sql = R"(
         delete from graph_involve
+        where scn_uid = ")" + scn_uid + R"(")";
+    return executeUpdate(sql);
+}
+
+int MySQLOperator::delete_scn_from_interacts(std::string &scn_uid) {
+    std::string sql = R"(
+        delete from interacts
+        where scn_uid = ")" + scn_uid + R"(")";
+    return executeUpdate(sql);
+}
+
+int MySQLOperator::delete_scn_from_graph_interact(std::string &scn_uid) {
+    std::string sql = R"(
+        delete from graph_interact
         where scn_uid = ")" + scn_uid + R"(")";
     return executeUpdate(sql);
 }
