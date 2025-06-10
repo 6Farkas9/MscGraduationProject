@@ -1,38 +1,49 @@
 ﻿#include <iostream>
 #include "MongoDBOperator.h"
 #include "MySQLOperator.h"
-// #include "KT.h"
-// #include "CD.h"
-// #include "RR.h"
 // #include "UidCreator.h"
-#include "SceneService.h"
+// #include "SceneService.h"
+#include "LearnerService.h"
 
 int main() {
-    MySQLOperator& mysqldb = MySQLOperator::getInstance();
-    mysqldb.initialize();
+    MySQLOperator& mysqlop = MySQLOperator::getInstance();
+    mysqlop.initialize();
     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
     mongodbop.initialize();
 
-    SceneService scn_ser = SceneService(mysqldb, mongodbop);
+    LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
 
-    std::unordered_map<std::string, float> cpt_uid2diff;
-    // cpt_f4e10b32f85746d7900fdbff3b27276e
-    // cpt_5a315add91b0469f8537cb37feb0dc0c
-    // cpt_a86e9f3aff6245979bf1c8a9454b5dde
-    cpt_uid2diff["cpt_f4e10b32f85746d7900fdbff3b27276e"] = 0.1;
-    cpt_uid2diff["cpt_5a315add91b0469f8537cb37feb0dc0c"] = 0.2;
-    cpt_uid2diff["cpt_a86e9f3aff6245979bf1c8a9454b5dde"] = 0.3;
+    auto res = lrn_ser.predict_lrn_kt_in_are(
+        "lrn_aee0624932cf4affa00626e8f038c4e8",
+        "are_3fee9e47d0f3428382f4afbcb1004117"
+    );
 
-    for (auto &kv : cpt_uid2diff) {
+    std::cout << res.size() << std::endl;
+
+    for (auto & kv : res) {
         std::cout << kv.first << " , " << kv.second << std::endl;
     }
 
-    std::string scn_uid = scn_ser.addOneScene(false, cpt_uid2diff);
+    // SceneService scn_ser = SceneService(mysqldb, mongodbop);
 
-    scn_ser.deleteOneScene(scn_uid);
+    // for (auto &kv : cpt_uid2diff) {
+    //     std::cout << kv.first << " , " << kv.second << std::endl;
+    // }
 
-    return 0;
+    // std::string scn_uid = scn_ser.addOneScene(false, cpt_uid2diff);
+
+    // scn_ser.deleteOneScene(scn_uid);
+
+    // return 0;
 }
+
+    // std::unordered_map<std::string, float> cpt_uid2diff;
+    // // cpt_f4e10b32f85746d7900fdbff3b27276e
+    // // cpt_5a315add91b0469f8537cb37feb0dc0c
+    // // cpt_a86e9f3aff6245979bf1c8a9454b5dde
+    // cpt_uid2diff["cpt_f4e10b32f85746d7900fdbff3b27276e"] = 0.1;
+    // cpt_uid2diff["cpt_5a315add91b0469f8537cb37feb0dc0c"] = 0.2;
+    // cpt_uid2diff["cpt_a86e9f3aff6245979bf1c8a9454b5dde"] = 0.3;
 
 // int main() {
 //     MySQLOperator& mysqldb = MySQLOperator::getInstance();

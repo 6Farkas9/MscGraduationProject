@@ -63,9 +63,6 @@
     <ClInclude Include="include\models\RR.h">
       <Filter>include\models</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\ConceptsService.h">
-      <Filter>include\core</Filter>
-    </ClInclude>
     <ClInclude Include="include\core\LearnerService.h">
       <Filter>include\core</Filter>
     </ClInclude>
@@ -80,6 +77,9 @@
     </ClInclude>
     <ClInclude Include="include\utils\UidCreator.h">
       <Filter>include\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\ConceptService.h">
+      <Filter>include\core</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -104,9 +104,6 @@
     <ClCompile Include="src\models\RR.cpp">
       <Filter>src\models</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\ConceptsService.cpp">
-      <Filter>src\core</Filter>
-    </ClCompile>
     <ClCompile Include="src\core\LearnerService.cpp">
       <Filter>src\core</Filter>
     </ClCompile>
@@ -121,6 +118,9 @@
     </ClCompile>
     <ClCompile Include="src\utils\UidCreator.cpp">
       <Filter>src\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\ConceptService.cpp">
+      <Filter>src\core</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

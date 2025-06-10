@@ -1,12 +1,12 @@
 #include "LearnerService.h"
 
-LearnerService::LearnerService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) 
+LearnerService::LearnerService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
     mysqlop(mysqlop),
     mongodbop(mongodbop) {
 
 }
 
-~LearnerService::LearnerService() {
+LearnerService::~LearnerService() {
 
 }
 
@@ -21,8 +21,8 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_kt_in_are(con
     */
     // 获取时间界限
     auto twotime = MLSTimer::getCurrentand30daysTime();
-    end_time = twotime[0];
-    start_time = twotime[1];
+    auto end_time = twotime[0];
+    auto start_time = twotime[1];
     // 获取当前领域的所有知识点
     auto cpt_uids = mysqlop.get_cpt_uid_id_of_area(are_uid);
     int cpt_num = cpt_uids.size();

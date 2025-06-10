@@ -162,7 +162,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\api\crow.h" />
-    <ClInclude Include="include\core\ConceptsService.h" />
+    <ClInclude Include="include\core\ConceptService.h" />
     <ClInclude Include="include\core\LearnerService.h" />
     <ClInclude Include="include\core\MLS_config.h" />
     <ClInclude Include="include\core\SceneService.h" />
@@ -177,7 +177,7 @@
     <ClInclude Include="include\utils\UidCreator.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\core\ConceptsService.cpp" />
+    <ClCompile Include="src\core\ConceptService.cpp" />
     <ClCompile Include="src\core\LearnerService.cpp" />
     <ClCompile Include="src\core\SceneService.cpp" />
     <ClCompile Include="src\database\MongoDBOperator.cpp" />

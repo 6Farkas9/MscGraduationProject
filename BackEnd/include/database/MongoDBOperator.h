@@ -82,7 +82,7 @@ public:
         bool upsert = false);
     
     // 更新多个文档
-    int MongoDBOperator::updateMany(
+    int updateMany(
         const std::string& collection,
         bsoncxx::document::view_or_value filter,
         bsoncxx::document::view_or_value update,
