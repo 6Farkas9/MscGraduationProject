@@ -19,6 +19,7 @@ std::vector<float> CD::forward(
     // 构造pt路径
     std::string pt_path = R"(\CD\PT\)" + are_uid + "_use.pt";
     pt_path = DEEPLEARNING_ROOT + pt_path;
+    // 加载模型
     model_cd = torch::jit::load(pt_path);
     model_cd.eval();
     // 计算h_lrn

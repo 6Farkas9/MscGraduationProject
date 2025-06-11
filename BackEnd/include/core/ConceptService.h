@@ -24,6 +24,7 @@ public:
     ConceptService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~ConceptService();
 
+    // 添加一个新的知识点
     std::string addOneConcept(
         std::string &are_uid, 
         std::vector<std::string> &pre_cpt_uids, 
@@ -31,7 +32,14 @@ public:
         std::string &name
     );
 
-    bool deleteOneConcept(std::string cpt_uid);
+    // 根据uid删除该知识点
+    bool deleteOneConcept(std::string &cpt_uid);
+
+    // 添加新知识点后的KCGE计算
+    bool recalculate_kcge_cpt_after_add(std::string &cpt_uid);
+
+    // 删除知识点前的KCGE计算 ？ - 不确定是不是应该重新计算，虽然被删除了，但是其本身的信息对预测还是有用的 - 写出来，用不用后说
+    bool recalculate_kcge_cpt_before_delete(std::string &cpt_uid);
 
 private:
     MySQLOperator &mysqlop; 

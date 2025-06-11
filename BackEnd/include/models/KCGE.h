@@ -23,18 +23,18 @@ public:
     KCGE(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
     ~KCGE();
 
-    std::unordered_map<std::string, float> forward(const std::string are_uid, const std::string lrn_uid);
-
-    // 新增scn后的重新计算
-    // 删除scn后的重新计算
-    // 新增cpt后的重新计算
-    // 删除cpt后的重新计算
-
+    std::vector<std::vector<float>> forward(
+        const std::vector<std::vector<float>> &x,
+        const std::vector<std::vector<int>> &edge_index,
+        const std::vector<int> &edge_type,
+        const std::vector<float> &edge_attr
+    );
 
 private:
-
     MySQLOperator &mysqlop;
     MongoDBOperator &mongodbop; 
+
+    torch::jit::Module model_kcge;
 };
 
 #endif //ifndef KCGE_H
