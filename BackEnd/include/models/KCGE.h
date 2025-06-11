@@ -24,10 +24,10 @@ public:
     ~KCGE();
 
     std::vector<std::vector<float>> forward(
-        const std::vector<std::vector<float>> &x,
-        const std::vector<std::vector<int>> &edge_index,
-        const std::vector<int> &edge_type,
-        const std::vector<float> &edge_attr
+        const std::vector<std::vector<float>> &x_vec,
+        const std::vector<std::vector<int64_t>> &edge_index_vec,
+        const std::vector<int64_t> &edge_type_vec,
+        const std::vector<float> &edge_attr_vec
     );
 
 private:

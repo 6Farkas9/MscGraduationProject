@@ -14,6 +14,8 @@
 #include <bsoncxx/document/view_or_value.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
 #include <mongocxx/options/bulk_write.hpp>
+#include <mongocxx/exception/exception.hpp>
+#include <bsoncxx/exception/exception.hpp>
 
 #include <memory>
 #include <string>

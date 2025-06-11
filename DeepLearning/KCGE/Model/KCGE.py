@@ -109,6 +109,11 @@ class KCGE(nn.Module):
 
     def forward(self, x : torch.Tensor, edge_index: torch.Tensor, edge_type: torch.Tensor, edge_attr: torch.Tensor) -> torch.Tensor:
 
+        # print(x.shape)
+        # print(edge_index.shape)
+        # print(edge_type.shape)
+        # print(edge_attr.shape)
+
         z_1 = self.conv1(x, edge_index, edge_type, edge_attr)
         z_2 = self.conv2(z_1, edge_index, edge_type, edge_attr)
         z_3 = self.conv3(z_2, edge_index, edge_type, edge_attr)

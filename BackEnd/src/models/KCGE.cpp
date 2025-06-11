@@ -12,20 +12,15 @@ KCGE::~KCGE(){
 
 std::vector<std::vector<float>> KCGE::forward(
     const std::vector<std::vector<float>> &x_vec,
-    const std::vector<std::vector<int>> &edge_index_vec,
-    const std::vector<int> &edge_type_vec,
+    const std::vector<std::vector<int64_t>> &edge_index_vec,
+    const std::vector<int64_t> &edge_type_vec,
     const std::vector<float> &edge_attr_vec
 ) {
     // 构造pt路径
     std::string pt_path = R"(\KCGE\PT\KCGE_use.pt)";
     pt_path = DEEPLEARNING_ROOT + pt_path;
     // 加载模型
-    try{
-        model_kcge = torch::jit::load(pt_path, torch::kCPU);
-    }
-    catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-    }
+    model_kcge = torch::jit::load(pt_path, torch::kCPU);
     model_kcge.eval();
     // 构造x的tensor
     std::vector<torch::Tensor> x_stack;
@@ -44,16 +39,16 @@ std::vector<std::vector<float>> KCGE::forward(
     for (const auto &edge_index_e : edge_index_vec){
         edge_index_stack.push_back(
             torch::from_blob(
-                const_cast<int*>(edge_index_e.data()),  // 避免拷贝数据
+                const_cast<int64_t*>(edge_index_e.data()),  // 避免拷贝数据
                 {static_cast<int64_t>(edge_index_e.size())},
                 torch::kLong
             )
         );
     }
-    torch::Tensor edge_index = torch::stack(x_stack);
+    torch::Tensor edge_index = torch::stack(edge_index_stack);
     // 构造edge_type
     torch::Tensor edge_type = torch::from_blob(
-        const_cast<int*>(edge_type_vec.data()),  // 避免拷贝数据
+        const_cast<int64_t*>(edge_type_vec.data()),  // 避免拷贝数据
         {static_cast<int64_t>(edge_type_vec.size())},
         torch::kLong
     );

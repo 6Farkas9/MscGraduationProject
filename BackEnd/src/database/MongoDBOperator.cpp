@@ -272,21 +272,25 @@ int MongoDBOperator::bulkUpdateMany(
         auto client = pImpl_->pool->acquire();
         auto db = (*client)[pImpl_->databaseName];
         auto coll = db[collection];
-
         mongocxx::options::bulk_write bulk_opts;
-        bulk_opts.ordered(false); // 非顺序执行以提高性能
-
+        bulk_opts.ordered(false);
         std::vector<mongocxx::model::update_many> bulk_ops;
+
         for (const auto& [filter, update] : filter_updates) {
-            mongocxx::model::update_many op(filter.view(), update.view());
+            mongocxx::model::update_many op(filter, update);
             op.upsert(upsert); // 设置是否启用 upsert
             bulk_ops.emplace_back(std::move(op));
         }
-
         auto result = coll.bulk_write(bulk_ops, bulk_opts);
         return result->modified_count() + result->upserted_count();
-    } catch (const std::exception& e) {
-        std::cerr << "MongoDB Bulk Update Error: " << e.what() << std::endl;
+    } catch (const bsoncxx::exception& e) {  // 正确：bsoncxx 确实有 exception 类
+        std::cerr << "bulk update BSON Error: " << e.what() << std::endl;
+        return -2;
+    } catch (const mongocxx::exception& e) {  // 特定操作异常
+        std::cerr << "bulk update MongoDB Operation Failed: " << e.what() << std::endl;
+        return -3;
+    }catch (const std::exception& e) {  // 兜底
+        std::cerr << "System Error: " << e.what() << std::endl;
         return -1;
     }
 }
@@ -690,29 +694,35 @@ int MongoDBOperator::update_cpt_kcge_emb(const std::unordered_map<std::string, s
 
         for (const auto& [key, vec] : cpt_emb) {
             // 构造 filter: { _id: key }
-            auto filter = bsoncxx::builder::stream::document{}
-                << "_id" << key
-                << bsoncxx::builder::stream::finalize;
+            auto filter = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("_id", key)
+            );
 
-            // 构造 update: { $set: { KCGE_Emb: [vec[0], vec[1], ...] } }
-            auto array_builder = bsoncxx::builder::basic::array{};
-            for (float v : vec) {
-                array_builder.append(static_cast<double>(v));
+            bsoncxx::builder::basic::array array_builder;
+            for (const auto& v : vec) {
+                array_builder.append(static_cast<double>(v));  // float -> double
             }
+            auto update = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("$set", 
+                    bsoncxx::builder::basic::make_document(
+                        bsoncxx::builder::basic::kvp("KCGE_Emb", array_builder)
+                    )
+                )
+            );
 
-            auto update = bsoncxx::builder::stream::document{}
-                << "$set" << bsoncxx::builder::stream::open_document
-                    << "KCGE_Emb" << array_builder
-                << bsoncxx::builder::stream::close_document
-                << bsoncxx::builder::stream::finalize;
-
-            filter_updates.emplace_back(filter.view(), update.view());
+            filter_updates.emplace_back(std::move(filter), std::move(update));
         }
 
         // 2. 调用批量更新
         return bulkUpdateMany("concepts", filter_updates, true);
-    } catch (const std::exception& e) {
-        std::cerr << "MongoDB Delete Scene Error: " << e.what() << std::endl;
+    } catch (const bsoncxx::exception& e) {  // 正确：bsoncxx 确实有 exception 类
+        std::cerr << "cpt update BSON Error: " << e.what() << std::endl;
+        return -2;
+    } catch (const mongocxx::exception& e) {  // 特定操作异常
+        std::cerr << "cpt update MongoDB Operation Failed: " << e.what() << std::endl;
+        return -3;
+    }catch (const std::exception& e) {  // 兜底
+        std::cerr << "System Error: " << e.what() << std::endl;
         return -1;
     }
 }
@@ -729,30 +739,35 @@ int MongoDBOperator::update_are_kcge_emb(const std::unordered_map<std::string, s
         >> filter_updates;
 
         for (const auto& [key, vec] : are_emb) {
-            // 构造 filter: { _id: key }
-            auto filter = bsoncxx::builder::stream::document{}
-                << "_id" << key
-                << bsoncxx::builder::stream::finalize;
+            auto filter = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("_id", key)
+            );
 
-            // 构造 update: { $set: { KCGE_Emb: [vec[0], vec[1], ...] } }
-            auto array_builder = bsoncxx::builder::basic::array{};
-            for (float v : vec) {
-                array_builder.append(static_cast<double>(v));
+            bsoncxx::builder::basic::array array_builder;
+            for (const auto& v : vec) {
+                array_builder.append(static_cast<double>(v));  // float -> double
             }
+            auto update = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("$set", 
+                    bsoncxx::builder::basic::make_document(
+                        bsoncxx::builder::basic::kvp("KCGE_Emb", array_builder)
+                    )
+                )
+            );
 
-            auto update = bsoncxx::builder::stream::document{}
-                << "$set" << bsoncxx::builder::stream::open_document
-                    << "KCGE_Emb" << array_builder
-                << bsoncxx::builder::stream::close_document
-                << bsoncxx::builder::stream::finalize;
-
-            filter_updates.emplace_back(filter.view(), update.view());
+            filter_updates.emplace_back(std::move(filter), std::move(update));
         }
 
         // 2. 调用批量更新
         return bulkUpdateMany("areas", filter_updates, true);
-    } catch (const std::exception& e) {
-        std::cerr << "MongoDB Delete Scene Error: " << e.what() << std::endl;
+    } catch (const bsoncxx::exception& e) {  // 正确：bsoncxx 确实有 exception 类
+        std::cerr << "are update BSON Error: " << e.what() << std::endl;
+        return -2;
+    } catch (const mongocxx::exception& e) {  // 特定操作异常
+        std::cerr << "are update MongoDB Operation Failed: " << e.what() << std::endl;
+        return -3;
+    }catch (const std::exception& e) {  // 兜底
+        std::cerr << "System Error: " << e.what() << std::endl;
         return -1;
     }
 }

@@ -81,8 +81,8 @@ bool ConceptService::recalculate_kcge_cpt_after_add(
     std::unordered_map<int, std::string> cpt_idx2uid;
     // 构建基础容器
     std::vector<std::vector<float>> x;
-    std::vector<std::vector<int>> edge_index;
-    std::vector<int> edge_type;
+    std::vector<std::vector<int64_t>> edge_index(2, std::vector<int64_t>());
+    std::vector<int64_t> edge_type;
     std::vector<float> edge_attr;
     // 获取are_uid对应的emb
     std::unordered_set<std::string> are_uid_set{are_uid};
@@ -93,11 +93,13 @@ bool ConceptService::recalculate_kcge_cpt_after_add(
     cpt_idx2uid[0] = cpt_uid;
     // 添加are_emb
     x.emplace_back(std::move(are_emb_dict[are_uid]));
-    edge_index.emplace_back(std::move(std::vector<int>{0, 1}));
-    edge_index.emplace_back(std::move(std::vector<int>{1, 0}));
-    edge_type.emplace_back(1);
+    edge_index[0].emplace_back(0);
+    edge_index[1].emplace_back(1);
     edge_type.emplace_back(1);
     edge_attr.emplace_back(1.0f);
+    edge_index[0].emplace_back(1);
+    edge_index[1].emplace_back(0);
+    edge_type.emplace_back(1);
     edge_attr.emplace_back(1.0f);
     // 根据pre_cpt_uids获取前置条件的emb
     // 根据aft_cpt_uids获取后置条件的emb
@@ -105,21 +107,34 @@ bool ConceptService::recalculate_kcge_cpt_after_add(
     condition_cpt_uids.insert(pre_cpt_uids.begin(), pre_cpt_uids.end());
     condition_cpt_uids.insert(aft_cpt_uids.begin(), aft_cpt_uids.end());
     auto conditon_cpt_emb_dict = mongodbop.get_cpt_kcge_by_cpt_uid(condition_cpt_uids);
-    int condition_cpt_start_idx = 2;
+    int64_t condition_cpt_start_idx = 2;
     for (auto & cpt_uid_pre : pre_cpt_uids) {
         cpt_idx2uid[condition_cpt_start_idx] = cpt_uid_pre;
-        edge_index.emplace_back(std::move(std::vector<int>{condition_cpt_start_idx++, 0}));
-        edge_type.emplace_back(1);
+        x.emplace_back(std::move(conditon_cpt_emb_dict[cpt_uid_pre]));
+        edge_index[0].emplace_back(condition_cpt_start_idx++);
+        edge_index[1].emplace_back(0);
+        edge_type.emplace_back(2);
         edge_attr.emplace_back(1.0f);
     }
     for (auto & cpt_uid_aft : aft_cpt_uids) {
         cpt_idx2uid[condition_cpt_start_idx] = cpt_uid_aft;
-        edge_index.emplace_back(std::move(std::vector<int>{0, condition_cpt_start_idx++}));
-        edge_type.emplace_back(1);
+        x.emplace_back(std::move(conditon_cpt_emb_dict[cpt_uid_aft]));
+        edge_index[0].emplace_back(0);
+        edge_index[1].emplace_back(condition_cpt_start_idx++);
+        edge_type.emplace_back(2);
+        edge_attr.emplace_back(1.0f);
+    }
+    // 构造自连接变
+    int item_num = x.size();
+    for (int64_t i = 0; i < item_num; ++i) {
+        edge_index[0].emplace_back(i);
+        edge_index[1].emplace_back(i);
+        edge_type.emplace_back(3);
         edge_attr.emplace_back(1.0f);
     }
     // 输入模型
     KCGE model_kcge = KCGE(mysqlop, mongodbop);
+    try{
     auto x_emb = model_kcge.forward(
         x, 
         edge_index, 
@@ -129,14 +144,20 @@ bool ConceptService::recalculate_kcge_cpt_after_add(
     // 获取结果
     std::unordered_map<std::string, std::vector<float>> cpt_emb_write;
     std::unordered_map<std::string, std::vector<float>> are_emb_write;
-    cpt_emb_write[cpt_uid] = std::move(x_emb[0]);
-    are_emb_write[are_uid] = std::move(x_emb[1]);
-    // 暂时先不管are
+    cpt_emb_write[cpt_uid] = std::vector<float>(x_emb[0]);
+    are_emb_write[are_uid] = std::vector<float>(x_emb[1]);
     int condition_cpt_num = pre_cpt_uids.size() + aft_cpt_uids.size();
     for (int i = 2; i < condition_cpt_num + 2; ++i) {
-        cpt_emb_write[cpt_idx2uid[i]] = std::move(x_emb[i]);
+        cpt_emb_write[cpt_idx2uid[i]] = std::vector<float>(x_emb[i]);
     }
     // 保存新的结果
     mongodbop.update_cpt_kcge_emb(cpt_emb_write);
     mongodbop.update_are_kcge_emb(are_emb_write);
+    }
+    catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+        return false;
+    }
+    
+    return true;
 }
