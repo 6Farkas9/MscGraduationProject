@@ -573,6 +573,33 @@ int MongoDBOperator::delete_scn_from_scenes(const std::vector<std::string> &scn_
     }
 }
 
+int MongoDBOperator::delete_cpt_from_concepts(const std::vector<std::string> &cpt_uids) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+    
+    try {
+        // 构建过滤条件：_id等于输入字符串
+        auto in_array = bsoncxx::builder::basic::array{};
+        for (const auto& id : cpt_uids) {
+            in_array.append(id);
+        }
+
+        auto filter = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 
+                bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("$in", in_array)
+                )
+            )
+        );
+        
+        return deleteMany("concepts", filter.view());
+    } catch (const std::exception& e) {
+        std::cerr << "MongoDB Delete Scene Error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
 
 
 std::optional<std::unordered_map<std::string, float>> MongoDBOperator::testGetLearnerInfo(const std::string& lrn_uid) {

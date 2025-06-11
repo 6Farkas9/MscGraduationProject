@@ -121,6 +121,9 @@ public:
     // 从scenes中删除指定scn_uid的文档
     int delete_scn_from_scenes(const std::vector<std::string> &scn_uids);
 
+    // 从concepts中删除指定cpt_uid的文档
+    int delete_cpt_from_concepts(const std::vector<std::string> &cpt_uids);
+
 
     
     // 示例1: 获取用户信息（返回可选文档）
