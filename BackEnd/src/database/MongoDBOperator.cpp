@@ -256,6 +256,41 @@ int MongoDBOperator::updateMany(
     }
 }
 
+int MongoDBOperator::bulkUpdateMany(
+    const std::string& collection,
+    const std::vector<std::pair<
+        bsoncxx::document::view_or_value, // filter
+        bsoncxx::document::view_or_value   // update
+    >>& filter_updates,
+    bool upsert
+) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+
+    try {
+        auto client = pImpl_->pool->acquire();
+        auto db = (*client)[pImpl_->databaseName];
+        auto coll = db[collection];
+
+        mongocxx::options::bulk_write bulk_opts;
+        bulk_opts.ordered(false); // 非顺序执行以提高性能
+
+        std::vector<mongocxx::model::update_many> bulk_ops;
+        for (const auto& [filter, update] : filter_updates) {
+            mongocxx::model::update_many op(filter.view(), update.view());
+            op.upsert(upsert); // 设置是否启用 upsert
+            bulk_ops.emplace_back(std::move(op));
+        }
+
+        auto result = coll.bulk_write(bulk_ops, bulk_opts);
+        return result->modified_count() + result->upserted_count();
+    } catch (const std::exception& e) {
+        std::cerr << "MongoDB Bulk Update Error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
 bool MongoDBOperator::deleteOne(
     const std::string& collection, 
     bsoncxx::document::view_or_value filter) {
@@ -299,6 +334,48 @@ int MongoDBOperator::deleteMany(
 }
 
 // ========== 业务方法示例 ==========
+
+std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_are_kcge_by_are_uid(const std::unordered_set<std::string> &are_uids) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+    try {
+        // 1. 构建查询条件：_id 在 scn_uids 集合中
+        bsoncxx::builder::basic::array in_array;
+        for (const auto& uid : are_uids) {
+            in_array.append(uid);
+        }
+        auto filter = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 
+                bsoncxx::builder::basic::make_document(
+                    bsoncxx::builder::basic::kvp("$in", in_array)
+                )
+            )
+        );
+        // 2. 内部构造其他参数
+        auto projection = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 1),
+            bsoncxx::builder::basic::kvp("KCGE_Emb", 1)
+        ); // 返回KCGE字段
+        std::optional<int64_t> limit = std::nullopt; // 不限制结果数量
+        std::optional<mongocxx::cursor> res = findMany("areas", filter.view(), projection.view(), limit);
+        std::unordered_map<std::string, std::vector<float>> ans;
+        if (res == std::nullopt || res->begin() == res->end()) {
+            return ans;
+        }
+        for (auto &&doc : *res){
+            std::string scn_uid = doc["_id"].get_string().value.data();
+            ans[scn_uid] = std::vector<float>();
+            for (auto & ele : doc["KCGE_Emb"].get_array().value){
+                ans[scn_uid].emplace_back(ele.get_double().value);
+            }
+        }
+        return ans;
+    } catch (const std::exception& e) {
+        std::cerr << "System error: " << e.what() << std::endl;
+        throw;
+    }
+}
 
 std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_scn_kcge_by_scn_uid(const std::unordered_set<std::string> &scn_uids) {
     if (!isConnected()) {
@@ -599,6 +676,88 @@ int MongoDBOperator::delete_cpt_from_concepts(const std::vector<std::string> &cp
         return -1;
     }
 }
+
+int MongoDBOperator::update_cpt_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &cpt_emb) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+
+    try {
+        std::vector<std::pair<
+            bsoncxx::document::view_or_value,
+            bsoncxx::document::view_or_value
+        >> filter_updates;
+
+        for (const auto& [key, vec] : cpt_emb) {
+            // 构造 filter: { _id: key }
+            auto filter = bsoncxx::builder::stream::document{}
+                << "_id" << key
+                << bsoncxx::builder::stream::finalize;
+
+            // 构造 update: { $set: { KCGE_Emb: [vec[0], vec[1], ...] } }
+            auto array_builder = bsoncxx::builder::basic::array{};
+            for (float v : vec) {
+                array_builder.append(static_cast<double>(v));
+            }
+
+            auto update = bsoncxx::builder::stream::document{}
+                << "$set" << bsoncxx::builder::stream::open_document
+                    << "KCGE_Emb" << array_builder
+                << bsoncxx::builder::stream::close_document
+                << bsoncxx::builder::stream::finalize;
+
+            filter_updates.emplace_back(filter.view(), update.view());
+        }
+
+        // 2. 调用批量更新
+        return bulkUpdateMany("concepts", filter_updates, true);
+    } catch (const std::exception& e) {
+        std::cerr << "MongoDB Delete Scene Error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
+int MongoDBOperator::update_are_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &are_emb) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+
+    try {
+        std::vector<std::pair<
+            bsoncxx::document::view_or_value,
+            bsoncxx::document::view_or_value
+        >> filter_updates;
+
+        for (const auto& [key, vec] : are_emb) {
+            // 构造 filter: { _id: key }
+            auto filter = bsoncxx::builder::stream::document{}
+                << "_id" << key
+                << bsoncxx::builder::stream::finalize;
+
+            // 构造 update: { $set: { KCGE_Emb: [vec[0], vec[1], ...] } }
+            auto array_builder = bsoncxx::builder::basic::array{};
+            for (float v : vec) {
+                array_builder.append(static_cast<double>(v));
+            }
+
+            auto update = bsoncxx::builder::stream::document{}
+                << "$set" << bsoncxx::builder::stream::open_document
+                    << "KCGE_Emb" << array_builder
+                << bsoncxx::builder::stream::close_document
+                << bsoncxx::builder::stream::finalize;
+
+            filter_updates.emplace_back(filter.view(), update.view());
+        }
+
+        // 2. 调用批量更新
+        return bulkUpdateMany("areas", filter_updates, true);
+    } catch (const std::exception& e) {
+        std::cerr << "MongoDB Delete Scene Error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
+
 
 
 

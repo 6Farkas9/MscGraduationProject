@@ -13,6 +13,7 @@
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/document/view_or_value.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
+#include <mongocxx/options/bulk_write.hpp>
 
 #include <memory>
 #include <string>
@@ -21,6 +22,7 @@
 #include <unordered_set>
 #include <mutex>
 #include <optional>
+#include <utility>
 
 class MongoDBOperator {
 private:
@@ -87,6 +89,15 @@ public:
         bsoncxx::document::view_or_value filter,
         bsoncxx::document::view_or_value update,
         bool upsert);
+
+    int bulkUpdateMany(
+        const std::string& collection,
+        const std::vector<std::pair<
+            bsoncxx::document::view_or_value, // filter
+            bsoncxx::document::view_or_value   // update
+        >>& filter_updates,
+        bool upsert
+    );
     
     // 删除文档
     bool deleteOne(
@@ -99,6 +110,9 @@ public:
         bsoncxx::document::view_or_value filter);
 
     // ========== 业务方法示例 ==========
+
+    // 获取指定scn的kcge嵌入表达
+    std::unordered_map<std::string, std::vector<float>> get_are_kcge_by_are_uid(const std::unordered_set<std::string> &are_uids);
 
     // 获取指定scn的kcge嵌入表达
     std::unordered_map<std::string, std::vector<float>> get_scn_kcge_by_scn_uid(const std::unordered_set<std::string> &scn_uids);
@@ -124,6 +138,11 @@ public:
     // 从concepts中删除指定cpt_uid的文档
     int delete_cpt_from_concepts(const std::vector<std::string> &cpt_uids);
 
+    // 更新concept的kcge嵌入
+    int update_cpt_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &cpt_emb);
+
+    // 更新area的kcge嵌入
+    int update_are_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &are_emb);
 
     
     // 示例1: 获取用户信息（返回可选文档）

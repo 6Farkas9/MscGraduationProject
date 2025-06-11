@@ -20,7 +20,12 @@ std::vector<std::vector<float>> KCGE::forward(
     std::string pt_path = R"(\KCGE\PT\KCGE_use.pt)";
     pt_path = DEEPLEARNING_ROOT + pt_path;
     // 加载模型
-    model_kcge = torch::jit::load(pt_path);
+    try{
+        model_kcge = torch::jit::load(pt_path, torch::kCPU);
+    }
+    catch (const std::exception& e) {
+        std::cerr << e.what() << std::endl;
+    }
     model_kcge.eval();
     // 构造x的tensor
     std::vector<torch::Tensor> x_stack;
