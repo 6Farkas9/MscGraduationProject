@@ -117,18 +117,34 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
-    def save_kcge_final_scn_emb(self, scn_emb_dict):
-        collection = self.mongo_db["scenes"]
+    def save_kcge_final_are_emb(self, are_emb_dict):
+        collection = self.mongo_db["areas"]
 
         operations = [
             UpdateOne(
-                {"_id": cpt_uid},  # 查询条件
+                {"_id": are_uid},  # 查询条件
                 {"$set": {
                     "KCGE_Emb" : data
                 }},    # 更新内容（完全替换匹配字段）
                 upsert=True        # 有则更新无则插入
             )
-            for cpt_uid, data in scn_emb_dict.items()
+            for are_uid, data in are_emb_dict.items()
+        ]
+
+        result = collection.bulk_write(operations)
+
+    def save_kcge_final_scn_emb(self, scn_emb_dict):
+        collection = self.mongo_db["scenes"]
+
+        operations = [
+            UpdateOne(
+                {"_id": scn_uid},  # 查询条件
+                {"$set": {
+                    "KCGE_Emb" : data
+                }},    # 更新内容（完全替换匹配字段）
+                upsert=True        # 有则更新无则插入
+            )
+            for scn_uid, data in scn_emb_dict.items()
         ]
 
         result = collection.bulk_write(operations)

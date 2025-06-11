@@ -36,7 +36,11 @@ public:
     bool deleteOneConcept(std::string &cpt_uid);
 
     // 添加新知识点后的KCGE计算
-    bool recalculate_kcge_cpt_after_add(std::string &cpt_uid);
+    bool recalculate_kcge_cpt_after_add(
+        std::string &cpt_uid,
+        std::vector<std::string> &pre_cpt_uids, 
+        std::vector<std::string> &aft_cpt_uids
+    );
 
     // 删除知识点前的KCGE计算 ？ - 不确定是不是应该重新计算，虽然被删除了，但是其本身的信息对预测还是有用的 - 写出来，用不用后说
     bool recalculate_kcge_cpt_before_delete(std::string &cpt_uid);

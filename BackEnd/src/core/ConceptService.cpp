@@ -54,7 +54,11 @@ bool ConceptService::deleteOneConcept(std::string &cpt_uid) {
     mongodbop.delete_cpt_from_concepts(std::vector<std::string>{cpt_uid});
 }
 
-bool ConceptService::recalculate_kcge_cpt_after_add(std::string &cpt_uid) {
+bool ConceptService::recalculate_kcge_cpt_after_add(
+    std::string &cpt_uid,
+    std::vector<std::string> &pre_cpt_uids, 
+    std::vector<std::string> &aft_cpt_uids
+) {
     /*
         1. 关系类型0 ： 自连接 权重1
         2. 关系类型1 ： 知识点 - 领域 权重1
@@ -62,6 +66,7 @@ bool ConceptService::recalculate_kcge_cpt_after_add(std::string &cpt_uid) {
         4. 关系类型3 ： 知识点 - 场景 权重 难度
             新添加的知识点没有关联的场景，关系类型3实际上不需要计算
     */
-
+    // 添加新知识点的重点在于关系0和关系2（关系1有但是不重要，关系3没有）
+    // 
     
 }

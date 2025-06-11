@@ -44,6 +44,7 @@ def save_final_data(x, datareader : CDDataReader):
     scn_index, scn_mask, scn_index_special, scn_mask_special, scn_idx ,cpt_idx = datareader.get_final_Data()
 
     # 根据返回的scn_idx和cpt_idx从x中获取h_scn和h_cpt
+    h_are = x[0]
     h_scn = x[scn_idx]
     h_cpt = x[cpt_idx]
 
@@ -63,7 +64,7 @@ def save_final_data(x, datareader : CDDataReader):
     
     # print(r_pred.shape)
 
-    cddatareader.save_final_data(r_pred, h_scn, h_cpt)
+    cddatareader.save_final_data(r_pred, h_are, h_scn, h_cpt)
 
 def train_single_are(cddatareader, parsers, are_uid):
     train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = cddatareader.load_Data_from_db()
