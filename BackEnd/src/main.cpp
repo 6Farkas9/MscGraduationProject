@@ -27,17 +27,18 @@ int main() {
     aft_cpt.emplace_back("cpt_c7d6af53b25944e6bb3b990c3076df05");
     aft_cpt.emplace_back("cpt_92b35b614dbc4dcfaa4f3592f8e6d0cd");
 
-    std::string cpt_uid = cpt_ser.addOneConcept(
-        are_uid,
-        pre_cpt,
-        aft_cpt,
-        name
-    );
+    // std::string cpt_uid = cpt_ser.addOneConcept(
+    //     are_uid,
+    //     pre_cpt,
+    //     aft_cpt,
+    //     name
+    // );
 
-    std::cout << cpt_uid << std::endl;
+    // std::cout << cpt_uid << std::endl;
 
-    cpt_ser.deleteOneConcept(cpt_uid);
-    // cpt_ser.deleteOneConcept("cpt_a0a30edc635b477d88fc531d79f97f4e");
+    // cpt_ser.deleteOneConcept(cpt_uid);
+    std::string to_del = "cpt_cd69f24c240b4056b896ee1c1adb01be";
+    cpt_ser.deleteOneConcept(to_del);
 
     return 0;
 

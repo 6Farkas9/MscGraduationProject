@@ -493,6 +493,6 @@ int MySQLOperator::delete_scn_cpt_by_cpt_uid_one(std::string &cpt_uid) {
 int MySQLOperator::delete_cpt_cpt_by_cpt_uid_one(std::string &cpt_uid) {
     std::string sql = R"(
         delete from graph_precondition
-        where cpt_uid_pre = ")" + cpt_uid + R"(" or cpr_uid_aft = ")" + cpt_uid + R"(")";
+        where cpt_uid_pre = ")" + cpt_uid + R"(" or cpt_uid_aft = ")" + cpt_uid + R"(")";
     return executeUpdate(sql);
 }

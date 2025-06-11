@@ -44,8 +44,6 @@ bool ConceptService::deleteOneConcept(std::string &cpt_uid) {
     // 从graph_belong中删除记录
     mysqlop.delete_cpt_from_graph_belong_one(cpt_uid);
     // 从graph_precondition中删除记录
-    // TODO:
-    // 这里昨晚忘加了，从数据库上手动进行删除，应该就是最后的几条记录
     mysqlop.delete_cpt_cpt_by_cpt_uid_one(cpt_uid);
     // 从graph_involve中删除记录
     mysqlop.delete_scn_cpt_by_cpt_uid_one(cpt_uid);
