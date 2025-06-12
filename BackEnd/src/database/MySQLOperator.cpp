@@ -194,7 +194,7 @@ void MySQLOperator::testSelect(std::string table, int limit) {
     }
 }
 
-std::vector<std::vector<std::string>> MySQLOperator::get_Are_lrn_Interacts_Time(const std::string &are_uid, const std::string &lrn_uid, const std::string &time_start, const std::string &time_end){
+std::vector<std::vector<std::string>> MySQLOperator::get_interacts_in_area_of_lrn_with_time(const std::string &are_uid, const std::string &lrn_uid, const std::string &time_start, const std::string &time_end){
     std::string sql = R"(
         SELECT 
             i.scn_uid, 
@@ -226,10 +226,8 @@ std::vector<std::vector<std::string>> MySQLOperator::get_Are_lrn_Interacts_Time(
     for(auto &row : result){
         ans.emplace_back(std::vector<std::string>());
         for(auto &item : row){
-            ans.back().emplace_back(item);
-            // std::cout << item << " ";
+            ans.back().emplace_back(std::move(item));
         }
-        // std::cout << std::endl;
     }
 
     return ans;
@@ -267,7 +265,7 @@ int MySQLOperator::get_cpt_num_of_area(const std::string &are_uid) {
     return std::stoi(result[0][0]);
 }
 
-std::unordered_map<std::string, std::unordered_set<std::string>> MySQLOperator::get_Cpt_of_Scn(const std::unordered_set<std::string> &scn_uids){
+std::unordered_map<std::string, std::unordered_set<std::string>> MySQLOperator::get_cpt_of_scn(const std::unordered_set<std::string> &scn_uids){
     std::string sql = R"(
         select scn_uid, cpt_uid
         from graph_involve
@@ -288,7 +286,7 @@ std::unordered_map<std::string, std::unordered_set<std::string>> MySQLOperator::
         if(ans.find(row[0]) == ans.end()){
             ans[row[0]] = std::unordered_set<std::string>();
         }
-        ans[row[0]].insert(row[1]);
+        ans[row[0]].insert(std::move(row[1]));
     }
     return ans;
 }
@@ -332,17 +330,15 @@ std::vector<std::vector<std::string>> MySQLOperator::get_lrn_interacts_time(cons
     for(auto &row : result){
         ans.emplace_back(std::vector<std::string>());
         for(auto &item : row){
-            ans.back().emplace_back(item);
-            // std::cout << item << " ";
+            ans.back().emplace_back(std::move(item));
         }
-        // std::cout << std::endl;
     }
 
     return ans;
 }
 
 // 通用的执行函数
-bool MySQLOperator::judgeHadUid(std::string &table, std::string &pre, std::string &uid) {
+bool MySQLOperator::judge_uid_exist(std::string &table, std::string &pre, std::string &uid) {
     std::string sql = R"(
         select count(*)
         from )" + table + R"(
@@ -353,34 +349,34 @@ bool MySQLOperator::judgeHadUid(std::string &table, std::string &pre, std::strin
 }
 
 // 判断learners中是否有重复uid
-bool MySQLOperator::judgeLearnersHadUid(std::string &uid) {
+bool MySQLOperator::judge_lrn_uid_exist(std::string &uid) {
     std::string table = "learners";
     std::string pre = "lrn_";
-    return judgeHadUid(table, pre, uid);
+    return judge_uid_exist(table, pre, uid);
 }
 
 // 判断scenes中是否有重复uid
-bool MySQLOperator::judgeScenesHadUid(std::string &uid) {
+bool MySQLOperator::judge_scn_uid_exist(std::string &uid) {
     std::string table = "scenes";
     std::string pre = "scn_";
-    return judgeHadUid(table, pre, uid);
+    return judge_uid_exist(table, pre, uid);
 }
 
 // 判断concepts中是否有重复uid
-bool MySQLOperator::judgeConceptsHadUid(std::string &uid) {
+bool MySQLOperator::judge_cpt_uid_exist(std::string &uid) {
     std::string table = "concepts";
     std::string pre = "cpt_";
-    return judgeHadUid(table, pre, uid);
+    return judge_uid_exist(table, pre, uid);
 }
 
 // 判断areas中是否有重复uid
-bool MySQLOperator::judgeAreasHadUid(std::string &uid) {
+bool MySQLOperator::judge_are_uid_exist(std::string &uid) {
     std::string table = "areas";
     std::string pre = "are_";
-    return judgeHadUid(table, pre, uid);
+    return judge_uid_exist(table, pre, uid);
 }
 
-int MySQLOperator::insertNewScn_one(std::string &scn_uid, bool has_result) {
+int MySQLOperator::insert_one_scn_to_scenes(std::string &scn_uid, bool has_result) {
     std::string sql = R"(
         insert into scenes (scn_uid, has_result)
         values (")" + scn_uid + R"(", )";
@@ -394,14 +390,14 @@ int MySQLOperator::insertNewScn_one(std::string &scn_uid, bool has_result) {
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_scn_from_scenes_one(std::string &scn_uid) {
+int MySQLOperator::delete_one_scn_from_scenes(std::string &scn_uid) {
     std::string sql = R"(
         delete from scenes
         where scn_uid = ")" + scn_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::insert_scn_cpt_one(std::string &scn_uid, std::unordered_map<std::string, float> &cpt_uid2diff) {
+int MySQLOperator::insert_one_scn_to_graph_involve(std::string &scn_uid, std::unordered_map<std::string, float> &cpt_uid2diff) {
     std::string sql = R"(
         insert into graph_involve(scn_uid, cpt_uid, difficulty)
         values )";
@@ -416,28 +412,28 @@ int MySQLOperator::insert_scn_cpt_one(std::string &scn_uid, std::unordered_map<s
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_scn_cpt_by_scn_uid_one(std::string &scn_uid) {
+int MySQLOperator::delete_one_scn_from_graph_involve(std::string &scn_uid) {
     std::string sql = R"(
         delete from graph_involve
         where scn_uid = ")" + scn_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_scn_from_interacts_one(std::string &scn_uid) {
+int MySQLOperator::delete_one_scn_from_interacts(std::string &scn_uid) {
     std::string sql = R"(
         delete from interacts
         where scn_uid = ")" + scn_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_scn_from_graph_interact_one(std::string &scn_uid) {
+int MySQLOperator::delete_one_scn_from_graph_interact(std::string &scn_uid) {
     std::string sql = R"(
         delete from graph_interact
         where scn_uid = ")" + scn_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::insertNewCpt_one(std::string &are_uid, std::string &cpt_uid, std::string &name) {
+int MySQLOperator::insert_one_cpt_to_concepts(std::string &are_uid, std::string &cpt_uid, std::string &name) {
     std::string sql = R"(
         insert into concepts (cpt_uid, cpt_name, id_in_area, trained)
         select
@@ -447,7 +443,7 @@ int MySQLOperator::insertNewCpt_one(std::string &are_uid, std::string &cpt_uid, 
     return executeUpdate(sql);
 }
 
-int MySQLOperator::insert_cpt_cpt_many(std::vector<std::pair<std::string, std::string>> cpt_cpt) {
+int MySQLOperator::insert_multi_cpt_cpt_to_graph_precondition(std::vector<std::pair<std::string, std::string>> cpt_cpt) {
     std::string sql = R"(
         insert into graph_precondition (cpt_uid_pre, cpt_uid_aft)
         values )";
@@ -462,37 +458,60 @@ int MySQLOperator::insert_cpt_cpt_many(std::vector<std::pair<std::string, std::s
     return executeUpdate(sql);
 }
 
-int MySQLOperator::insert_are_cpt_one(std::string &are_uid, std::string &cpt_uid) {
+int MySQLOperator::insert_one_are_cpt_to_graph_belong(std::string &are_uid, std::string &cpt_uid) {
     std::string sql = R"(
         insert into graph_belong (are_uid, cpt_uid)
         values (")" + are_uid+ R"(", ")" + cpt_uid + R"("))";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_cpt_from_concepts_one(std::string &cpt_uid) {
+int MySQLOperator::delete_one_cpt_from_concepts(std::string &cpt_uid) {
     std::string sql = R"(
         delete from concepts
         where cpt_uid = ")" + cpt_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_cpt_from_graph_belong_one(std::string &cpt_uid) {
+int MySQLOperator::delete_one_cpt_from_graph_belong(std::string &cpt_uid) {
     std::string sql = R"(
         delete from graph_belong
         where cpt_uid = ")" + cpt_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_scn_cpt_by_cpt_uid_one(std::string &cpt_uid) {
+int MySQLOperator::delete_one_cpt_from_graph_involve(std::string &cpt_uid) {
     std::string sql = R"(
         delete from graph_involve
         where cpt_uid = ")" + cpt_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_cpt_cpt_by_cpt_uid_one(std::string &cpt_uid) {
+int MySQLOperator::delete_one_cpt_from_graph_precondition(std::string &cpt_uid) {
     std::string sql = R"(
         delete from graph_precondition
         where cpt_uid_pre = ")" + cpt_uid + R"(" or cpt_uid_aft = ")" + cpt_uid + R"(")";
     return executeUpdate(sql);
+}
+
+std::vector<std::vector<std::string>> MySQLOperator::get_cpt_cpt_from_graph_precondition_with_both_in(
+        std::unordered_set<std::string> &cpt_uids
+) {
+    std::string uids = R"(()";
+    int cpt_num = cpt_uids.size();
+    int i = 0;
+    for (auto & cpt_uid : cpt_uids) {
+        uids += R"(")" + cpt_uid + R"(")";
+        if (i < cpt_num - 1) {
+            uids += R"(,)";
+        }
+        else {
+            uids += R"())";
+        }
+        ++i;
+    }
+    std::string sql = R"(
+        select cpt_uid_pre, cpt_uid_aft
+        from graph_precondition
+        where cpt_uid_pre in )" + uids + R"( and cpt_uid_aft in )" + uids;
+    return executeQuery(sql);
 }

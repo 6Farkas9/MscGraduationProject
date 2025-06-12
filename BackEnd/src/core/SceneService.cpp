@@ -19,28 +19,28 @@ std::string SceneService::addOneScene(bool has_result, std::unordered_map<std::s
     // 向mysql-scenes中添加新的scn
     // 新建uid
     std::string scn_uid = UidCreator::generate_uuid_winapi();
-    while (mysqlop.judgeScenesHadUid(scn_uid)) {
+    while (mysqlop.judge_scn_uid_exist(scn_uid)) {
         scn_uid = UidCreator::generate_uuid_winapi();
     }
     scn_uid = std::string("scn_") + scn_uid;
     std::cout << scn_uid << std::endl;
     // 向scenes中插入数据
-    mysqlop.insertNewScn_one(scn_uid, has_result);
+    mysqlop.insert_one_scn_to_scenes(scn_uid, has_result);
     // 根据传入的数据向graph_involve中添加对应的记录
-    mysqlop.insert_scn_cpt_one(scn_uid, cpt_uid2diff);
+    mysqlop.insert_one_scn_to_graph_involve(scn_uid, cpt_uid2diff);
 
     return scn_uid;
 }
 
 bool SceneService::deleteOneScene(std::string scn_uid) {
     // 从graph_involve中删除scn_uid
-    mysqlop.delete_scn_cpt_by_scn_uid_one(scn_uid);
+    mysqlop.delete_one_scn_from_graph_involve(scn_uid);
     // 既然上面的都删除了，那么从interacts中删除scn_uid
-    mysqlop.delete_scn_from_interacts_one(scn_uid);
+    mysqlop.delete_one_scn_from_interacts(scn_uid);
     // 从graph_interact中删除scn_uid
-    mysqlop.delete_scn_from_graph_interact_one(scn_uid);
+    mysqlop.delete_one_scn_from_graph_interact(scn_uid);
     // 从scenes中删除scn_uid
-    mysqlop.delete_scn_from_scenes_one(scn_uid);
+    mysqlop.delete_one_scn_from_scenes(scn_uid);
 
     // 从mongodb中删除对应的记录
     mongodbop.delete_scn_from_scenes(std::vector<std::string>{scn_uid});

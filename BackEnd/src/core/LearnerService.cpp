@@ -27,7 +27,7 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_kt_in_are(con
     auto cpt_uids = mysqlop.get_cpt_uid_id_of_area(are_uid);
     int cpt_num = cpt_uids.size();
     // 获取当前领域的知识点的该学生的一个月内的交互数据
-    auto interacts = mysqlop.get_Are_lrn_Interacts_Time(
+    auto interacts = mysqlop.get_interacts_in_area_of_lrn_with_time(
         are_uid,
         lrn_uid,
         start_time,
@@ -39,7 +39,7 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_kt_in_are(con
         scn_uids.insert(interact[0]);
     }
     // 获取每个场景所涉及的知识点
-    auto scn_cpt = mysqlop.get_Cpt_of_Scn(scn_uids);
+    auto scn_cpt = mysqlop.get_cpt_of_scn(scn_uids);
     // 构造输入interact
     std::vector<std::vector<int>> interacts_input;
     for (auto & interact : interacts) {
@@ -75,7 +75,7 @@ std::unordered_map<std::string, float> LearnerService::predicr_lrn_cd_in_are(con
     auto end_time = twotime[0];
     auto start_time = twotime[1];
     // 获取近30天内关于are_uid的交互记录
-    auto interacts = mysqlop.get_Are_lrn_Interacts_Time(
+    auto interacts = mysqlop.get_interacts_in_area_of_lrn_with_time(
         are_uid, lrn_uid, 
         start_time, 
         end_time

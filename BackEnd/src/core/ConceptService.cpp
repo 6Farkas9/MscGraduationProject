@@ -19,23 +19,23 @@ std::string ConceptService::addOneConcept(
     // 向mysql-concepts中添加新的cpt
     // 新建uid
     std::string cpt_uid = UidCreator::generate_uuid_winapi();
-    while (mysqlop.judgeConceptsHadUid(cpt_uid)) {
+    while (mysqlop.judge_cpt_uid_exist(cpt_uid)) {
         cpt_uid = UidCreator::generate_uuid_winapi();
     }
     cpt_uid = std::string("cpt_") + cpt_uid;
-    // // 向concepts中插入数据
-    // mysqlop.insertNewCpt_one(are_uid, cpt_uid, name);
-    // // 向graph_belong中插入数据
-    // mysqlop.insert_are_cpt_one(are_uid, cpt_uid);
-    // // 向graph_precondition中插入数据
-    // std::vector<std::pair<std::string, std::string>> pre_con;
-    // for (auto &pre_cpt : pre_cpt_uids) {
-    //     pre_con.emplace_back(std::make_pair(pre_cpt, cpt_uid));
-    // }
-    // for (auto &aft_cpt : aft_cpt_uids) {
-    //     pre_con.emplace_back(std::make_pair(cpt_uid, aft_cpt));
-    // }
-    // mysqlop.insert_cpt_cpt_many(pre_con);
+    // 向concepts中插入数据
+    mysqlop.insert_one_cpt_to_concepts(are_uid, cpt_uid, name);
+    // 向graph_belong中插入数据
+    mysqlop.insert_one_are_cpt_to_graph_belong(are_uid, cpt_uid);
+    // 向graph_precondition中插入数据
+    std::vector<std::pair<std::string, std::string>> pre_con;
+    for (auto &pre_cpt : pre_cpt_uids) {
+        pre_con.emplace_back(std::make_pair(pre_cpt, cpt_uid));
+    }
+    for (auto &aft_cpt : aft_cpt_uids) {
+        pre_con.emplace_back(std::make_pair(cpt_uid, aft_cpt));
+    }
+    mysqlop.insert_multi_cpt_cpt_to_graph_precondition(pre_con);
 
     // 重新计算相关emb
     recalculate_kcge_cpt_after_add(
@@ -50,14 +50,13 @@ std::string ConceptService::addOneConcept(
 
 bool ConceptService::deleteOneConcept(std::string &cpt_uid) {
     // 从graph_belong中删除记录
-    mysqlop.delete_cpt_from_graph_belong_one(cpt_uid);
+    mysqlop.delete_one_cpt_from_graph_belong(cpt_uid);
     // 从graph_precondition中删除记录
-    mysqlop.delete_cpt_cpt_by_cpt_uid_one(cpt_uid);
+    mysqlop.delete_one_cpt_from_graph_precondition(cpt_uid);
     // 从graph_involve中删除记录
-    mysqlop.delete_scn_cpt_by_cpt_uid_one(cpt_uid);
+    mysqlop.delete_one_cpt_from_graph_involve(cpt_uid);
     // 从concepts中删除
-    mysqlop.delete_cpt_from_concepts_one(cpt_uid);
-
+    mysqlop.delete_one_cpt_from_concepts(cpt_uid);
     // 从MongoDB中删除数据
     mongodbop.delete_cpt_from_concepts(std::vector<std::string>{cpt_uid});
     return true;
@@ -79,6 +78,7 @@ bool ConceptService::recalculate_kcge_cpt_after_add(
     // 添加新知识点的重点在于关系0和关系2（关系1有但是不重要，关系3没有）
     // 构建idx2uid
     std::unordered_map<int, std::string> cpt_idx2uid;
+    std::unordered_map<std::string, int> cpt_uid2idx;
     // 构建基础容器
     std::vector<std::vector<float>> x;
     std::vector<std::vector<int64_t>> edge_index(2, std::vector<int64_t>());
@@ -106,9 +106,11 @@ bool ConceptService::recalculate_kcge_cpt_after_add(
     std::unordered_set<std::string> condition_cpt_uids;
     condition_cpt_uids.insert(pre_cpt_uids.begin(), pre_cpt_uids.end());
     condition_cpt_uids.insert(aft_cpt_uids.begin(), aft_cpt_uids.end());
+    // condition_cpt之间也可能有precondition关系
     auto conditon_cpt_emb_dict = mongodbop.get_cpt_kcge_by_cpt_uid(condition_cpt_uids);
     int64_t condition_cpt_start_idx = 2;
     for (auto & cpt_uid_pre : pre_cpt_uids) {
+        cpt_uid2idx[cpt_uid_pre] = condition_cpt_start_idx;
         cpt_idx2uid[condition_cpt_start_idx] = cpt_uid_pre;
         x.emplace_back(std::move(conditon_cpt_emb_dict[cpt_uid_pre]));
         edge_index[0].emplace_back(condition_cpt_start_idx++);
@@ -117,10 +119,21 @@ bool ConceptService::recalculate_kcge_cpt_after_add(
         edge_attr.emplace_back(1.0f);
     }
     for (auto & cpt_uid_aft : aft_cpt_uids) {
+        cpt_uid2idx[cpt_uid_aft] = condition_cpt_start_idx;
         cpt_idx2uid[condition_cpt_start_idx] = cpt_uid_aft;
         x.emplace_back(std::move(conditon_cpt_emb_dict[cpt_uid_aft]));
         edge_index[0].emplace_back(0);
         edge_index[1].emplace_back(condition_cpt_start_idx++);
+        edge_type.emplace_back(2);
+        edge_attr.emplace_back(1.0f);
+    }
+    // 构造condition_cpt之间的关系
+    auto condition_cpt_cpt = mysqlop.get_cpt_cpt_from_graph_precondition_with_both_in(
+        condition_cpt_uids
+    );
+    for (auto &cpt_cpt : condition_cpt_cpt) {
+        edge_index[0].emplace_back(cpt_uid2idx[cpt_cpt[0]]);
+        edge_index[1].emplace_back(cpt_uid2idx[cpt_cpt[1]]);
         edge_type.emplace_back(2);
         edge_attr.emplace_back(1.0f);
     }
