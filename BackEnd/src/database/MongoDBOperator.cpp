@@ -772,6 +772,51 @@ int MongoDBOperator::update_are_kcge_emb(const std::unordered_map<std::string, s
     }
 }
 
+int MongoDBOperator::update_scn_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &scn_emb) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+
+    try {
+        std::vector<std::pair<
+            bsoncxx::document::view_or_value,
+            bsoncxx::document::view_or_value
+        >> filter_updates;
+
+        for (const auto& [key, vec] : scn_emb) {
+            auto filter = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("_id", key)
+            );
+
+            bsoncxx::builder::basic::array array_builder;
+            for (const auto& v : vec) {
+                array_builder.append(static_cast<double>(v));  // float -> double
+            }
+            auto update = bsoncxx::builder::basic::make_document(
+                bsoncxx::builder::basic::kvp("$set", 
+                    bsoncxx::builder::basic::make_document(
+                        bsoncxx::builder::basic::kvp("KCGE_Emb", array_builder)
+                    )
+                )
+            );
+
+            filter_updates.emplace_back(std::move(filter), std::move(update));
+        }
+
+        // 2. 调用批量更新
+        return bulkUpdateMany("scenes", filter_updates, true);
+    } catch (const bsoncxx::exception& e) {  // 正确：bsoncxx 确实有 exception 类
+        std::cerr << "scn update BSON Error: " << e.what() << std::endl;
+        return -2;
+    } catch (const mongocxx::exception& e) {  // 特定操作异常
+        std::cerr << "scn update MongoDB Operation Failed: " << e.what() << std::endl;
+        return -3;
+    }catch (const std::exception& e) {  // 兜底
+        std::cerr << "System Error: " << e.what() << std::endl;
+        return -1;
+    }
+}
+
 
 
 

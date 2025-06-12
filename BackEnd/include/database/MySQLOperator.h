@@ -141,6 +141,29 @@ public:
     std::vector<std::vector<std::string>> get_cpt_cpt_from_graph_precondition_with_both_in(
         std::unordered_set<std::string> &cpt_uids
     );
+
+    // 从graph_belong中根据cpt_uid获取对应的are_uid
+    std::string get_are_uid_by_cpt_uid(std::string &cpt_uid);
+
+    // 从graph_belong中根据cpt_uid获取对应的are_uid
+    std::unordered_map<std::string, std::string> get_are_uid_by_multi_cpt_uid(
+        std::unordered_set<std::string> &cpt_uids
+    );
+
+    // 获取指定cpt相关的scn_uid
+    std::unordered_set<std::string> get_scn_uid_from_graph_involve_by_cpt_uid(std::string &cpt_uid);
+
+    // 获取指定cpt相关的前后置条件的cpt
+    std::unordered_set<std::string> get_cpt_uid_from_graph_precondition_by_cpt_uid(std::string &cpt_uid);
+
+    // 根据指定的scn和cpt获取involve关系
+    std::unordered_map<std::string, std::unordered_map<std::string, float>> get_scn_cpt_from_graph_involve_by_scns_cpts(
+        std::unordered_set<std::string> &scn_uids,
+        std::unordered_set<std::string> &cpt_uids
+    );
+
+    // 向graph_involve中插入一条数据
+    int insert_one_scn_cpt_to_graph_involve(std::string &scn_uid, std::string &cpt_uid, float difficulty);
 };
 
 #endif

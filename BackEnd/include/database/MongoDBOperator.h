@@ -146,6 +146,9 @@ public:
     // 更新area的kcge嵌入
     int update_are_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &are_emb);
 
+    // 更新scene的kcge嵌入
+    int update_scn_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &scn_emb);
+
     
     // 示例1: 获取用户信息（返回可选文档）
     std::optional<std::unordered_map<std::string, float>> testGetLearnerInfo(const std::string& lrn_uid);

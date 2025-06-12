@@ -36,9 +36,16 @@ int main() {
 
     std::cout << cpt_uid << std::endl;
 
+    std::string scn_uid = "scn_6653ca78e6f74b8088769c4a08dc6784";
+    mysqlop.insert_one_scn_cpt_to_graph_involve(
+        scn_uid,
+        cpt_uid,
+        0.3
+    );
+
     cpt_ser.deleteOneConcept(cpt_uid);
 
-    // std::string to_del = "cpt_4f954528dfc044abac13520696e6f08c";
+    // std::string to_del = "cpt_3ef8d6ab595b49e0b26512e57f8ec9e8";
     // cpt_ser.deleteOneConcept(to_del);
 
     return 0;

@@ -515,3 +515,118 @@ std::vector<std::vector<std::string>> MySQLOperator::get_cpt_cpt_from_graph_prec
         where cpt_uid_pre in )" + uids + R"( and cpt_uid_aft in )" + uids;
     return executeQuery(sql);
 }
+
+std::string MySQLOperator::get_are_uid_by_cpt_uid(std::string &cpt_uid) {
+    std::string sql = R"(
+        select are_uid
+        from graph_belong
+        where cpt_uid = ")" + cpt_uid + R"(")";
+    return executeQuery(sql)[0][0];
+}
+
+std::unordered_map<std::string, std::string> MySQLOperator::get_are_uid_by_multi_cpt_uid(
+    std::unordered_set<std::string> &cpt_uids
+) {
+    std::string sql = R"(
+        select cpt_uid, are_uid
+        from graph_belong
+        where cpt_uid in ()";
+    int cpt_num = cpt_uids.size();
+    int i = 0;
+    for (auto & cpt_uid : cpt_uids) {
+        sql += R"(")" + cpt_uid + R"(")";
+        if (++i < cpt_num) {
+            sql += R"(,)";
+        }
+    }
+    sql += R"())";
+    auto result = executeQuery(sql);
+    std::unordered_map<std::string, std::string> ans;
+    for (auto & cpt_are : result) {
+        ans[std::move(cpt_are[0])] = std::move(cpt_are[1]);
+    }
+    return ans;
+}
+
+std::unordered_set<std::string> MySQLOperator::get_scn_uid_from_graph_involve_by_cpt_uid(std::string &cpt_uid) {
+    std::string sql = R"(
+        select scn_uid
+        from graph_involve
+        where cpt_uid = ")" + cpt_uid + R"(")";
+    auto result = executeQuery(sql);
+    std::unordered_set<std::string> ans;
+    for (auto & scn_uid_vec : result) {
+        ans.insert(std::move(scn_uid_vec[0]));
+    }
+    return ans;
+}
+
+std::unordered_set<std::string> MySQLOperator::get_cpt_uid_from_graph_precondition_by_cpt_uid(std::string &cpt_uid) {
+    std::string sql = R"(
+        select
+            case
+                when cpt_uid_pre = ")" + cpt_uid + R"(" then cpt_uid_aft
+                when cpt_uid_aft = ")" + cpt_uid + R"(" then cpt_uid_pre
+            end as match_col
+        from graph_precondition
+        where ")" + cpt_uid + R"(" in (cpt_uid_pre, cpt_uid_aft))";
+    auto result = executeQuery(sql);
+    std::unordered_set<std::string> ans;
+    for (auto & scn_uid_vec : result) {
+        ans.insert(std::move(scn_uid_vec[0]));
+    }
+    return ans;
+}
+
+std::unordered_map<std::string, std::unordered_map<std::string, float>> MySQLOperator::get_scn_cpt_from_graph_involve_by_scns_cpts(
+    std::unordered_set<std::string> &scn_uids,
+    std::unordered_set<std::string> &cpt_uids
+) {
+    int i, length;
+
+    std::string scn_uids_str = R"(()";
+    length = scn_uids.size();
+    i = 0;
+    for (auto & scn_uid : scn_uids) {
+        scn_uids_str += R"(")" + scn_uid + R"(")";
+        if (++i < length) {
+            scn_uids_str += R"(,)";
+        }
+    }
+    scn_uids_str += R"())";
+
+    std::string cpt_uids_str = R"(()";
+    length = cpt_uids.size();
+    i = 0;
+    for (auto & cpt_uid : cpt_uids) {
+        cpt_uids_str += R"(")" + cpt_uid + R"(")";
+        if (++i < length) {
+            cpt_uids_str += R"(,)";
+        }
+    }
+    cpt_uids_str += R"())";
+
+    std::string sql = R"(
+        select scn_uid, cpt_uid, difficulty
+        from graph_involve
+        where scn_uid in )" + scn_uids_str + R"( and cpt_uid in )" + cpt_uids_str;
+
+    auto result = executeQuery(sql);
+    float difficulty;
+    std::unordered_map<std::string, std::unordered_map<std::string, float>> ans;
+    for (auto & scn_cpt_dif : result) {
+        if (ans.find(scn_cpt_dif[0]) == ans.end()) {
+            ans[scn_cpt_dif[0]] = std::unordered_map<std::string, float>();
+        }
+        std::istringstream(scn_cpt_dif[2]) >> difficulty;
+        ans[scn_cpt_dif[0]][scn_cpt_dif[1]] = difficulty;
+    }
+    return ans;
+}
+
+int MySQLOperator::insert_one_scn_cpt_to_graph_involve(std::string &scn_uid, std::string &cpt_uid, float difficulty) {
+    std::string sql = R"(
+        insert into graph_involve (scn_uid, cpt_uid, difficulty)
+        values (")" + scn_uid+ R"(", ")" + cpt_uid + R"(", )" + std::to_string(difficulty) + R"())";
+    return executeUpdate(sql);
+}
