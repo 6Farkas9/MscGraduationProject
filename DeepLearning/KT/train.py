@@ -266,14 +266,22 @@ def train_lrn_are(datareader, are_uid, parsers, train_data, master_data, optimiz
         for epoch in epoch_tqdm:
             epoch_tqdm.set_description('epoch - {}'.format(epoch))
 
-            train_dataset = IPDKTDataset(train_data_frame, cpt_num, parsers.max_step)
+            train_dataset = IPDKTDataset(
+                train_data_frame, 
+                cpt_num, 
+                len(train_data[lrn_uids_dict[lrn_uid]][2])
+            )
             train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=1, **dataloader_kwargs)
 
             loss, acc = train_epoch(model, train_dataloader, optimizer, criterion, device)
             epoch_tqdm.set_description('epoch - {} train_loss - {:.2f} acc - {:.2f}'.format(epoch, loss, acc))
             del train_dataset, train_dataloader
 
-            master_dataset = IPDKTDataset(master_data_frame, cpt_num, parsers.max_step)
+            master_dataset = IPDKTDataset(
+                master_data_frame, 
+                cpt_num, 
+                len(master_data[lrn_uids_dict[lrn_uid]][2])
+            )
             master_dataloader = DataLoader(master_dataset, batch_size=1, shuffle=True, num_workers=1, **dataloader_kwargs)
 
             loss, acc = master_epoch(model, master_dataloader, criterion, device)
