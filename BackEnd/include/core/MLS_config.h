@@ -3,4 +3,6 @@
 
 #define DEEPLEARNING_ROOT R"(D:\Desktop\GraduationDesign\GraduationDesign\DeepLearning)"
 
+#define FRONTEND_ROOT R"(D:\Desktop\GraduationDesign\GraduationDesign\FrontEnd)"
+
 #endif

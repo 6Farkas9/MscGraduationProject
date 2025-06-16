@@ -1,68 +1,150 @@
 ﻿#include <iostream>
-#include "MongoDBOperator.h"
-#include "MySQLOperator.h"
+#include "MLS_config.h"
+// #include "MongoDBOperator.h"
+// #include "MySQLOperator.h"
 // #include "UidCreator.h"
 // #include "SceneService.h"
 // #include "LearnerService.h"
-#include "ConceptService.h"
+// #include "ConceptService.h"
+
+#include "crow.h"
+#include "crow/middlewares/cors.h"
+
+// 静态文件服务函数
+crow::response serve_file(const std::string& filename, const std::string& content_type) {
+    // 使用filesystem::path处理跨平台路径
+    std::filesystem::path filepath = std::filesystem::path(FRONTEND_ROOT) / filename;
+    
+    if (!std::filesystem::exists(filepath)) {
+        return crow::response(404, crow::json::wvalue{{"error", "File not found"}});
+    }
+    
+    std::ifstream file(filepath, std::ios::binary);
+    if (!file.is_open()) {
+        return crow::response(500, crow::json::wvalue{{"error", "Could not open file"}});
+    }
+    
+    std::string content((std::istreambuf_iterator<char>(file)), 
+                       std::istreambuf_iterator<char>());
+    
+    crow::response res(content);
+    res.set_header("Content-Type", content_type);
+    return res;
+}
 
 int main() {
-    MySQLOperator& mysqlop = MySQLOperator::getInstance();
-    mysqlop.initialize();
-    MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
-    mongodbop.initialize();
+    // 启用CORS中间件
+    crow::App<crow::CORSHandler> app;
+    
+    // 配置CORS
+    auto& cors = app.get_middleware<crow::CORSHandler>();
+    cors
+      .global()
+        .headers("X-Custom-Header", "Upgrade-Insecure-Requests")
+        .methods("POST"_method, "GET"_method)
+      .prefix("/")
+        .origin("*")
+      .prefix("/api")
+        .origin("*");
+    
+    // 静态文件路由
+    CROW_ROUTE(app, "/")([](){
+        return serve_file("index.html", "text/html");
+    });
 
-    ConceptService cpt_ser = ConceptService(mysqlop, mongodbop);
+    CROW_ROUTE(app, "/style.css")([](){
+        return serve_file("style.css", "text/css");
+    });
 
-    std::string are_uid = "are_3fee9e47d0f3428382f4afbcb1004117";
-    std::string name = "test_name";
-
-    std::unordered_set<std::string> pre_cpt, aft_cpt;
-
-    pre_cpt.insert("cpt_f4e10b32f85746d7900fdbff3b27276e");
-    pre_cpt.insert("cpt_5a315add91b0469f8537cb37feb0dc0c");
-    pre_cpt.insert("cpt_a86e9f3aff6245979bf1c8a9454b5dde");
-
-    aft_cpt.insert("cpt_f361c531a42048c18d55769b782c3fd5");
-    aft_cpt.insert("cpt_c7d6af53b25944e6bb3b990c3076df05");
-    aft_cpt.insert("cpt_92b35b614dbc4dcfaa4f3592f8e6d0cd");
-
-    std::string cpt_uid = cpt_ser.addOneConcept(
-        are_uid,
-        pre_cpt,
-        aft_cpt,
-        name
-    );
-
-    std::cout << cpt_uid << std::endl;
-
-    std::string scn_uid = "scn_6653ca78e6f74b8088769c4a08dc6784";
-    mysqlop.insert_one_scn_cpt_to_graph_involve(
-        scn_uid,
-        cpt_uid,
-        0.3
-    );
-
-    cpt_ser.deleteOneConcept(cpt_uid);
-
-    // std::string to_del = "cpt_3ef8d6ab595b49e0b26512e57f8ec9e8";
-    // cpt_ser.deleteOneConcept(to_del);
-
+    CROW_ROUTE(app, "/test.js")([](){
+        return serve_file("test.js", "application/javascript");
+    });
+    
+    // API端点 - 统一使用crow::response
+    CROW_ROUTE(app, "/api/hello")([](){
+        crow::json::wvalue response;
+        response["message"] = "Hello from Crow C++ backend!";
+        response["status"] = "success";
+        return crow::response(response);
+    });
+    
+    // API端点 - POST请求
+    CROW_ROUTE(app, "/api/echo").methods("POST"_method)([](const crow::request& req){
+        auto x = crow::json::load(req.body);
+        if (!x) {
+            return crow::response(400, crow::json::wvalue{{"error", "Invalid JSON"}});
+        }
+        
+        crow::json::wvalue response;
+        response["received"] = x;
+        response["message"] = "Data received successfully!";
+        return crow::response(response);
+    });
+    
+    // 启动服务器
+    std::cout << "Server running on http://localhost:18080" << std::endl;
+    app.port(18080).multithreaded().run();
+    
     return 0;
-
-    // LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
-
-    // auto res = lrn_ser.predict_lrn_rr(
-    //     "lrn_aee0624932cf4affa00626e8f038c4e8"
-    // );
-
-    // std::cout << res.size() << std::endl;
-
-    // for (auto & kv : res) {
-    //     std::cout << kv.first << " , " << kv.second << std::endl;
-    // }
-
 }
+
+// int main() {
+//     MySQLOperator& mysqlop = MySQLOperator::getInstance();
+//     mysqlop.initialize();
+//     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
+//     mongodbop.initialize();
+
+//     ConceptService cpt_ser = ConceptService(mysqlop, mongodbop);
+
+//     std::string are_uid = "are_3fee9e47d0f3428382f4afbcb1004117";
+//     std::string name = "test_name";
+
+//     std::unordered_set<std::string> pre_cpt, aft_cpt;
+
+//     pre_cpt.insert("cpt_f4e10b32f85746d7900fdbff3b27276e");
+//     pre_cpt.insert("cpt_5a315add91b0469f8537cb37feb0dc0c");
+//     pre_cpt.insert("cpt_a86e9f3aff6245979bf1c8a9454b5dde");
+
+//     aft_cpt.insert("cpt_f361c531a42048c18d55769b782c3fd5");
+//     aft_cpt.insert("cpt_c7d6af53b25944e6bb3b990c3076df05");
+//     aft_cpt.insert("cpt_92b35b614dbc4dcfaa4f3592f8e6d0cd");
+
+//     std::string cpt_uid = cpt_ser.addOneConcept(
+//         are_uid,
+//         pre_cpt,
+//         aft_cpt,
+//         name
+//     );
+
+//     std::cout << cpt_uid << std::endl;
+
+//     std::string scn_uid = "scn_6653ca78e6f74b8088769c4a08dc6784";
+//     mysqlop.insert_one_scn_cpt_to_graph_involve(
+//         scn_uid,
+//         cpt_uid,
+//         0.3
+//     );
+
+//     cpt_ser.deleteOneConcept(cpt_uid);
+
+//     // std::string to_del = "cpt_3ef8d6ab595b49e0b26512e57f8ec9e8";
+//     // cpt_ser.deleteOneConcept(to_del);
+
+//     return 0;
+
+//     // LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
+
+//     // auto res = lrn_ser.predict_lrn_rr(
+//     //     "lrn_aee0624932cf4affa00626e8f038c4e8"
+//     // );
+
+//     // std::cout << res.size() << std::endl;
+
+//     // for (auto & kv : res) {
+//     //     std::cout << kv.first << " , " << kv.second << std::endl;
+//     // }
+
+// }
 
 // "are_3fee9e47d0f3428382f4afbcb1004117"
 

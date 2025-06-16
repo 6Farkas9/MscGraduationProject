@@ -1,22 +1,31 @@
 <!DOCTYPE html>
-<html lang="">
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>vue-manage-system后台管理系统</title>
-  <link rel="stylesheet" href="//at.alicdn.com/t/c/font_830376_92o68tc95je.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crow C++ Backend Test</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
-
 <body>
-  <noscript>
-    <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled.
-        Please enable it to continue.</strong>
-  </noscript>
-  <div id="app"></div>
-  <script type="module" src="/src/main.ts"></script>
-  <!-- built files will be auto injected -->
+    <div class="container">
+        <h1>Crow C++ Backend Test</h1>
+        
+        <div class="section">
+            <h2>GET Request Test</h2>
+            <button id="getTestBtn">Test GET /api/hello</button>
+            <div id="getResult" class="result"></div>
+        </div>
+        
+        <div class="section">
+            <h2>POST Request Test</h2>
+            <div class="input-group">
+                <input type="text" id="postInput" placeholder="Enter some text">
+                <button id="postTestBtn">Test POST /api/echo</button>
+            </div>
+            <div id="postResult" class="result"></div>
+        </div>
+    </div>
+    
+    <script src="/test.js"></script>
 </body>
-
 </html>
