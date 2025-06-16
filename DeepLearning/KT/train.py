@@ -229,10 +229,10 @@ def train_lrn_are(datareader, are_uid, parsers, train_data, master_data, optimiz
     IPDKT_pt_path = os.path.join('PT')
     IPDKT_pt_train_path = os.path.join(IPDKT_pt_path, are_uid + '_train.pt')
 
-    IPDKT_pt_are_dit_path = os.path.join(IPDKT_pt_path, are_uid)
+    IPDKT_pt_are_dir_path = os.path.join(IPDKT_pt_path, are_uid)
 
-    if not os.path.exists(IPDKT_pt_are_dit_path):
-        os.makedirs(IPDKT_pt_are_dit_path)
+    if not os.path.exists(IPDKT_pt_are_dir_path):
+        os.makedirs(IPDKT_pt_are_dir_path)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}  

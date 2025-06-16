@@ -30,18 +30,25 @@ parser.add_argument('--embedding_dim',type=int,default=32,help='number of embedd
 parser.add_argument('--num_workers',type=int,default=3,help='num of workers')
 parser.add_argument('--max_step',type=int,default=256,help='num of max_step')
 
-def save_final_data(x, datareader : CDDataReader):
+def save_final_data(lrn_uid, x, datareader : CDDataReader):
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     CD_pt_path = os.path.join(deeplearning_root, 'CD', 'PT')
     CD_use_path = os.path.join(CD_pt_path, are_uid + '_use.pt')
+    CD_lrn_pt_use_path = os.path.join(CD_pt_path, are_uid, lrn_uid + '_use.pt')
 
-    model_cd = torch.jit.load(CD_use_path)
+    CD_final_use_path = ''
+    if os.path.exists(CD_lrn_pt_use_path):
+        CD_final_use_path = CD_lrn_pt_use_path
+    else:
+        CD_final_use_path = CD_use_path
+
+    model_cd = torch.jit.load(CD_final_use_path)
     model_cd = model_cd.to('cpu')
 
     model_cd.eval()
 
-    scn_index, scn_mask, scn_index_special, scn_mask_special, scn_idx ,cpt_idx = datareader.get_final_Data()
+    scn_index, scn_mask, scn_index_special, scn_mask_special, scn_idx ,cpt_idx = datareader.get_final_Data(lrn_uid)
 
     # 根据返回的scn_idx和cpt_idx从x中获取h_scn和h_cpt
     h_are = x[0]
@@ -64,7 +71,7 @@ def save_final_data(x, datareader : CDDataReader):
     
     # print(r_pred.shape)
 
-    cddatareader.save_final_data(r_pred, h_are, h_scn, h_cpt)
+    cddatareader.save_final_data(lrn_uid, r_pred, h_are, h_scn, h_cpt)
 
 def train_single_are(cddatareader, parsers, are_uid):
     train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = cddatareader.load_Data_from_db()
@@ -288,9 +295,187 @@ def train_single_are(cddatareader, parsers, are_uid):
         scripted_model_cd = torch.jit.optimize_for_inference(scripted_model_cd)
         scripted_model_cd.save(CD_use_path)
 
-    save_final_data(x.to('cpu'), cddatareader)
+    train_lrn_are(
+        cddatareader, parsers, are_uid, x, 
+        train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type,
+        optimizer, criterion
+    )
 
+def train_lrn_are(
+        cddatareader, parsers, are_uid, x,
+        train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type,
+        optimizer, criterion):
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}
+
+    model_kcge = KCGE(parsers.embedding_dim).to(device)
+    model_cd = CD(parsers.embedding_dim).to(device)
+
+    KCGE_pt_path = os.path.join(deeplearning_root, 'KCGE', 'PT')
+    KCGE_train_path = os.path.join(KCGE_pt_path, 'KCGE_train.pt')
+
+    CD_pt_path = os.path.join(deeplearning_root, 'CD', 'PT')
+    CD_train_path = os.path.join(CD_pt_path, are_uid + '_train.pt')
+
+    CD_pt_are_dir_path =  os.path.join(CD_pt_path, are_uid)
+
+    if not os.path.exists(CD_pt_are_dir_path):
+        os.makedirs(CD_pt_are_dir_path)
+
+    lrn_tqdm = tqdm(lrn_uids)
+    for lrn_uid in lrn_tqdm:
+        lrn_tqdm.set_description('{}'.format(lrn_uid))
+
+        model_cd = model_cd.to(device)
+
+        checkpoint = torch.load(KCGE_train_path, map_location=device)
+        model_kcge.load_state_dict(checkpoint['model_kcge'])
+        checkpoint = torch.load(CD_train_path, map_location=device)
+        model_cd.load_state_dict(checkpoint['model_cd'])
+
+        epoch_tqdm = tqdm(range(parsers.epochs))
+        for epoch in epoch_tqdm:
+            epoch_tqdm.set_description('epoch {} - train'.format(epoch))
+
+            model_kcge.train()
+            model_cd.train()
+
+            train_dataset = CDDataset(
+                {lrn_uid : train_data[lrn_uid]}, 
+                {lrn_uid : 0}, 
+                cpt_uids, scn_uids, 
+                parsers.max_step
+            )
+            train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=1, **dataloader_kwargs)
+
+            batch_tqdm = tqdm(train_dataloader)
+
+            num_correct = 0
+            num_total = 0
+            loss_train = []
+
+            for item in batch_tqdm:
+                # 'learner_idx' : learner_idx,
+                # 'scn_seq_index' : scn_seq_index,
+                # 'scn_seq_mask' : scn_seq_mask,
+                # 'result' : result
+                lrn_uids_in = item['learner_uid']
+                scn_seq_idx = item['scn_seq_index']
+                scn_seq_mask = item['scn_seq_mask']
+                result = item['result']
+
+                z = model_kcge(x, edge_index.to(device), edge_type.to(device), edge_attr.to(device))
+                x = z.detach().clone()
+
+                h_scn = z[scn_idx]
+                h_cpt = z[cpt_idx]
+
+                # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
+                selected = h_scn[scn_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
+                # 2. 计算加权和（利用广播机制）
+                weighted_sum = (selected * scn_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
+                # 3. 计算有效计数（每行有多少个 1）
+                valid_counts = scn_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
+                # 4. 直接归一化
+                h_lrn = weighted_sum / valid_counts.to(device)  # (lrn_num, embedding_dim)
+
+                r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_lrn, h_scn, h_cpt)
+
+                result = result.flatten().to(device)
+                r_pred = r_pred.flatten()
+
+                loss = criterion(result, r_pred)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                num_correct += ((r_pred >= 0.5).long() == result).sum().item()
+                num_total += len(result)
+                loss_train.append(loss.detach().cpu().numpy())
+                batch_tqdm.set_description('loss:{:.4f}'.format(loss))
+            
+            acc = num_correct / num_total
+            loss = np.average(loss_train)
+            epoch_tqdm.set_description('epoch {} - train - loss:{:.4f} - acc:{:.4f}'.format(epoch, loss, acc))
+
+            del train_dataloader
+
+            epoch_tqdm.set_description('epoch {} - master'.format(epoch))
+
+            model_kcge.eval()
+            model_cd.eval()
+
+            master_dataset = CDDataset(
+                {lrn_uid : master_data[lrn_uid]}, 
+                {lrn_uid : 0}, 
+                cpt_uids, scn_uids, 
+                parsers.max_step)
+            master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
+
+            batch_tqdm = tqdm(master_dataloader)
+
+            num_correct = 0
+            num_total = 0
+            loss_master = []
+
+            for item in batch_tqdm:
+                # 'learner_idx' : learner_idx,
+                # 'scn_seq_index' : scn_seq_index,
+                # 'scn_seq_mask' : scn_seq_mask,
+                # 'result' : result
+                lrn_uids_in = item['learner_uid']
+                scn_seq_idx = item['scn_seq_index']
+                scn_seq_mask = item['scn_seq_mask']
+                result = item['result']
+
+                with torch.no_grad():
+
+                    z = model_kcge(x, edge_index.to(device), edge_type.to(device), edge_attr.to(device))
+                    x = z.detach().clone()
+
+                    # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
+                    selected = h_scn[scn_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
+                    # 2. 计算加权和（利用广播机制）
+                    weighted_sum = (selected * scn_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
+                    # 3. 计算有效计数（每行有多少个 1）
+                    valid_counts = scn_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
+                    # 4. 直接归一化
+                    h_lrn = weighted_sum / valid_counts.to(device)  # (lrn_num, embedding_dim)
+
+                    r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_lrn, h_scn, h_cpt)
+
+                result = result.flatten().to(device)
+                r_pred = r_pred.flatten()
+
+                loss = criterion(result, r_pred)
+
+                num_correct += ((r_pred >= 0.5).long() == result).sum().item()
+                num_total += len(result)
+                loss_master.append(loss.detach().cpu().numpy())
+                batch_tqdm.set_description('loss:{:.4f}'.format(loss))
+            
+            acc = num_correct / num_total
+            loss = np.average(loss_master)
+            epoch_tqdm.set_description('epoch {} - master - loss:{:.4f} - acc:{:.4f}'.format(epoch, loss, acc))
+
+            del master_dataloader
+
+        CD_lrn_pt_use_path = os.path.join(CD_pt_path, are_uid, lrn_uid + '_use.pt')
+
+        model_cd = model_cd.to('cpu')
+        torch.cuda.empty_cache()
+
+        with torch.no_grad():  # 禁用梯度计算
+            with torch.jit.optimized_execution(False):  # 禁止优化时隐式转移到GPU
+                scripted_model_cd = torch.jit.script(model_cd)
+
+        scripted_model_cd = torch.jit.optimize_for_inference(scripted_model_cd)
+        scripted_model_cd.save(CD_lrn_pt_use_path)
+
+        save_final_data(lrn_uid, x.to('cpu'), cddatareader)
+    
 if __name__ == '__main__':
     parsers = parser.parse_args()
 

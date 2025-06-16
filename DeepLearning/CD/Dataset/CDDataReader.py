@@ -102,51 +102,52 @@ class CDDataReader():
         return train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type
         
     
-    def get_final_Data(self):
+    def get_final_Data(self, lrn_uid):
 
         # 获取所有的特殊课程的scn_uid和cpt_uid
         # 通过uid和scn_uids获取每个特殊课程的id
         # 然后获取有序的cpt_uid_list
 
         # 根据这个获取scn_index，scn_mask因为每个lrn的交互个数不同，还是要设置一下的
-        num_learners = len(self.lrn_scn)
-        scn_index = torch.zeros((num_learners, self.max_scn_num), dtype=torch.long)
-        scn_mask = torch.zeros((num_learners, self.max_scn_num), dtype=torch.float)
+        num_learners = 1
+        scn_list = self.lrn_scn[lrn_uid][0]
+        seq_len = min(len(scn_list), self.max_scn_num)
+
+        scn_index = torch.zeros((num_learners, seq_len), dtype=torch.long)
+        scn_mask = torch.zeros((num_learners, seq_len), dtype=torch.float)
         
         # 预先将scn_uids转换为defaultdict提高查找效率
         scn_uids_default = defaultdict(int, self.scn_uids)  # 不存在的key返回0
         
-        for i, (lrn_uid, (scn_list, _)) in enumerate(self.lrn_scn.items()):
-            seq_len = min(len(scn_list), self.max_scn_num)
-            
-            # 一次性处理所有场景
-            scn_ids = [scn_uids_default[scn_uid] for scn_uid in scn_list[:seq_len]]
-            scn_index[i, :seq_len] = torch.tensor(scn_ids, dtype=torch.long)
-            scn_mask[i, :seq_len] = 1.0
+        # for i, (lrn_uid, (scn_list, _)) in enumerate(self.lrn_scn.items()):
+        # 一次性处理所有场景
+        scn_ids = [scn_uids_default[scn_uid] for scn_uid in scn_list[:seq_len]]
+        scn_index[0 : seq_len] = torch.tensor(scn_ids, dtype=torch.long)
+        scn_mask[0 : seq_len] = 1.0
 
         # 这个变量用来获取之后的h_scn和h_cpt
         special_scn_cpt_uids = mysqldb.get_special_scn_cpt_uid_of_are(self.are_uid)
 
         cpt_num = len(special_scn_cpt_uids)
-        scn_mask_special  = torch.ones(len(self.lrn_uids), cpt_num, dtype=torch.float32)
+        scn_mask_special  = torch.ones(1, cpt_num, dtype=torch.float32)
 
         scn_seq = [self.scn_uids[scn_uid] for scn_uid, _ in special_scn_cpt_uids]
         self.cpt_uids_list_orderd = [cpt_uid for _, cpt_uid in special_scn_cpt_uids]
         scn_index_oneline = torch.tensor(scn_seq, dtype=torch.long)
         
-        scn_index_special = scn_index_oneline.expand(len(self.lrn_uids), -1).contiguous()
+        scn_index_special = scn_index_oneline.expand(1, -1).contiguous()
 
         return scn_index, scn_mask, scn_index_special, scn_mask_special, self.scn_idx ,self.cpt_idx
     
-    def save_final_data(self, r_pred, h_are, h_scn, h_cpt):
+    def save_final_data(self, lrn_uid, r_pred, h_are, h_scn, h_cpt):
 
         # cd不同于其他的模型，最终的结果计算要计算学习者关于特定场景的正确概率
         r_pred_dict = {
             lrn_uid: {
-                cpt_uid: float(r_pred[i, j])  # 显式转换为Python float
-                for j, cpt_uid in enumerate(self.cpt_uids_list_orderd)
+                cpt_uid: float(r_pred[0, i])  # 显式转换为Python float
+                for i, cpt_uid in enumerate(self.cpt_uids_list_orderd)
             }
-            for i, lrn_uid in enumerate(list(self.lrn_uids.keys()))
+            # for i, lrn_uid in enumerate(list(self.lrn_uids.keys()))
         }
         mongodb.save_cd_final_r_pred_emb(r_pred_dict)
         
