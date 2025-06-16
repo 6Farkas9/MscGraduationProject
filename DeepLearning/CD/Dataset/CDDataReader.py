@@ -35,6 +35,9 @@ class CDDataReader():
     
     def get_scn_of_are_with_result(self):
         return mysqldb.get_scn_of_are_with_result(self.are_uid)
+    
+    def get_scn_and_cpt_idx(self):
+        return self.scn_idx, self.cpt_idx
 
     def load_Data_from_db(self):
         cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = self.kcgedr.load_data_from_db()
@@ -139,18 +142,7 @@ class CDDataReader():
 
         return scn_index, scn_mask, scn_index_special, scn_mask_special, self.scn_idx ,self.cpt_idx
     
-    def save_final_data(self, lrn_uid, r_pred, h_are, h_scn, h_cpt):
-
-        # cd不同于其他的模型，最终的结果计算要计算学习者关于特定场景的正确概率
-        r_pred_dict = {
-            lrn_uid: {
-                cpt_uid: float(r_pred[0, i])  # 显式转换为Python float
-                for i, cpt_uid in enumerate(self.cpt_uids_list_orderd)
-            }
-            # for i, lrn_uid in enumerate(list(self.lrn_uids.keys()))
-        }
-        mongodb.save_cd_final_r_pred_emb(r_pred_dict)
-        
+    def save_final_kcge_data(self, h_are, h_scn, h_cpt):
         are_emb_dict = {
             self.are_uid : h_are.tolist()
         }
@@ -165,6 +157,18 @@ class CDDataReader():
             cpt_uid : h_cpt[self.cpt_uids[cpt_uid]].tolist() for cpt_uid in self.cpt_uids
         }
         mongodb.save_kcge_final_cpt_emb(cpt_emb_dict)
+
+    def save_final_cd_data(self, lrn_uid, r_pred):
+
+        # cd不同于其他的模型，最终的结果计算要计算学习者关于特定场景的正确概率
+        r_pred_dict = {
+            lrn_uid: {
+                cpt_uid: float(r_pred[0, i])  # 显式转换为Python float
+                for i, cpt_uid in enumerate(self.cpt_uids_list_orderd)
+            }
+            # for i, lrn_uid in enumerate(list(self.lrn_uids.keys()))
+        }
+        mongodb.save_cd_final_r_pred_emb(r_pred_dict)
 
     
 if __name__ == '__main__':

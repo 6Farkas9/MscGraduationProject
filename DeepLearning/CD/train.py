@@ -30,6 +30,15 @@ parser.add_argument('--embedding_dim',type=int,default=32,help='number of embedd
 parser.add_argument('--num_workers',type=int,default=3,help='num of workers')
 parser.add_argument('--max_step',type=int,default=256,help='num of max_step')
 
+def save_final_kcge_data(x, datareader : CDDataReader):
+    scn_idx, cpt_idx = datareader.get_scn_and_cpt_idx()
+    # 获取嵌入式表达
+    h_are = x[0]
+    h_scn = x[scn_idx]
+    h_cpt = x[cpt_idx]
+    # 保存
+    cddatareader.save_final_kcge_data(h_are, h_scn, h_cpt)
+
 def save_final_data(lrn_uid, x, datareader : CDDataReader):
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -51,7 +60,6 @@ def save_final_data(lrn_uid, x, datareader : CDDataReader):
     scn_index, scn_mask, scn_index_special, scn_mask_special, scn_idx ,cpt_idx = datareader.get_final_Data(lrn_uid)
 
     # 根据返回的scn_idx和cpt_idx从x中获取h_scn和h_cpt
-    h_are = x[0]
     h_scn = x[scn_idx]
     h_cpt = x[cpt_idx]
 
@@ -71,7 +79,7 @@ def save_final_data(lrn_uid, x, datareader : CDDataReader):
     
     # print(r_pred.shape)
 
-    cddatareader.save_final_data(lrn_uid, r_pred, h_are, h_scn, h_cpt)
+    cddatareader.save_final_cd_data(lrn_uid, r_pred)
 
 def train_single_are(cddatareader, parsers, are_uid):
     train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = cddatareader.load_Data_from_db()
@@ -294,6 +302,8 @@ def train_single_are(cddatareader, parsers, are_uid):
         scripted_model_kcge.save(KCGE_use_path)
         scripted_model_cd = torch.jit.optimize_for_inference(scripted_model_cd)
         scripted_model_cd.save(CD_use_path)
+
+    save_final_kcge_data(x, cddatareader)
 
     train_lrn_are(
         cddatareader, parsers, are_uid, x, 
