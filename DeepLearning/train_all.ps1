@@ -16,19 +16,19 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # 3. 依次运行Python脚本
-# Write-Host "`n正在运行第一个脚本: $pythonScript1"
-# python $pythonScript1
-# if ($LASTEXITCODE -ne 0) {
-#     Write-Host "$pythonScript1 执行失败"
-#     exit 1
-# }
+Write-Host "`n正在运行第一个脚本: $pythonScript1"
+python $pythonScript1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "$pythonScript1 执行失败"
+    exit 1
+}
 
-# Write-Host "`n正在运行第二个脚本: $pythonScript2"
-# python $pythonScript2
-# if ($LASTEXITCODE -ne 0) {
-#     Write-Host "$pythonScript2 执行失败"
-#     exit 1
-# }
+Write-Host "`n正在运行第二个脚本: $pythonScript2"
+python $pythonScript2
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "$pythonScript2 执行失败"
+    exit 1
+}
 
 Write-Host "`n正在运行第三个脚本: $pythonScript3"
 python $pythonScript3
