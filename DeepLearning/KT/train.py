@@ -183,9 +183,9 @@ def train_single_are(datareader, parsers, are_uid):
 
         loss, acc = master_epoch(model, master_dataloader, criterion, device)
         epoch_tqdm.set_description('epoch - {} master_loss - {:.2f} acc - {:.2f}'.format(epoch, loss, acc))
+        del master_dataset, master_dataloader
         # print('epoch - {} master_loss - {:.2f} acc - {:.2f}'.format(epoch, loss, acc))
         loss_all.append(loss)
-        del master_dataset,master_dataloader
 
         if (epoch + 1) % 8 == 0:
             torch.save({
@@ -220,29 +220,106 @@ def train_single_are(datareader, parsers, are_uid):
 
     datareader.make_cpt_trained()
 
-    save_final_predict(are_uid, datareader)
+    train_lrn_are(datareader, are_uid, parsers, train_data, master_data, optimizer, criterion)
 
+def train_lrn_are(datareader, are_uid, parsers, train_data, master_data, optimizer, criterion):
+    # 根据are_uid加载lrn_uids
+    lrn_uids_dict = datareader.get_lrn_uids()
 
-def save_final_predict(are_uid, datareader: IPDKTDataReader):
+    IPDKT_pt_path = os.path.join('PT')
+    IPDKT_pt_train_path = os.path.join(IPDKT_pt_path, are_uid + '_train.pt')
+
+    IPDKT_pt_are_dit_path = os.path.join(IPDKT_pt_path, are_uid)
+
+    if not os.path.exists(IPDKT_pt_are_dit_path):
+        os.makedirs(IPDKT_pt_are_dit_path)
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}  
+
+    cpt_num = datareader.get_cpt_num_of_area()
+    model = IPDKT(
+        input_size= 2 * cpt_num,
+        hidden_size= parsers.hidden_size,
+        num_layer= parsers.num_layers,
+        output_size= cpt_num
+    ).to(device) 
+
+    lrn_tqdm = tqdm(lrn_uids_dict)
+    for lrn_uid in lrn_tqdm:
+        lrn_tqdm.set_description('{}'.format(lrn_uid))
+        # 加载单lrn训练数据
+        train_data_frame = pd.DataFrame(
+            [train_data[lrn_uids_dict[lrn_uid]]], 
+            columns=['lrn_id','cpt_ids','correct']
+        ).set_index('lrn_id')
+        master_data_frame = pd.DataFrame(
+            [master_data[lrn_uids_dict[lrn_uid]]], 
+            columns=['lrn_id','cpt_ids','correct']
+        ).set_index('lrn_id')
+        # 加载train模型
+        check_point = torch.load(IPDKT_pt_train_path, map_location=device)
+        model.load_state_dict(check_point['model_state_dict'])
+        model = model.to(device)
+        # 训练
+        epoch_tqdm = tqdm(range(parsers.epochs))
+        for epoch in epoch_tqdm:
+            epoch_tqdm.set_description('epoch - {}'.format(epoch))
+
+            train_dataset = IPDKTDataset(train_data_frame, cpt_num, parsers.max_step)
+            train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=1, **dataloader_kwargs)
+
+            loss, acc = train_epoch(model, train_dataloader, optimizer, criterion, device)
+            epoch_tqdm.set_description('epoch - {} train_loss - {:.2f} acc - {:.2f}'.format(epoch, loss, acc))
+            del train_dataset, train_dataloader
+
+            master_dataset = IPDKTDataset(master_data_frame, cpt_num, parsers.max_step)
+            master_dataloader = DataLoader(master_dataset, batch_size=1, shuffle=True, num_workers=1, **dataloader_kwargs)
+
+            loss, acc = master_epoch(model, master_dataloader, criterion, device)
+            epoch_tqdm.set_description('epoch - {} master_loss - {:.2f} acc - {:.2f}'.format(epoch, loss, acc))
+            del master_dataset, master_dataloader
+        # 保存对应lrn的单pt结果
+
+        IPDKT_lrn_pt_use_path = os.path.join(IPDKT_pt_path, are_uid, lrn_uid + '_use.pt')
+        model = model.to('cpu')
+        torch.cuda.empty_cache()
+
+        with torch.no_grad():  # 禁用梯度计算
+            with torch.jit.optimized_execution(False):  # 禁止优化时隐式转移到GPU
+                scripted_model = torch.jit.script(model)
+
+        scripted_model = torch.jit.optimize_for_inference(scripted_model)
+        scripted_model.save(IPDKT_lrn_pt_use_path)
+        # 计算保存预测结果
+        save_final_predict(lrn_uid, datareader)
+
+def save_final_predict(lrn_uid, datareader: IPDKTDataReader):
     # 获取当前领域的所有学生的各自的数据 - 因为是最终预测，不需要数据大小对齐，所以获取所有数据就行
-    final_data, cpt_id2uid = datareader.load_final_data('cpu')
+    final_data, cpt_id2uid = datareader.load_final_data(lrn_uid, 'cpu')
     
     # 然后加载模型，
     IPDKT_pt_path = os.path.join('PT')
     IPDKT_pt_use_path = os.path.join(IPDKT_pt_path, are_uid + '_use.pt')
+    IPDKT_lrn_pt_use_path = os.path.join(IPDKT_pt_path, are_uid, lrn_uid + '_use.pt')
 
-    model_ipdkt = torch.jit.load(IPDKT_pt_use_path)
+    IPDKT_final_use = ''
+    if os.path.exists(IPDKT_lrn_pt_use_path):
+        IPDKT_final_use = IPDKT_lrn_pt_use_path
+    else:
+        IPDKT_final_use = IPDKT_pt_use_path
+
+    model_ipdkt = torch.jit.load(IPDKT_final_use)
     model_ipdkt = model_ipdkt.to('cpu')
 
     model_ipdkt.eval()
 
     # 预测出结果
     pre_result = {}
-    for lrn_uid in final_data:
-        with torch.no_grad():
-            result = model_ipdkt(final_data[lrn_uid])[-1]
-        # print(pre_result[lrn_uid])
-        pre_result[lrn_uid] = {cpt_uid : result[id].item() for id, cpt_uid in cpt_id2uid.items()}
+    with torch.no_grad():
+        result = model_ipdkt(final_data)[-1]
+    # print(pre_result[lrn_uid])
+    pre_result[lrn_uid] = {cpt_uid : result[id].item() for id, cpt_uid in cpt_id2uid.items()}
 
     # 保存到MongoDB中
     datareader.save_final_data(pre_result)

@@ -50,14 +50,17 @@ class IPDKTDataReader():
     def get_concepts_of_scene(self, scn_uids):
         return mysqldb.get_concepts_of_scenes(scn_uids)
     
-    # def get_concept_num_of_area(self):
-    #     return db.get_concept_num_of_area(self.are_uid)[0]
+    def get_cpt_num_of_area(self):
+        return self.cpt_num
     
     def get_cpt_uid_of_scene(self, scn_uids):
         return mysqldb.get_concepts_uid_of_scenes(scn_uids)
     
     def load_area_uids(self):
         return mysqldb.get_areas_uid()
+    
+    def get_lrn_uids(self):
+        return self.lrn_uids
 
     # 从数据库中获取所有数据
     def load_data_from_db(self):
@@ -83,6 +86,7 @@ class IPDKTDataReader():
         scn_uids = list(scn_uids_set)
 
         lrn_uids = {lrn_uid : idx for idx, lrn_uid in enumerate(lrn_uids_list)}
+        self.lrn_uids = lrn_uids
         self.lrn_id2uid = {idx : lrn_uid for idx, lrn_uid in enumerate(lrn_uids_list)}
         
         scn_cpts = self.get_cpt_uid_of_scene(list(scn_uids))
@@ -131,30 +135,23 @@ class IPDKTDataReader():
         mysqldb.make_cpt_trained(self.cpt_uids_list)
 
     # 获取当前时间前推30天内的所有interacts数据
-    def load_final_data(self, device):
+    def load_final_data(self, lrn_uid, device):
         # shape: [[lrn_uid, [[cpt_uid, cpt_uid], [...],  ...], [correct, correct]], [....], ...]
-        final_data = {}
 
-        for onelrndata in self.data:
-            lrn_uid = onelrndata[0]
-            interact_num = len(onelrndata[1])
+        the_lrn_data = self.data[self.lrn_uids[lrn_uid]]
+        interact_num = len(the_lrn_data[1])
 
-            final_data[lrn_uid] = torch.zeros(interact_num, self.cpt_num * 2, dtype=torch.float32, device=device)
+        final_data = torch.zeros(interact_num, self.cpt_num * 2, dtype=torch.float32, device=device)
 
-            row = []
-            col = []
+        row = []
+        col = []
 
-            for i in range(interact_num):
-                skip = self.cpt_num * (1 - onelrndata[2][i])
-                row.extend([i] * len(onelrndata[1][i]))
-                col.extend([cpt_id + skip for cpt_id in onelrndata[1][i]])
+        for i in range(interact_num):
+            skip = self.cpt_num * (1 - the_lrn_data[2][i])
+            row.extend([i] * len(the_lrn_data[1][i]))
+            col.extend([cpt_id + skip for cpt_id in the_lrn_data[1][i]])
 
-            # for i in range(interact_num):
-            #     skip = self.cpt_num * (1 - onelrndata[2][i])
-            #     for cpt_id in onelrndata[1][i]:
-            #         final_data[lrn_uid][i][int(skip + cpt_id)] = 1.0
-
-            final_data[lrn_uid][row, col] = 1.0
+        final_data[row, col] = 1.0
 
         return final_data, self.cpt_id2uid
 
