@@ -39,14 +39,7 @@ def RRloss(r_pred : torch.tensor, r : torch.tensor, h_lrn : torch.tensor, h_cpt 
     loss = mse_loss + lambda_reg * regularization_loss
     return loss
 
-def save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDataReader):
-    # 其实，就是最后一次的master的特化版本
-    # 根据输入的数据获取各种图
-    # 然后获取所有学生的近一个月的所有交互数据
-    # 加载模型
-    # 得出四个结果
-    # 学习者、知识点、场景的嵌入式表达直接保存
-    # 推荐得分按学习者分类保存
+def save_final_hgc_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDataReader):
     device = 'cpu'
 
     lrn_uids, scn_uids, cpt_uids = uids
@@ -64,23 +57,17 @@ def save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDat
     HGC_SCN_use_path = os.path.join(HGC_pt_path, 'HGC_SCN_use.pt')
     HGC_CPT_use_path = os.path.join(HGC_pt_path, 'HGC_CPT_ues.pt')
 
-    RR_pt_path = os.path.join(deeplearning_root, 'RR', 'PT')
-    RR_use_path = os.path.join(RR_pt_path, 'RR_use.pt')
-
     model_hgc_lrn = torch.jit.load(HGC_LRN_use_path)
     model_hgc_scn = torch.jit.load(HGC_SCN_use_path)
     model_hgc_cpt = torch.jit.load(HGC_CPT_use_path)
-    model_rr = torch.jit.load(RR_use_path)
 
     model_hgc_lrn = model_hgc_lrn.to(device)
     model_hgc_scn = model_hgc_scn.to(device)
     model_hgc_cpt = model_hgc_cpt.to(device)
-    model_rr = model_rr.to(device)
 
     model_hgc_lrn.eval()
     model_hgc_scn.eval()
     model_hgc_cpt.eval()
-    model_rr.eval()
 
     with torch.no_grad():
 
@@ -99,25 +86,66 @@ def save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDat
 
         scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat, cpt_emb)
 
-        scn_index, scn_mask = datareader.get_final_lrn_scn_index(lrn_uids, scn_uids)
-
-        r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
-                                    scn_dynamic_emb, 
-                                    scn_index,
-                                    scn_mask,
-                                    cpt_emb)
-
     lrn_uids_list = [lrn_uid for lrn_uid, _ in sorted(lrn_uids.items(), key=itemgetter(1))]
     scn_uids_list = [scn_uid for scn_uid, _ in sorted(scn_uids.items(), key=itemgetter(1))]
     cpt_uids_list = [cpt_uid for cpt_uid, _ in sorted(cpt_uids.items(), key=itemgetter(1))]
-    
 
     # 保存lrn_emb，scn_emb，cpt_emb
-    datareader.save_final_data(lrn_uids_list, scn_uids_list, cpt_uids_list, 
-                               lrn_emb, scn_dynamic_emb, cpt_emb,
-                               r_pred)
+    datareader.save_final_hgc_data(
+        lrn_uids_list, scn_uids_list, cpt_uids_list, 
+        lrn_emb, scn_dynamic_emb, cpt_emb,
+    )
 
-if __name__ == '__main__':
+    return cpt_uids_list, (lrn_emb, scn_dynamic_emb, cpt_emb)
+
+def save_final_rr_data(
+        lrn_uid, scn_uids, 
+        lrn_emb, scn_dynamic_emb, cpt_emb,
+        cpt_uids_list, 
+        datareader : RRDataReader
+    ):
+    # 其实，就是最后一次的master的特化版本
+    # 根据输入的数据获取各种图
+    # 然后获取所有学生的近一个月的所有交互数据
+    # 加载模型
+    # 得出四个结果
+    # 学习者、知识点、场景的嵌入式表达直接保存
+    # 推荐得分按学习者分类保存
+    device = 'cpu'
+
+    RR_pt_path = os.path.join(deeplearning_root, 'RR', 'PT')
+    RR_use_path = os.path.join(RR_pt_path, 'RR_use.pt')
+    RR_pt_lrn_dir_path = os.path.join(RR_pt_path, 'lrn_use')
+    RR_pt_lrn_use_path = os.path.join(RR_pt_lrn_dir_path, lrn_uid + '_use.pt')
+
+    RR_pt_final_use = ''
+    if os.path.exists(RR_pt_lrn_use_path):
+        RR_pt_final_use = RR_pt_lrn_use_path
+    else:
+        RR_pt_final_use = RR_use_path
+
+
+    model_rr = torch.jit.load(RR_pt_final_use)
+
+    model_rr = model_rr.to(device)
+
+    model_rr.eval()
+
+    with torch.no_grad():
+
+        scn_index, scn_mask = datareader.get_final_lrn_scn_index(lrn_uid, scn_uids)
+
+        r_pred, h_lrn, h_cpt =  model_rr(
+            lrn_emb, 
+            scn_dynamic_emb, 
+            scn_index,
+            scn_mask,
+            cpt_emb)
+
+    # 保存lrn_emb，scn_emb，cpt_emb
+    datareader.save_final_rr_data(lrn_uid, cpt_uids_list, r_pred)
+
+def train_basic():
     parsers = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -290,7 +318,7 @@ if __name__ == '__main__':
         epoch_tqdm.set_description('epoch - master - {}'.format(epoch))
 
         master_dataset = RRDataSet(master_data, uids, learners_init, parsers.max_step)
-        master_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
+        master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
 
         batch_tqdm = tqdm(master_dataloader)
         batch_tqdm.set_description('batch start')
@@ -398,9 +426,224 @@ if __name__ == '__main__':
         scripted_model_rr = torch.jit.optimize_for_inference(scripted_model_rr)
         scripted_model_rr.save(RR_use_path)
 
-    # 在这里保存mongo数据
-    # 保存 1.学习者嵌入式表达2.场景嵌入式表达3.知识点嵌入式表达
-    # 针对特定的学习者保存推荐结果？是的
+        cpt_uids_list, embs = save_final_hgc_data(uids, inits, p_matrixes, dynamic_scn_mat, rrdatareader)
 
-    save_final_data(uids, inits, p_matrixes, dynamic_scn_mat, rrdatareader)
+    train_single_lrn(
+        train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat, optimizer,
+        cpt_uids_list,
+        embs[0], embs[1], embs[2],
+        rrdatareader
+    )
+
+def train_single_lrn(
+    train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat, optimizer,
+    cpt_uids_list,
+    lrn_emb_final, scn_emb_final, cpt_emb_final,
+    rrdatareader : RRDataReader):
+    # 加载设备
+    parsers = parser.parse_args()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}
+    
+    # 加载各种数据
+    lrn_uids, scn_uids, cpt_uids = uids
+    learners_init, scenes_init, concepts_init = inits
+
+    (p_lsl_edge_index, p_lsl_edge_attr), \
+    (p_scs_edge_index, p_scs_edge_attr), \
+    (p_sls_edge_index, p_sls_edge_attr), \
+    (p_cc_edge_index, p_cc_edge_attr), \
+    (p_cac_edge_index, p_cac_edge_attr), \
+    (p_csc_edge_index, p_csc_edge_attr) = p_matrixes
+
+    # 声明路径
+    HGC_pt_path = os.path.join(deeplearning_root, 'HGC', 'PT')
+    HGC_LRN_train_path = os.path.join(HGC_pt_path, 'HGC_LRN_train.pt')
+    HGC_SCN_train_path = os.path.join(HGC_pt_path, 'HGC_SCN_train.pt')
+    HGC_CPT_train_path = os.path.join(HGC_pt_path, 'HGC_CPT_train.pt')
+
+    RR_pt_path = os.path.join(deeplearning_root, 'RR', 'PT')
+    RR_train_path = os.path.join(RR_pt_path, 'RR_train.pt')
+    RR_use_path = os.path.join(RR_pt_path, 'RR_use.pt')
+
+    RR_pt_lrn_dir_path = os.path.join(RR_pt_path, 'lrn_use')
+
+    if not os.path.exists(RR_pt_lrn_dir_path):
+        os.makedirs(RR_pt_lrn_dir_path)
+
+    # 声明模型
+    model_hgc_lrn = HGC_LRN(parsers.embedding_dim).to(device)
+    model_hgc_scn = HGC_SCN(parsers.embedding_dim).to(device)
+    model_hgc_cpt = HGC_CPT(parsers.embedding_dim).to(device)
+
+    model_rr = RR(parsers.embedding_dim, parsers.hidden_dim).to(device)
+
+    lrn_tqdm = tqdm(lrn_uids)
+    for lrn_uid in lrn_tqdm:
+        lrn_tqdm.set_description('{}'.format(lrn_uid))
+
+        # 加载模型
+        checkpoint = torch.load(HGC_LRN_train_path, map_location=device)
+        model_hgc_lrn.load_state_dict(checkpoint['model_hgc_lrn'])
+        checkpoint = torch.load(HGC_SCN_train_path, map_location=device)
+        model_hgc_scn.load_state_dict(checkpoint['model_hgc_scn'])
+        checkpoint = torch.load(HGC_CPT_train_path, map_location=device)
+        model_hgc_cpt.load_state_dict(checkpoint['model_hgc_cpt'])
+        checkpoint = torch.load(RR_train_path, map_location=device)
+        model_rr.load_state_dict(checkpoint['model_rr'])
+
+        model_rr = model_rr.to(device)
+
+        epoch_tqdm = tqdm(range(parsers.epochs))
+        for epoch in epoch_tqdm:
+            epoch_tqdm.set_description('epoch - train - {}'.format(epoch))
+
+            train_dataset = RRDataSet(
+                {lrn_uid : train_data[lrn_uid]}, 
+                ({lrn_uid : 0}, scn_uids, cpt_uids), 
+                learners_init, 
+                len(train_data[lrn_uid][0])
+            )
+            train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
+
+            batch_tqdm = tqdm(train_dataloader)
+            batch_tqdm.set_description('batch start')
+            loss_train = []
+
+            model_hgc_lrn.train()
+            model_hgc_scn.train()
+            model_hgc_cpt.train()
+            model_rr.train()
+
+            for item in batch_tqdm:
+                learner_idx = item['learner_idx']
+                learner_init = item['learner_init']
+                scn_seq_index = item['scn_seq_index']
+                scn_seq_mask = item['scn_seq_mask']
+                r_uk_data = item['r_uk_data']
+
+                p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
+                sub_p_lsl = p_lsl.subgraph(learner_idx)
+
+                lrn_emb = model_hgc_lrn(sub_p_lsl.x.to(device), 
+                                        sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
+                                        )
+                scn_emb = model_hgc_scn(scenes_init.to(device), 
+                                        p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
+                                        p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+                                        )
+                cpt_emb = model_hgc_cpt(concepts_init.to(device), 
+                                        p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
+                                        p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
+                                        p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+                                        )
+
+                scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
+
+                r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
+                                            scn_dynamic_emb, 
+                                            scn_seq_index.to(device),
+                                            scn_seq_mask.to(device),
+                                            cpt_emb)
+
+                loss = RRloss(r_pred, r_uk_data.to(device), h_lrn, h_cpt, parsers.lambda_reg)
+                batch_tqdm.set_description('loss:{:.4f}'.format(loss))
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                loss_train.append(loss.detach().cpu().numpy())
+
+            epoch_tqdm.set_description('epoch - {} train_loss - {:.2f}'.format(epoch, np.average(loss_train)))
+
+            del train_dataloader
+
+            epoch_tqdm.set_description('epoch - master - {}'.format(epoch))
+
+            master_dataset = RRDataSet(
+                {lrn_uid : master_data[lrn_uid]}, 
+                ({lrn_uid : 0}, scn_uids, cpt_uids), 
+                learners_init, 
+                len(master_data[lrn_uid][0])
+            )
+            master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
+
+            batch_tqdm = tqdm(master_dataloader)
+            batch_tqdm.set_description('batch start')
+            loss_master = []
+
+            model_hgc_lrn.eval()
+            model_hgc_scn.eval()
+            model_hgc_cpt.eval()
+            model_rr.eval()
+
+            for item in batch_tqdm:
+                learner_idx = item['learner_idx']
+                learner_init = item['learner_init']
+                scn_seq_index = item['scn_seq_index']
+                scn_seq_mask = item['scn_seq_mask']
+                r_uk_data = item['r_uk_data']
+
+                p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
+                sub_p_lsl = p_lsl.subgraph(learner_idx)
+
+                with torch.no_grad():
+
+                    lrn_emb = model_hgc_lrn(sub_p_lsl.x.to(device), 
+                                            sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
+                                            )
+                    scn_emb = model_hgc_scn(scenes_init.to(device), 
+                                            p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
+                                            p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+                                            )
+                    cpt_emb = model_hgc_cpt(concepts_init.to(device), 
+                                            p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
+                                            p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
+                                            p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+                                            )
+
+                    scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
+
+                    r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
+                                                scn_dynamic_emb, 
+                                                scn_seq_index.to(device),
+                                                scn_seq_mask.to(device),
+                                                cpt_emb)
+
+                loss = RRloss(r_pred, r_uk_data.to(device), h_lrn, h_cpt, parsers.lambda_reg)
+                batch_tqdm.set_description('loss:{:.4f}'.format(loss))
+                loss_master.append(loss.detach().cpu().numpy())
+                # loss_all.append(loss.detach().cpu().numpy())
+
+            epoch_tqdm.set_description('epoch - {} master_loss - {:.2f}'.format(epoch, np.average(loss_master)))
+
+            del master_dataloader
+
+        RR_pt_lrn_use_path = os.path.join(RR_pt_lrn_dir_path, lrn_uid + '_use.pt')
+
+        model_rr = model_rr.to('cpu')
+        torch.cuda.empty_cache()
+
+        with torch.no_grad():  # 禁用梯度计算
+            with torch.jit.optimized_execution(False):  # 禁止优化时隐式转移到GPU
+                scripted_model_rr = torch.jit.script(model_rr)
+
+        scripted_model_rr = torch.jit.optimize_for_inference(scripted_model_rr)
+        scripted_model_rr.save(RR_pt_lrn_use_path)
+
+        # 在这里保存mongo数据
+        # 保存 1.学习者嵌入式表达2.场景嵌入式表达3.知识点嵌入式表达
+        # 针对特定的学习者保存推荐结果？是的
+        # row_i = A[i:i+1, :]
+
+        save_final_rr_data(
+            lrn_uid, scn_uids, 
+            lrn_emb_final[lrn_uids[lrn_uid] : lrn_uids[lrn_uid] + 1, :].to('cpu'), 
+            scn_emb_final.to('cpu'), cpt_emb_final.to('cpu'),
+            cpt_uids_list, 
+            rrdatareader
+        )
+
+if __name__ == '__main__':
+    train_basic()
 

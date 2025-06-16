@@ -94,6 +94,7 @@ class RR(nn.Module):
 
         lrn_dynamic = self.gru(scn_record)
 
+        # print('lrn_static:', lrn_static.shape, 'lrn_dynamic:', lrn_dynamic.shape)
         lrn = torch.cat((lrn_static, lrn_dynamic), dim=1)
         
         # 潜在因子计算

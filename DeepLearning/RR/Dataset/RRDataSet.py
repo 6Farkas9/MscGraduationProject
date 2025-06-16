@@ -14,7 +14,7 @@ class RRDataSet(Dataset):
     def __init__(self, data, uids, lrn_init, max_step):
         super(RRDataSet, self).__init__()
         self.data = data
-
+        
         self.lrn_uids = uids[0]
         self.scn_uids = uids[1]
         self.cpt_uids = uids[2]

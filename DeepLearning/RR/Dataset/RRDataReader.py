@@ -106,30 +106,30 @@ class RRDataReader():
 
         return train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat
     
-    def get_final_lrn_scn_index(self, lrn_uids, scn_uids):
+    def get_final_lrn_scn_index(self, lrn_uid, scn_uids):
         # 根据这个lrn_scn去做出
         # scn_seq_index : torch.Tensor,
         # scn_seq_mask : torch.Tensor,
         # 其中scn_seq_index的长度是最多的交互次数
-        scn_index = torch.zeros(len(lrn_uids), self.max_interact_num, dtype=torch.long)
-        scn_mask  = torch.zeros(len(lrn_uids), self.max_interact_num, dtype=torch.float32)
+        current_interact_num = len(self.lrn_scn[lrn_uid])
+
+        scn_index = torch.zeros(1, current_interact_num, dtype=torch.long)
+        scn_mask  = torch.zeros(1, current_interact_num, dtype=torch.float32)
         lrn_idx = 0
         row = []
         col = []
-        for lrn_uid in lrn_uids:
-            current_interact_num = len(self.lrn_scn[lrn_uid])
 
-            row.extend([lrn_idx] * current_interact_num)
-            col.extend([idx for idx in range(current_interact_num)])
+        row.extend([lrn_idx] * current_interact_num)
+        col.extend([idx for idx in range(current_interact_num)])
 
-            current_scn_seq = [scn_uids[scn_uid] for scn_uid in self.lrn_scn[lrn_uid]]
-            scn_index[lrn_idx][:current_interact_num] = torch.tensor(current_scn_seq, dtype=torch.long)
+        current_scn_seq = [scn_uids[scn_uid] for scn_uid in self.lrn_scn[lrn_uid]]
+        scn_index[lrn_idx][:current_interact_num] = torch.tensor(current_scn_seq, dtype=torch.long)
 
         scn_mask[row, col] = 1.0
 
         return scn_index, scn_mask
     
-    def save_final_data(self, lrn_uids, scn_uids, cpt_uids, lrn_emb, scn_emb, cpt_emb, r_pred):
+    def save_final_hgc_data(self, lrn_uids, scn_uids, cpt_uids, lrn_emb, scn_emb, cpt_emb):
         lrn_emb_dict = {
             lrn_uid : c_lrn_emb.tolist() for lrn_uid, c_lrn_emb in zip(lrn_uids, lrn_emb)
         }
@@ -147,13 +147,14 @@ class RRDataReader():
         }
 
         mongodb.save_final_cpt_emb(cpt_emb_dict)
-
+    
+    def save_final_rr_data(self, lrn_uid, cpt_uids, r_pred):
         r_pred_dict = {
             lrn_uid: {
-                cpt_uid: float(r_pred[i, j])  # 显式转换为Python float
-                for j, cpt_uid in enumerate(cpt_uids)
+                cpt_uid: float(r_pred[0, i])  # 显式转换为Python float
+                for i, cpt_uid in enumerate(cpt_uids)
             }
-            for i, lrn_uid in enumerate(lrn_uids)
+            # for i, lrn_uid in enumerate(lrn_uids)
         }
 
         mongodb.save_rr_final_r_pred_emb(r_pred_dict)
