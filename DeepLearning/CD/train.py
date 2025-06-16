@@ -345,7 +345,7 @@ def train_lrn_are(
                 {lrn_uid : train_data[lrn_uid]}, 
                 {lrn_uid : 0}, 
                 cpt_uids, scn_uids, 
-                parsers.max_step
+                len(train_data[lrn_uid][1])
             )
             train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=1, **dataloader_kwargs)
 
@@ -411,7 +411,8 @@ def train_lrn_are(
                 {lrn_uid : master_data[lrn_uid]}, 
                 {lrn_uid : 0}, 
                 cpt_uids, scn_uids, 
-                parsers.max_step)
+                len(master_data[lrn_uid][1])
+            )
             master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
 
             batch_tqdm = tqdm(master_dataloader)
