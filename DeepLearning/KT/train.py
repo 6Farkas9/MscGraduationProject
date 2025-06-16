@@ -132,7 +132,7 @@ def train_single_are(datareader, parsers, are_uid):
     ).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr= parsers.lr)
 
-    IPDKT_pt_path = os.path.join('PT')
+    IPDKT_pt_path = os.path.join('KT', 'PT')
     IPDKT_pt_train_path = os.path.join(IPDKT_pt_path, are_uid + '_train.pt')
     # print(IPDKT_pt_path)
     IPDKT_pt_train_path = os.path.normpath(IPDKT_pt_train_path)
@@ -226,7 +226,7 @@ def train_lrn_are(datareader, are_uid, parsers, train_data, master_data, optimiz
     # 根据are_uid加载lrn_uids
     lrn_uids_dict = datareader.get_lrn_uids()
 
-    IPDKT_pt_path = os.path.join('PT')
+    IPDKT_pt_path = os.path.join('KT', 'PT')
     IPDKT_pt_train_path = os.path.join(IPDKT_pt_path, are_uid + '_train.pt')
 
     IPDKT_pt_are_dir_path = os.path.join(IPDKT_pt_path, are_uid)
@@ -307,7 +307,7 @@ def save_final_predict(lrn_uid, datareader: IPDKTDataReader):
     final_data, cpt_id2uid = datareader.load_final_data(lrn_uid, 'cpu')
     
     # 然后加载模型，
-    IPDKT_pt_path = os.path.join('PT')
+    IPDKT_pt_path = os.path.join('KT', 'PT')
     IPDKT_pt_use_path = os.path.join(IPDKT_pt_path, are_uid + '_use.pt')
     IPDKT_lrn_pt_use_path = os.path.join(IPDKT_pt_path, are_uid, lrn_uid + '_use.pt')
 
@@ -334,7 +334,7 @@ def save_final_predict(lrn_uid, datareader: IPDKTDataReader):
 
 if __name__ == '__main__': 
     parsers = parser.parse_args()
-    IPDKT_pt_path = os.path.join('PT')
+    IPDKT_pt_path = os.path.join('KT', 'PT')
     IPDKT_are_schedule_path = os.path.join(IPDKT_pt_path, 'IPDKT_schedule.json')
     datareader = IPDKTDataReader()
     # KT比较特殊，不能用一个temp完全解决中途崩溃的问题，需要记录哪些area已经处理过了

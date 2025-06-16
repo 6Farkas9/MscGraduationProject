@@ -490,7 +490,7 @@ def train_lrn_are(
 if __name__ == '__main__':
     parsers = parser.parse_args()
 
-    CD_pt_path = os.path.join('PT')
+    CD_pt_path = os.path.join('CD', 'PT')
     CD_are_schedule_path = os.path.join(CD_pt_path, 'CD_schedule.json')
 
     cddatareader = CDDataReader()

@@ -23,6 +23,7 @@ public:
     ~KT();
 
     std::vector<float> forward(
+        const std::string &lrn_uid,
         const std::string &are_uid, 
         const std::vector<std::vector<int>> &interacts, 
         const int &cpt_num  

@@ -33,7 +33,7 @@ public:
 
     std::unordered_map<std::string, float> predict_lrn_kt_in_are(const std::string &lrn_uid, const std::string &are_uid);
 
-    std::unordered_map<std::string, float> predicr_lrn_cd_in_are(const std::string &lrn_uid, const std::string &are_uid);
+    std::unordered_map<std::string, float> predict_lrn_cd_in_are(const std::string &lrn_uid, const std::string &are_uid);
 
     std::unordered_map<std::string, float> predict_lrn_rr(const std::string &lrn_uid);
 

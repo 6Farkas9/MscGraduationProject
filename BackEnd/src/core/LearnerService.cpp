@@ -69,7 +69,7 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_kt_in_are(con
     return ans;
 }
 
-std::unordered_map<std::string, float> LearnerService::predicr_lrn_cd_in_are(const std::string &lrn_uid, const std::string &are_uid) {
+std::unordered_map<std::string, float> LearnerService::predict_lrn_cd_in_are(const std::string &lrn_uid, const std::string &are_uid) {
     // 获取时间界限
     auto twotime = MLSTimer::getCurrentand30daysTime();
     auto end_time = twotime[0];
