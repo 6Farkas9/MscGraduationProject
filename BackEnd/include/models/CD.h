@@ -24,6 +24,7 @@ public:
     ~CD();
 
     std::vector<float> forward(
+        const std::string &lrn_uid,
         const std::string &are_uid, 
         const std::vector<std::vector<float>> &interact_scn_emb,
         const std::vector<std::vector<float>> &scn_emb,

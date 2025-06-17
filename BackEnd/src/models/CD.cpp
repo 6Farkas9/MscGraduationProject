@@ -11,13 +11,14 @@ CD::~CD(){
 }
 
 std::vector<float> CD::forward(
+    const std::string &lrn_uid,
     const std::string &are_uid, 
     const std::vector<std::vector<float>> &interact_scn_emb,
     const std::vector<std::vector<float>> &scn_emb,
     const std::vector<std::vector<float>> &cpt_emb
 ) {
     // 构造pt路径
-    std::string pt_path = R"(\CD\PT\)" + are_uid + "_use.pt";
+    std::string pt_path = R"(\CD\PT\)" + are_uid + R"(\)" + lrn_uid + "_use.pt";
     pt_path = DEEPLEARNING_ROOT + pt_path;
     // 加载模型
     model_cd = torch::jit::load(pt_path);

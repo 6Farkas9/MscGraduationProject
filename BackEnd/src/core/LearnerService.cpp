@@ -53,6 +53,7 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_kt_in_are(con
     // 获取预测结果
     KT kt(mysqlop, mongodbop);
     auto r_pred = kt.forward(
+        lrn_uid,
         are_uid,
         interacts_input,
         cpt_num
@@ -113,6 +114,7 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_cd_in_are(con
     // 调用模型
     CD cd = CD(mysqlop, mongodbop);
     auto r_pred = cd.forward(
+        lrn_uid,
         are_uid,
         interact_scn_emb,
         scn_emb,
@@ -171,6 +173,7 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_rr(const std:
     // 调用模型
     RR rr = RR(mysqlop, mongodbop);
     auto r_pred = rr.forward(
+        lrn_uid,
         lrn_emb, 
         scn_emb, 
         cpt_emb, 

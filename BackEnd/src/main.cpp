@@ -18,11 +18,34 @@ int main() {
 
     LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
 
-    lrn_ser.predict_lrn_kt_in_are(
-        "are_3fee9e47d0f3428382f4afbcb1004117",
-        ""
+    auto res_kt = lrn_ser.predict_lrn_kt_in_are(
+        "lrn_aee0624932cf4affa00626e8f038c4e8",
+        "are_3fee9e47d0f3428382f4afbcb1004117"
     );
 
+    for (auto & kv : res_kt) {
+        std::cout << kv.first << " - " << kv.second << std::endl;
+    }
+    std::cout << "KT finished" << std::endl;
+
+    auto res_cd = lrn_ser.predict_lrn_cd_in_are(
+        "lrn_aee0624932cf4affa00626e8f038c4e8",
+        "are_3fee9e47d0f3428382f4afbcb1004117"
+    );
+
+    for (auto & kv : res_cd) {
+        std::cout << kv.first << " - " << kv.second << std::endl;
+    }
+    std::cout << "CD finished" << std::endl;
+
+    auto res_rr = lrn_ser.predict_lrn_rr(
+        "lrn_aee0624932cf4affa00626e8f038c4e8"
+    );
+
+    for (auto & kv : res_rr) {
+        std::cout << kv.first << " - " << kv.second << std::endl;
+    }
+    std::cout << "RR finished" << std::endl;
 }
 
 // 静态文件服务函数

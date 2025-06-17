@@ -17,7 +17,7 @@ std::vector<float> KT::forward(
     const int &cpt_num  
 ) {
     // 加载模型
-    std::string pt_path = R"(\KT\PT\)" + are_uid + "_use.pt";
+    std::string pt_path = R"(\KT\PT\)" + are_uid + R"(\)" + lrn_uid + "_use.pt";
     pt_path = DEEPLEARNING_ROOT + pt_path;
     IPDKT = torch::jit::load(pt_path);
     IPDKT.eval();

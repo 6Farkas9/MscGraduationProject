@@ -11,13 +11,14 @@ RR::~RR(){
 }
 
 std::vector<float> RR::forward(
+    const std::string &lrn_uid,
     const std::vector<float> &lrn_emb_in,
     const std::vector<std::vector<float>> &scn_emb_in,
     const std::vector<std::vector<float>> &cpt_emb_in,
     const std::vector<int> &scn_index_vec
 ) {
     // 构造pt路径
-    std::string pt_path = R"(\RR\PT\RR_use.pt)";
+    std::string pt_path = R"(\RR\PT\lrn_use\)" + lrn_uid + "_use.pt";
     pt_path = DEEPLEARNING_ROOT + pt_path;
     // 加载模型
     model_rr = torch::jit::load(pt_path);
