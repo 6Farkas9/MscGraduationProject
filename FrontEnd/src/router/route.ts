@@ -4,11 +4,6 @@
 export const Layout = () => import("@/views/Layout/index.vue")
 export const constRouter = [
   {
-    path: "/login",
-    meta: { title: "登录", icon: "", isShow: false },
-    component: () => import("@/views/Login/index.vue"),
-  },
-  {
     path: "/",
     redirect: "/home",
     name: "layout",
@@ -24,47 +19,6 @@ export const constRouter = [
     ],
   },
   {
-    path: "/",
-    name: "document",
-    redirect: "/document",
-    meta: { title: "", icon: "", isShow: false },
-    component: Layout,
-    children: [
-      {
-        path: "/document",
-        name: "document",
-        meta: { title: "文档", icon: "Document", isShow: true },
-        component: () => import("@/views/Document/index.vue"),
-      },
-    ],
-  },
-  {
-    path: "/404",
-    meta: { title: "404", isShow: false },
-    component: () => import("@/views/404/index.vue"),
-  },
-]
-/****
- * @异步路由也叫权限路由
- */
-export const asyncRouter = [
-  {
-    path: "/",
-    name: "canvas",
-    redirect: "/canvas",
-    meta: { title: "", icon: "", isShow: false },
-    component: Layout,
-    children: [
-      {
-        path: "/canvas",
-        name: "canvas",
-        meta: { title: "canvas案例", icon: "EditPen", isShow: true },
-        component: () => import("@/views/Canvas/index.vue"),
-      },
-    ],
-  },
-
-  {
     path: "/components",
     name: "components",
     redirect: "/components/pagination",
@@ -76,13 +30,7 @@ export const asyncRouter = [
         name: "pagination",
         meta: { title: "分页器 ", icon: "MoreFilled", isShow: true },
         component: () => import("@/views/Components/pagination/index.vue"),
-      },
-      {
-        path: "/components/edit",
-        name: "edit",
-        meta: { title: "富文本编辑器 ", icon: "Monitor", isShow: true },
-        component: () => import("@/views/Components/edit/index.vue"),
-      },
+      }
     ],
   },
 
@@ -137,6 +85,17 @@ export const asyncRouter = [
       },
     ],
   },
+  {
+    path: "/404",
+    meta: { title: "404", isShow: false },
+    component: () => import("@/views/404/index.vue"),
+  },
+]
+/****
+ * @异步路由也叫权限路由
+ */
+export const asyncRouter = [
+  
 ]
 /***
  * @任意路由

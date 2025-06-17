@@ -66,8 +66,10 @@ import { useUserStore } from "@/stores/modules/user"
 
 import { storeToRefs } from "pinia"
 const settingStore = useSettingStore()
-const userStore = useUserStore()
-const { routerMenuList } = storeToRefs(userStore)
+// const userStore = useUserStore()
+// const { routerMenuList } = storeToRefs(userStore)
+import { constRouter } from "@/router/route"
+const routerMenuList = ref(constRouter.filter(route => route.meta?.isShow))
 const { flag, dark, page_setting } = storeToRefs(settingStore)
 let isflag = ref(true)
 // 刷新
