@@ -62,14 +62,21 @@
 import variables from "@/styles/variables.module.scss"
 import { defaultSettings } from "@/config/setting"
 import { useSettingStore } from "@/stores/modules/setting"
-import { useUserStore } from "@/stores/modules/user"
 
 import { storeToRefs } from "pinia"
 const settingStore = useSettingStore()
-// const userStore = useUserStore()
-// const { routerMenuList } = storeToRefs(userStore)
-import { constRouter } from "@/router/route"
-const routerMenuList = ref(constRouter.filter(route => route.meta?.isShow))
+
+import { constRouter, getHomeRouteConfig } from "@/router/route";
+// 动态获取首页配置（包含完整的meta信息）
+const homeRoute = getHomeRouteConfig();
+// 构造 routerMenuList
+const routerMenuList = ref([
+  // 添加首页路由（确保存在且包含完整配置）
+  ...(homeRoute ? [homeRoute] : []),
+  // 添加其他需要显示的路由
+  ...constRouter.filter(route => route.meta?.isShow)
+]);
+
 const { flag, dark, page_setting } = storeToRefs(settingStore)
 let isflag = ref(true)
 // 刷新

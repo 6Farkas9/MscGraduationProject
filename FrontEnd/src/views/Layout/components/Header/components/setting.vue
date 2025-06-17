@@ -36,31 +36,6 @@
         v-show="!settingStore.dark"
       />
     </div>
-    <!-- 用户 -->
-    <div class="setting-user">
-      <el-dropdown trigger="click">
-        <div class="user">
-          <el-avatar
-            :size="35"
-            :src="userStore.userinfo.avatar"
-            @error="() => true"
-          >
-            <img
-              src="https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png"
-            />
-          </el-avatar>
-          <div class="nickname">{{ userStore.userinfo.username }}</div>
-        </div>
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item @click="goUrl">项目地址</el-dropdown-item>
-          </el-dropdown-menu>
-          <el-dropdown-menu>
-            <el-dropdown-item @click="loginOut">退出登录</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
-    </div>
     <!-- 设置 -->
     <el-tooltip
       class="box-item"
@@ -82,12 +57,10 @@ import { defaultSettings } from "@/config/setting"
 import { useFullscreen } from "@vueuse/core"
 import { GETDARK } from "@/utils/local"
 import { useSettingStore } from "@/stores/modules/setting"
-import { useUserStore } from "@/stores/modules/user"
 import { toggleDark } from "@/utils/changeDark"
 import { messageBox, notification } from "@/Hooks/Element-plus"
 const { isFullscreen, toggle } = useFullscreen()
 const settingStore = useSettingStore()
-const userStore = useUserStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -102,20 +75,9 @@ const refresh = () => {
     refreshRef.value!.classList.remove("animate__animated", "animate__rotateIn")
   })
 }
-// 退出登录
-const loginOut = async () => {
-  await messageBox("提示", "您确定要退出登录吗？", "primary")
-  userStore.loginOut()
-  router.push({
-    path: "/login",
-    query: {
-      url: route.path,
-    },
-  })
-}
-const goUrl = () => {
-  window.open("https://gitee.com/dragon-xjy/xjy_admin")
-}
+// const goUrl = () => {
+//   window.open("https://gitee.com/dragon-xjy/xjy_admin")
+// }
 // 设置
 const drawerShow = ref(false)
 const set = () => {

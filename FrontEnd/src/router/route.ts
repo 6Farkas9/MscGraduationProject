@@ -109,3 +109,8 @@ export const anyRouter = [
     redirect: "/404",
   },
 ]
+
+export const getHomeRouteConfig = () => {
+  const layoutRoute = constRouter.find(route => route.path === "/");
+  return layoutRoute?.children?.find(child => child.path === "/home");
+};

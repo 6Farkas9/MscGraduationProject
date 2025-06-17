@@ -5,7 +5,7 @@
       <div
         :class="{ blackTitle: settingStore.dark, title: !settingStore.dark }"
       >
-        项目配置
+        设置
       </div>
     </template>
     <div class="config">
@@ -42,10 +42,10 @@
             <text>开启 Tags-View</text>
             <el-switch v-model="settingStore.page_setting.isShow_Tagview" />
           </div>
-          <div class="set_item">
+          <!-- <div class="set_item">
             <text>侧边栏 Logo</text>
             <el-switch v-model="settingStore.page_setting.isShow_Logo" />
-          </div>
+          </div> -->
           <div class="set_item">
             <text>展示面包屑</text>
             <el-switch v-model="settingStore.page_setting.isShow_Bread" />

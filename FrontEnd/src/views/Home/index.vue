@@ -8,7 +8,6 @@
               <div class="home-user">
                 <el-avatar
                   :size="60"
-                  :src="userStore.userinfo.avatar"
                   @error="() => true"
                 >
                   <img
@@ -17,7 +16,7 @@
                 </el-avatar>
                 <div class="user_content">
                   <div class="tip">
-                    Hello，{{ userStore.userinfo.username }}
+                    Hello，{{ "test_name" }}
                   </div>
                   <div class="content">
                     今日天气晴朗，气温在15℃至25℃之间，美好的一天。
@@ -161,9 +160,7 @@
 </template>
 
 <script setup lang="ts">
-import { useUserStore } from "@/stores/modules/user"
 import { basic } from "../../config/setting"
-const userStore = useUserStore()
 const router = useRouter()
 const goVue = () => {
   window.open("https://cn.vuejs.org/guide/introduction.html")
