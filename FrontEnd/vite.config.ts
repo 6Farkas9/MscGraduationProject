@@ -32,11 +32,6 @@ export default defineConfig(({ mode }) => {
       vue(),
       UnoCSS(),
 
-      //mock
-      viteMockServe({
-        mockPath: "./src/mock",
-        // localEnabled: true,
-      }),
       // 主题定制
       Components({
         resolvers: [ElementPlusResolver({ importStyle: "sass" })],

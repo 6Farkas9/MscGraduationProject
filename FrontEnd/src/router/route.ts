@@ -44,7 +44,7 @@ export const constRouter = [
         name: "pagination",
         meta: { title: "分页器 ", icon: "MoreFilled", isShow: true },
         component: () => import("@/views/Components/pagination/index.vue"),
-      }
+      },
     ],
   },
 
@@ -125,6 +125,6 @@ export const anyRouter = [
 ]
 
 export const getHomeRouteConfig = () => {
-  const layoutRoute = constRouter.find(route => route.path === "/");
-  return layoutRoute?.children?.find(child => child.path === "/home");
-};
+  const layoutRoute = constRouter.find(route => route.path === "/")
+  return layoutRoute?.children?.find(child => child.path === "/home")
+}
