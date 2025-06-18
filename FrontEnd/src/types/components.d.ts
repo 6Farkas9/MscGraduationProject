@@ -20,7 +20,8 @@ declare module 'vue' {
     ElInputNumber: typeof import('element-plus/es')['ElInputNumber']
     ElMenu: typeof import('element-plus/es')['ElMenu']
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
-    ElPagination: typeof import('element-plus/es')['ElPagination']
+    ElPagination: typeof import('./../components/ElementPlus_components/el-pagination/index.vue')['default']
+    ElProgress: typeof import('element-plus/es')['ElProgress']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
     ElSubMenu: typeof import('element-plus/es')['ElSubMenu']
@@ -37,6 +38,5 @@ declare module 'vue' {
     Setting: typeof import('./../views/Layout/components/Header/components/setting.vue')['default']
     SvgIcon: typeof import('./../components/SvgIcon/index.vue')['default']
     TagViews: typeof import('./../views/Layout/components/TagViews/index.vue')['default']
-    WangEditor: typeof import('./../components/WangEditor/index.vue')['default']
   }
 }

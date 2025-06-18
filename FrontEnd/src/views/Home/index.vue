@@ -183,6 +183,7 @@ const goECharts = () => {
 const goDocument = () => {
   window.open("https://juejin.cn/post/7380283122489081856")
 }
+
 // 异步加载图表
 const chartComponent = (val: string) => {
   return defineAsyncComponent(() => import(`./components/${val}.vue`))

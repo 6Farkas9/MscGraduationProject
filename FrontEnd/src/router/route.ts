@@ -6,7 +6,7 @@ export const constRouter = [
   {
     path: "/",
     redirect: "/home",
-    name: "layout",
+    name: "layout_home",
     meta: { title: "", icon: "", isShow: false },
     component: Layout,
     children: [
@@ -15,6 +15,20 @@ export const constRouter = [
         name: "home",
         meta: { title: "首页", icon: "HomeFilled", isShow: true },
         component: () => import("@/views/Home/index.vue"),
+      },
+    ],
+  },
+  {
+    path: "/platformstats",
+    name: "layout_platformstats",
+    meta: { title: "", icon: "", isShow: false },
+    component: Layout,
+    children: [
+      {
+        path: "/platformstats",
+        name: "platformstats",
+        meta: { title: "平台状态", icon: "HomeFilled", isShow: true },
+        component: () => import("@/views/PlatformStats/PlatformStats.vue"),
       },
     ],
   },

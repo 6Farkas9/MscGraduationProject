@@ -66,16 +66,39 @@ import { useSettingStore } from "@/stores/modules/setting"
 import { storeToRefs } from "pinia"
 const settingStore = useSettingStore()
 
-import { constRouter, getHomeRouteConfig } from "@/router/route";
-// 动态获取首页配置（包含完整的meta信息）
-const homeRoute = getHomeRouteConfig();
+import { constRouter} from "@/router/route";
+// 递归过滤路由，只保留需要显示的路由
+const filterRoutes = (routes: any[]) => {
+  return routes
+    .filter(route => {
+      // 如果是Layout组件，检查其children是否有需要显示的
+      if (route.component?.name === 'Layout') {
+        return route.children?.some(child => child.meta?.isShow)
+      }
+      // 普通路由直接检查isShow
+      return route.meta?.isShow
+    })
+    .map(route => {
+      // 如果是Layout组件，只保留需要显示的children
+      if (route.component?.name === 'Layout') {
+        return {
+          ...route,
+          children: filterRoutes(route.children || [])
+        }
+      }
+      // 普通路由处理children（如果有）
+      if (route.children) {
+        return {
+          ...route,
+          children: filterRoutes(route.children)
+        }
+      }
+      return route
+    })
+}
+
 // 构造 routerMenuList
-const routerMenuList = ref([
-  // 添加首页路由（确保存在且包含完整配置）
-  ...(homeRoute ? [homeRoute] : []),
-  // 添加其他需要显示的路由
-  ...constRouter.filter(route => route.meta?.isShow)
-]);
+const routerMenuList = ref(filterRoutes(constRouter))
 
 const { flag, dark, page_setting } = storeToRefs(settingStore)
 let isflag = ref(true)
