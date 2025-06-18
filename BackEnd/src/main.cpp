@@ -1,130 +1,137 @@
 ﻿#include <iostream>
+#include <fstream>
+#include <string>
 #include "MLS_config.h"
-#include "MongoDBOperator.h"
-#include "MySQLOperator.h"
+// #include "MongoDBOperator.h"
+// #include "MySQLOperator.h"
 // #include "UidCreator.h"
 // #include "SceneService.h"
-#include "LearnerService.h"
+// #include "LearnerService.h"
 // #include "ConceptService.h"
 
-// #include "crow.h"
-// #include "crow/middlewares/cors.h"
-
-int main() {
-    MySQLOperator& mysqlop = MySQLOperator::getInstance();
-    mysqlop.initialize();
-    MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
-    mongodbop.initialize();
-
-    LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
-
-    auto res_kt = lrn_ser.predict_lrn_kt_in_are(
-        "lrn_aee0624932cf4affa00626e8f038c4e8",
-        "are_3fee9e47d0f3428382f4afbcb1004117"
-    );
-
-    for (auto & kv : res_kt) {
-        std::cout << kv.first << " - " << kv.second << std::endl;
-    }
-    std::cout << "KT finished" << std::endl;
-
-    auto res_cd = lrn_ser.predict_lrn_cd_in_are(
-        "lrn_aee0624932cf4affa00626e8f038c4e8",
-        "are_3fee9e47d0f3428382f4afbcb1004117"
-    );
-
-    for (auto & kv : res_cd) {
-        std::cout << kv.first << " - " << kv.second << std::endl;
-    }
-    std::cout << "CD finished" << std::endl;
-
-    auto res_rr = lrn_ser.predict_lrn_rr(
-        "lrn_aee0624932cf4affa00626e8f038c4e8"
-    );
-
-    for (auto & kv : res_rr) {
-        std::cout << kv.first << " - " << kv.second << std::endl;
-    }
-    std::cout << "RR finished" << std::endl;
-}
-
-// 静态文件服务函数
-// crow::response serve_file(const std::string& filename, const std::string& content_type) {
-//     // 使用filesystem::path处理跨平台路径
-//     std::filesystem::path filepath = std::filesystem::path(FRONTEND_ROOT) / filename;
-    
-//     if (!std::filesystem::exists(filepath)) {
-//         return crow::response(404, crow::json::wvalue{{"error", "File not found"}});
-//     }
-    
-//     std::ifstream file(filepath, std::ios::binary);
-//     if (!file.is_open()) {
-//         return crow::response(500, crow::json::wvalue{{"error", "Could not open file"}});
-//     }
-    
-//     std::string content((std::istreambuf_iterator<char>(file)), 
-//                        std::istreambuf_iterator<char>());
-    
-//     crow::response res(content);
-//     res.set_header("Content-Type", content_type);
-//     return res;
-// }
+#include "crow.h"
+//#include "crow/middlewares/cors.h"
 
 // int main() {
-//     // 启用CORS中间件
-//     crow::App<crow::CORSHandler> app;
-    
-//     // 配置CORS
-//     auto& cors = app.get_middleware<crow::CORSHandler>();
-//     cors
-//       .global()
-//         .headers("X-Custom-Header", "Upgrade-Insecure-Requests")
-//         .methods("POST"_method, "GET"_method)
-//       .prefix("/")
-//         .origin("*")
-//       .prefix("/api")
-//         .origin("*");
-    
-//     // 静态文件路由
-//     CROW_ROUTE(app, "/")([](){
-//         return serve_file("index.html", "text/html");
-//     });
+//     MySQLOperator& mysqlop = MySQLOperator::getInstance();
+//     mysqlop.initialize();
+//     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
+//     mongodbop.initialize();
 
-//     CROW_ROUTE(app, "/style.css")([](){
-//         return serve_file("style.css", "text/css");
-//     });
+//     LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
 
-//     CROW_ROUTE(app, "/test.js")([](){
-//         return serve_file("test.js", "application/javascript");
-//     });
-    
-//     // API端点 - 统一使用crow::response
-//     CROW_ROUTE(app, "/api/hello")([](){
-//         crow::json::wvalue response;
-//         response["message"] = "Hello from Crow C++ backend!";
-//         response["status"] = "success";
-//         return crow::response(response);
-//     });
-    
-//     // API端点 - POST请求
-//     CROW_ROUTE(app, "/api/echo").methods("POST"_method)([](const crow::request& req){
-//         auto x = crow::json::load(req.body);
-//         if (!x) {
-//             return crow::response(400, crow::json::wvalue{{"error", "Invalid JSON"}});
-//         }
-        
-//         crow::json::wvalue response;
-//         response["received"] = x;
-//         response["message"] = "Data received successfully!";
-//         return crow::response(response);
-//     });
-    
-//     // 启动服务器
-//     std::cout << "Server running on http://localhost:18080" << std::endl;
-//     app.port(18080).multithreaded().run();
-    
-//     return 0;
+//     auto res_kt = lrn_ser.predict_lrn_kt_in_are(
+//         "lrn_aee0624932cf4affa00626e8f038c4e8",
+//         "are_3fee9e47d0f3428382f4afbcb1004117"
+//     );
+
+//     for (auto & kv : res_kt) {
+//         std::cout << kv.first << " - " << kv.second << std::endl;
+//     }
+//     std::cout << "KT finished" << std::endl;
+
+//     auto res_cd = lrn_ser.predict_lrn_cd_in_are(
+//         "lrn_aee0624932cf4affa00626e8f038c4e8",
+//         "are_3fee9e47d0f3428382f4afbcb1004117"
+//     );
+
+//     for (auto & kv : res_cd) {
+//         std::cout << kv.first << " - " << kv.second << std::endl;
+//     }
+//     std::cout << "CD finished" << std::endl;
+
+//     auto res_rr = lrn_ser.predict_lrn_rr(
+//         "lrn_aee0624932cf4affa00626e8f038c4e8"
+//     );
+
+//     for (auto & kv : res_rr) {
+//         std::cout << kv.first << " - " << kv.second << std::endl;
+//     }
+//     std::cout << "RR finished" << std::endl;
 // }
+
+std::string read_file_content(const std::string& file_path) {
+    std::ifstream file(file_path, std::ios::binary);
+    if (!file) {
+        return "";
+    }
+    return std::string(std::istreambuf_iterator<char>(file), 
+                      std::istreambuf_iterator<char>());
+}
+
+int main() {
+    crow::SimpleApp app;
+
+    // 1. 处理静态资源
+    CROW_ROUTE(app, "/assets/<string>")
+    ([](const std::string& filename) {
+        std::string file_path = std::string(FRONTEND_ROOT) + "/dist/assets/" + filename;
+        std::string content = read_file_content(file_path);
+        
+        if (content.empty()) {
+            return crow::response(404);
+        }
+        
+        crow::response res(content);
+        if (filename.find(".js") != std::string::npos) {
+            res.set_header("Content-Type", "application/javascript");
+        } 
+        else if (filename.find(".css") != std::string::npos) {
+            res.set_header("Content-Type", "text/css");
+        }
+        return res;
+    });
+
+    // 2. 处理根路径
+    CROW_ROUTE(app, "/")
+    ([]() {
+        std::string file_path = std::string(FRONTEND_ROOT) + R"(\dist\index.html)";
+        std::cout << file_path << std::endl;
+        std::string content = read_file_content(file_path);
+        
+        if (content.empty()) {
+            return crow::response(404);
+        }
+        
+        crow::response res(content);
+        res.set_header("Content-Type", "text/html");
+        return res;
+    });
+
+    // 3. 处理前端路由（Vue Router history模式）
+    CROW_ROUTE(app, "/<string>")
+    ([](const std::string&) {  // 参数忽略，统一返回index.html
+        std::string file_path = std::string(FRONTEND_ROOT) + R"(\dist\index.html)";
+        std::string content = read_file_content(file_path);
+        
+        if (content.empty()) {
+            return crow::response(404);
+        }
+        
+        crow::response res(content);
+        res.set_header("Content-Type", "text/html");
+        return res;
+    });
+
+    // 4. 处理favicon
+    CROW_ROUTE(app, "/favicon.ico")
+    ([]() {
+        std::string file_path = std::string(FRONTEND_ROOT) + R"(\dist\favicon.ico)";
+        std::string content = read_file_content(file_path);
+        
+        if (content.empty()) {
+            return crow::response(404);
+        }
+        
+        crow::response res(content);
+        res.set_header("Content-Type", "image/x-icon");
+        return res;
+    });
+
+    // 启动服务器
+    std::cout << "Server running on http://localhost:8080\n";
+    app.port(8080).multithreaded().run();
+}
 
 // int main() {
 //     MySQLOperator& mysqlop = MySQLOperator::getInstance();
