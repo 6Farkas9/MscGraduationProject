@@ -7,6 +7,7 @@
       "unplugin-auto-import/types", // 支持自动导入类型
       "element-plus/global",
       "vite/client", // 支持 Vite 环境变量类型
+      "vue"
     ]
   },
   "references": [

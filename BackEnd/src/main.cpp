@@ -10,7 +10,9 @@
 // #include "ConceptService.h"
 
 #include "crow.h"
+#include "FileReader.h"
 //#include "crow/middlewares/cors.h"
+#include "api_PlatformStats.h"
 
 // int main() {
 //     MySQLOperator& mysqlop = MySQLOperator::getInstance();
@@ -50,23 +52,27 @@
 //     std::cout << "RR finished" << std::endl;
 // }
 
-std::string read_file_content(const std::string& file_path) {
-    std::ifstream file(file_path, std::ios::binary);
-    if (!file) {
-        return "";
-    }
-    return std::string(std::istreambuf_iterator<char>(file), 
-                      std::istreambuf_iterator<char>());
-}
+// std::string read_file_content(const std::string& file_path) {
+//     std::ifstream file(file_path, std::ios::binary);
+//     if (!file) {
+//         return "";
+//     }
+//     return std::string(std::istreambuf_iterator<char>(file), 
+//                       std::istreambuf_iterator<char>());
+// }
 
 int main() {
     crow::SimpleApp app;
+
+    // 注册API路由
+    api_PlatformStats::setup_stats_routes(app);
+    api_PlatformStats::setup_triggertrain_routes(app);
 
     // 1. 处理静态资源
     CROW_ROUTE(app, "/assets/<string>")
     ([](const std::string& filename) {
         std::string file_path = std::string(FRONTEND_ROOT) + "/dist/assets/" + filename;
-        std::string content = read_file_content(file_path);
+        std::string content = FileReader::read_file_content(file_path);
         
         if (content.empty()) {
             return crow::response(404);
@@ -85,9 +91,9 @@ int main() {
     // 2. 处理根路径
     CROW_ROUTE(app, "/")
     ([]() {
-        std::string file_path = std::string(FRONTEND_ROOT) + R"(\dist\index.html)";
+        std::string file_path = std::string(FRONTEND_ROOT) + R"(/dist/index.html)";
         std::cout << file_path << std::endl;
-        std::string content = read_file_content(file_path);
+        std::string content = FileReader::read_file_content(file_path);
         
         if (content.empty()) {
             return crow::response(404);
@@ -101,8 +107,8 @@ int main() {
     // 3. 处理前端路由（Vue Router history模式）
     CROW_ROUTE(app, "/<string>")
     ([](const std::string&) {  // 参数忽略，统一返回index.html
-        std::string file_path = std::string(FRONTEND_ROOT) + R"(\dist\index.html)";
-        std::string content = read_file_content(file_path);
+        std::string file_path = std::string(FRONTEND_ROOT) + R"(/dist/index.html)";
+        std::string content = FileReader::read_file_content(file_path);
         
         if (content.empty()) {
             return crow::response(404);
@@ -116,8 +122,8 @@ int main() {
     // 4. 处理favicon
     CROW_ROUTE(app, "/favicon.ico")
     ([]() {
-        std::string file_path = std::string(FRONTEND_ROOT) + R"(\dist\favicon.ico)";
-        std::string content = read_file_content(file_path);
+        std::string file_path = std::string(FRONTEND_ROOT) + R"(/dist/favicon.ico)";
+        std::string content = FileReader::read_file_content(file_path);
         
         if (content.empty()) {
             return crow::response(404);

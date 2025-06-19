@@ -81,6 +81,15 @@
     <ClInclude Include="include\core\ConceptService.h">
       <Filter>include\core</Filter>
     </ClInclude>
+    <ClInclude Include="include\api\api_PlatformStats.h">
+      <Filter>include\api</Filter>
+    </ClInclude>
+    <ClInclude Include="include\core\PlatformStatsService.h">
+      <Filter>include\core</Filter>
+    </ClInclude>
+    <ClInclude Include="include\utils\FileReader.h">
+      <Filter>include\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -121,6 +130,15 @@
     </ClCompile>
     <ClCompile Include="src\core\ConceptService.cpp">
       <Filter>src\core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\api\api_PlatformStats.cpp">
+      <Filter>src\api</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\PlatformStatsService.cpp">
+      <Filter>src\core</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\FileReader.cpp">
+      <Filter>src\utils</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

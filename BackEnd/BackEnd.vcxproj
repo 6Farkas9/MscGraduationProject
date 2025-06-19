@@ -161,10 +161,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\api\api_PlatformStats.h" />
     <ClInclude Include="include\api\crow.h" />
     <ClInclude Include="include\core\ConceptService.h" />
     <ClInclude Include="include\core\LearnerService.h" />
     <ClInclude Include="include\core\MLS_config.h" />
+    <ClInclude Include="include\core\PlatformStatsService.h" />
     <ClInclude Include="include\core\SceneService.h" />
     <ClInclude Include="include\database\MongoDBOperator.h" />
     <ClInclude Include="include\database\MySQLOperator.h" />
@@ -173,12 +175,15 @@
     <ClInclude Include="include\models\KCGE.h" />
     <ClInclude Include="include\models\KT.h" />
     <ClInclude Include="include\models\RR.h" />
+    <ClInclude Include="include\utils\FileReader.h" />
     <ClInclude Include="include\utils\MLSTimer.h" />
     <ClInclude Include="include\utils\UidCreator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\api\api_PlatformStats.cpp" />
     <ClCompile Include="src\core\ConceptService.cpp" />
     <ClCompile Include="src\core\LearnerService.cpp" />
+    <ClCompile Include="src\core\PlatformStatsService.cpp" />
     <ClCompile Include="src\core\SceneService.cpp" />
     <ClCompile Include="src\database\MongoDBOperator.cpp" />
     <ClCompile Include="src\database\MySQLOperator.cpp" />
@@ -188,6 +193,7 @@
     <ClCompile Include="src\models\KCGE.cpp" />
     <ClCompile Include="src\models\KT.cpp" />
     <ClCompile Include="src\models\RR.cpp" />
+    <ClCompile Include="src\utils\FileReader.cpp" />
     <ClCompile Include="src\utils\MLSTimer.cpp" />
     <ClCompile Include="src\utils\UidCreator.cpp" />
   </ItemGroup>

@@ -66,19 +66,35 @@ import { useSettingStore } from "@/stores/modules/setting"
 import { storeToRefs } from "pinia"
 const settingStore = useSettingStore()
 
-import { constRouter, getHomeRouteConfig } from "@/router/route";
-// 动态获取首页配置（包含完整的meta信息）
-const homeRoute = getHomeRouteConfig();
+import { constRouter, getLayoutChildrenRoutes} from "@/router/route";
+import { ref } from "vue";
+import type { RouteRecordRaw } from 'vue-router'
+
+// 定义带类型的过滤函数
+const filterRoutes = (routes: RouteRecordRaw[]): RouteRecordRaw[] => {
+  return routes
+    .filter((route) => {
+      // 保留条件：显式声明 isShow:true 或 是 Layout 父路由
+      // const isLayoutParent = route.component && 
+      //                      (route.component as any).name === 'Layout'
+      return route.meta?.isShow // || isLayoutParent
+    })
+    .map((route) => {
+      if (route.children) {
+        return { ...route, children: filterRoutes(route.children) }
+      }
+      return route
+    })
+}
+
 // 构造 routerMenuList
 const routerMenuList = ref([
-  // 添加首页路由（确保存在且包含完整配置）
-  ...(homeRoute ? [homeRoute] : []),
-  // 添加其他需要显示的路由
-  ...constRouter.filter(route => route.meta?.isShow)
+  ...getLayoutChildrenRoutes(),  
+  // 添加其他过滤后的路由
+  ...filterRoutes(constRouter),
 ]);
 
-// // 构造 routerMenuList
-// const routerMenuList = ref(filterRoutes(constRouter))
+console.log('生产环境路由数据:', JSON.stringify(routerMenuList.value, null, 2))
 
 const { flag, dark, page_setting } = storeToRefs(settingStore)
 let isflag = ref(true)

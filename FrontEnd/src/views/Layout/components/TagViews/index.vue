@@ -48,8 +48,8 @@ interface routeObj {
 }
 const tagViewArr = ref(<routeObj[]>[
   {
-    path: "/home",
-    title: "首页",
+    path: "/platformstats",
+    title: "平台状态",
   },
 ])
 

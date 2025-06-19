@@ -2,8 +2,7 @@
   <div class="platformstats">
     <div class="header">
       <h1>学习平台数据概览</h1>
-      <p class="subtitle">冰冻三尺，非一日之寒，成大事者不拘小节</p>
-      <p class="author">—— Mr. Xie</p>
+      <p class="author">—— SZY</p>
     </div>
 
     <div class="data-cards">
@@ -77,7 +76,7 @@
           <p>上次训练时间: {{ stats.lastTrainingTime }}</p>
           <p>模型版本: {{ stats.modelVersion }}</p>
           <el-progress :percentage="stats.accuracy" :color="customColors"></el-progress>
-          <el-button type="primary" class="train-btn" @click="triggerTraining">手动触发训练</el-button>
+          <el-button type="primary" class="train-btn" @click="onTriggerTraining">手动触发训练</el-button>
         </div>
       </el-card>
     </div>
@@ -92,16 +91,17 @@ import {
   Opportunity,
   Reading
 } from '@element-plus/icons-vue'
+import { fetchStats, triggerTraining } from '@/api' // 导入封装的 API
 
-// 模拟数据
+// 初始数据
 const stats = ref({
-  domainCount: 12,
-  learnerCount: 8562,
-  scenarioCount: 34,
-  knowledgePointCount: 1258,
-  lastTrainingTime: '2023-11-15 14:30:22',
-  modelVersion: 'v2.3.1',
-  accuracy: 87.5
+  domainCount: 0,
+  learnerCount: 0,
+  scenarioCount: 0,
+  knowledgePointCount: 0,
+  lastTrainingTime: '加载中...',
+  modelVersion: '加载中...',
+  accuracy: 0
 })
 
 const customColors = [
@@ -112,8 +112,29 @@ const customColors = [
   { color: '#6f7ad3', percentage: 100 }
 ]
 
-const triggerTraining = () => {
-  ElMessage.info('已触发模型训练任务')
+// const triggerTraining = () => {
+//   ElMessage.info('已触发模型训练任务')
+// }
+// 组件挂载时获取数据
+onMounted(async () => {
+  try {
+    const data = await fetchStats()
+    stats.value = data
+  } catch (error) {
+    // 错误已在 API 函数中处理，这里可选补充逻辑
+  }
+})
+
+// 触发训练
+const onTriggerTraining = async () => {
+  try {
+    await triggerTraining()
+    // 可选：重新获取数据以更新界面
+    const data = await fetchStats()
+    stats.value = data
+  } catch (error) {
+    // 错误已在 API 函数中处理
+  }
 }
 </script>
 

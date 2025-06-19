@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
   //拿到配置的环境变量
   const env = loadEnv(mode, process.cwd())
   return {
-    base: "./",
+    base: "/",
     plugins: [
       // ...
       AutoImport({

@@ -5,21 +5,7 @@ export const Layout = () => import("@/views/Layout/index.vue")
 export const constRouter = [
   {
     path: "/",
-    redirect: "/home",
-    name: "layout_home",
-    meta: { title: "", icon: "", isShow: false },
-    component: Layout,
-    children: [
-      {
-        path: "/home",
-        name: "home",
-        meta: { title: "首页", icon: "HomeFilled", isShow: true },
-        component: () => import("@/views/Home/index.vue"),
-      },
-    ],
-  },
-  {
-    path: "/platformstats",
+    redirect: "/platformstats",
     name: "layout_platformstats",
     meta: { title: "", icon: "", isShow: false },
     component: Layout,
@@ -27,8 +13,23 @@ export const constRouter = [
       {
         path: "/platformstats",
         name: "platformstats",
-        meta: { title: "平台状态", icon: "HomeFilled", isShow: true },
+        meta: { title: "平台状态", icon: "", isShow: true },
         component: () => import("@/views/PlatformStats/PlatformStats.vue"),
+      },
+    ],
+  },
+  {
+    path: "/home",
+    // redirect: "/home",
+    name: "layout_home",
+    meta: { title: "", icon: "", isShow: false },
+    component: Layout,
+    children: [
+      {
+        path: "/home",
+        name: "home",
+        meta: { title: "首页", icon: "", isShow: true },
+        component: () => import("@/views/Home/index.vue"),
       },
     ],
   },
@@ -128,3 +129,13 @@ export const getHomeRouteConfig = () => {
   const layoutRoute = constRouter.find(route => route.path === "/")
   return layoutRoute?.children?.find(child => child.path === "/home")
 }
+
+export const getLayoutChildrenRoutes = () => {
+  const homeParent = constRouter.find(route => route.path === "/home");
+  const platformParent = constRouter.find(route => route.path === "/");
+  
+  return [
+    platformParent?.children?.find(child => child.path === "/platformstats"),
+    homeParent?.children?.find(child => child.path === "/home")
+  ].filter(Boolean); // 过滤掉可能的undefined
+};
