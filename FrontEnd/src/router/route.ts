@@ -19,6 +19,20 @@ export const constRouter = [
     ],
   },
   {
+    path: "/learnerinfo",
+    name: "layout_lrninfo",
+    meta: { title: "", icon: "", isShow: false },
+    component: Layout,
+    children: [
+      {
+        path: "/learnerinfo",
+        name: "learnerinfo",
+        meta: { title: "学习者数据", icon: "", isShow: true },
+        component: () => import("@/views/LearnerInfo/LearnerInfo.vue"),
+      },
+    ],
+  },
+  {
     path: "/home",
     // redirect: "/home",
     name: "layout_home",
@@ -125,17 +139,19 @@ export const anyRouter = [
   },
 ]
 
-export const getHomeRouteConfig = () => {
-  const layoutRoute = constRouter.find(route => route.path === "/")
-  return layoutRoute?.children?.find(child => child.path === "/home")
-}
+// export const getHomeRouteConfig = () => {
+//   const layoutRoute = constRouter.find(route => route.path === "/")
+//   return layoutRoute?.children?.find(child => child.path === "/home")
+// }
 
 export const getLayoutChildrenRoutes = () => {
-  const homeParent = constRouter.find(route => route.path === "/home");
   const platformParent = constRouter.find(route => route.path === "/");
+  const learnerinfo = constRouter.find(route => route.path === "/learnerinfo");
+  const homeParent = constRouter.find(route => route.path === "/home");
   
   return [
     platformParent?.children?.find(child => child.path === "/platformstats"),
+    learnerinfo?.children?.find(child => child.path === "/learnerinfo"),
     homeParent?.children?.find(child => child.path === "/home")
   ].filter(Boolean); // 过滤掉可能的undefined
 };
