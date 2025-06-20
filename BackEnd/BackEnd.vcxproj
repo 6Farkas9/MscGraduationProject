@@ -147,7 +147,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalOptions>/INCLUDE:?warp_size@cuda@at@@YAHXZ %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/INCLUDE:?warp_size@cuda@at@@YAHXZ /utf-8 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\asio-1.34.2\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\Crow\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\mongo-driver\include\mongocxx\v_noabi;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\mongo-driver\include\bsoncxx\v_noabi;D:\LIBS\boost-1.88.0;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\mongo-driver\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\include\utils;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\include\models;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\include\core;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\include\api;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\include\database;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\mysql-connector-c++-9.3.0-winx64\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\include\torch\csrc\api\include;D:\Desktop\GraduationDesign\GraduationDesign\BackEnd\libs\libtorch-release\libtorch\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -161,8 +161,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="include\api\api_handlers.h" />
     <ClInclude Include="include\api\api_PlatformStats.h" />
     <ClInclude Include="include\api\crow.h" />
+    <ClInclude Include="include\api\data_simulator.h" />
     <ClInclude Include="include\core\ConceptService.h" />
     <ClInclude Include="include\core\LearnerService.h" />
     <ClInclude Include="include\core\MLS_config.h" />
@@ -180,7 +182,9 @@
     <ClInclude Include="include\utils\UidCreator.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\api\api_handlers.cpp" />
     <ClCompile Include="src\api\api_PlatformStats.cpp" />
+    <ClCompile Include="src\api\data_simulator.cpp" />
     <ClCompile Include="src\core\ConceptService.cpp" />
     <ClCompile Include="src\core\LearnerService.cpp" />
     <ClCompile Include="src\core\PlatformStatsService.cpp" />

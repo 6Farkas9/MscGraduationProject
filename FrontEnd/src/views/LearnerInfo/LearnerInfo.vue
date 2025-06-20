@@ -15,21 +15,24 @@
             <span>UID:</span>
             <div class="uid-input-container">
               <el-input v-model="currentUid" size="small"></el-input>
-              <el-button type="primary" size="small" @click="fetchLearnerData">确定</el-button>
+              <el-button type="primary" size="small" @click="fetchLearnerData" :loading="loading">确定</el-button>
             </div>
           </div>
-          <div class="info-item">
+          <div v-if="hasData" class="info-item">
             <span>Email:</span>
             <span>{{ learnerInfo.email }}</span>
           </div>
-          <div class="info-item">
+          <div v-if="hasData" class="info-item">
             <span>手机号:</span>
             <span>{{ learnerInfo.phone }}</span>
+          </div>
+          <div v-if="!hasData" class="empty-tip">
+            <el-empty description="请输入UID查询学习者数据"></el-empty>
           </div>
         </el-card>
 
         <!-- 学习领域 -->
-        <el-card class="domains-card">
+        <el-card class="domains-card" v-if="hasData">
           <div slot="header">学习过的领域</div>
           <div class="domains-list">
             <el-tag
@@ -44,7 +47,7 @@
         </el-card>
 
         <!-- 总体表现 -->
-        <el-card class="performance-card">
+        <el-card class="performance-card" v-if="hasData">
           <div slot="header">总体表现</div>
           <div ref="overallChart" class="chart"></div>
           <div class="performance-summary">
@@ -57,7 +60,7 @@
       </div>
 
       <!-- 右侧面板 (2/3宽度) -->
-      <div class="right-panel">
+      <div class="right-panel" v-if="hasData">
         <!-- 领域表现 - 修改为左右布局 -->
         <el-card v-if="selectedDomain" class="domain-card">
           <div slot="header">{{ selectedDomain.name }}领域表现</div>
@@ -123,6 +126,13 @@
           </div>
         </el-card>
       </div>
+
+      <!-- 空数据状态 -->
+      <div class="right-panel" v-if="!hasData">
+        <el-card class="empty-card">
+          <el-empty description="暂无学习者数据"></el-empty>
+        </el-card>
+      </div>
     </div>
   </div>
 </template>
@@ -130,82 +140,27 @@
 <script>
 import { ref, onMounted, watch, nextTick } from 'vue';
 import * as echarts from 'echarts';
+import { getLearnerInfo, getRecommendations } from '@/api/learnerInfo.js'; // 假设API文件路径
 
 export default {
   setup() {
-    // 模拟数据
-    const mockData = {
-      uid: '10001',
-      email: '10001@example.com',
-      phone: '13800011234',
-      domains: [
-        {
-          id: 'math',
-          name: '数学',
-          knowledgePoints: [
-            { name: '代数基础', score: 0.85 },
-            { name: '几何基础', score: 0.88 },
-            { name: '概率统计', score: 0.92 }
-          ]
-        },
-        {
-          id: 'physics',
-          name: '物理',
-          knowledgePoints: [
-            { name: '力学', score: 0.72 },
-            { name: '电磁学', score: 0.75 },
-            { name: '热学', score: 0.78 }
-          ]
-        },
-        {
-          id: 'chemistry',
-          name: '化学',
-          knowledgePoints: [
-            { name: '无机化学', score: 0.55 },
-            { name: '有机化学', score: 0.65 },
-            { name: '物理化学', score: 0.58 }
-          ]
-        },
-        {
-          id: 'biology',
-          name: '生物',
-          knowledgePoints: [
-            { name: '细胞生物学', score: 0.35 },
-            { name: '遗传学', score: 0.45 },
-            { name: '生态学', score: 0.38 }
-          ]
-        }
-      ]
-    };
-
-    // 根据知识点评分计算领域评价
-    mockData.domains.forEach(domain => {
-      const scores = domain.knowledgePoints.map(p => p.score);
-      const minScore = Math.min(...scores);
-      
-      if (minScore >= 0.8) {
-        domain.evaluation = '表现优秀';
-      } else if (minScore >= 0.6) {
-        domain.evaluation = '表现良好';
-      } else if (minScore >= 0.4) {
-        domain.evaluation = '存在问题';
-      } else {
-        domain.evaluation = '学情预警';
-      }
-    });
-
-    const mockRecommendations = {
-      knowledgePoints: ['高级算法', '机器学习', '深度学习基础', '神经网络', '计算机视觉'],
-      studyPartners: ['10002', '10003', '10005'],
-      studyModels: ['10010', '10015', '10020']
-    };
-
     // 响应式数据
-    const currentUid = ref('10001');
-    const learnerInfo = ref(JSON.parse(JSON.stringify(mockData)));
-    const selectedDomain = ref(learnerInfo.value.domains[0]);
-    const currentDomainId = ref(learnerInfo.value.domains[0].id);
-    const recommendations = ref({ ...mockRecommendations });
+    const currentUid = ref('');
+    const learnerInfo = ref({
+      uid: '',
+      email: '',
+      phone: '',
+      domains: []
+    });
+    const selectedDomain = ref(null);
+    const currentDomainId = ref('');
+    const recommendations = ref({
+      knowledgePoints: [],
+      studyPartners: [],
+      studyModels: []
+    });
+    const loading = ref(false);
+    const hasData = ref(false);
     
     const performanceItems = ref([
       { type: 'excellent', label: '表现优秀', count: 0 },
@@ -219,23 +174,68 @@ export default {
     const domainChart = ref(null);
 
     // 方法
-    const fetchLearnerData = () => {
-      // 模拟API调用
-      console.log(`Fetching data for UID: ${currentUid.value}`);
-      
-      // 重置数据
-      learnerInfo.value = JSON.parse(JSON.stringify(mockData));
-      selectedDomain.value = learnerInfo.value.domains[0];
-      currentDomainId.value = learnerInfo.value.domains[0].id;
-      recommendations.value = { ...mockRecommendations };
-      
-      // 更新评价
-      updatePerformanceSummary();
-      
-      // 重新渲染图表
-      nextTick(() => {
-        initCharts();
-      });
+    const fetchLearnerData = async () => {
+      if (!currentUid.value) {
+        ElMessage.warning('请输入UID');
+        return;
+      }
+
+      loading.value = true;
+      try {
+        // 获取学习者信息
+        const learnerRes = await getLearnerInfo(currentUid.value);
+        if (learnerRes.data) {
+          learnerInfo.value = learnerRes.data;
+          
+          // 计算领域评价
+          learnerInfo.value.domains.forEach(domain => {
+            const scores = domain.knowledgePoints?.map(p => p.score) || [];
+            const minScore = scores.length > 0 ? Math.min(...scores) : 0;
+            
+            if (minScore >= 0.8) {
+              domain.evaluation = '表现优秀';
+            } else if (minScore >= 0.6) {
+              domain.evaluation = '表现良好';
+            } else if (minScore >= 0.4) {
+              domain.evaluation = '存在问题';
+            } else {
+              domain.evaluation = '学情预警';
+            }
+          });
+
+          // 设置默认选中的领域
+          if (learnerInfo.value.domains.length > 0) {
+            selectedDomain.value = learnerInfo.value.domains[0];
+            currentDomainId.value = learnerInfo.value.domains[0].id;
+          }
+
+          // 获取推荐信息
+          const recommendRes = await getRecommendations(currentUid.value);
+          recommendations.value = recommendRes.data || {
+            knowledgePoints: [],
+            studyPartners: [],
+            studyModels: []
+          };
+
+          // 更新评价统计
+          updatePerformanceSummary();
+          hasData.value = true;
+          
+          // 渲染图表
+          nextTick(() => {
+            initCharts();
+          });
+        } else {
+          hasData.value = false;
+          ElMessage.warning('未找到该学习者的数据');
+        }
+      } catch (error) {
+        console.error('获取学习者数据失败:', error);
+        ElMessage.error('获取数据失败');
+        hasData.value = false;
+      } finally {
+        loading.value = false;
+      }
     };
 
     const selectDomain = (domain) => {
@@ -362,7 +362,7 @@ export default {
       // 初始化新图表
       domainChart.value = echarts.init(document.querySelector('.domain-card .chart'));
       
-      const points = selectedDomain.value.knowledgePoints;
+      const points = selectedDomain.value.knowledgePoints || [];
       let excellent = 0, good = 0, problem = 0, warning = 0;
       
       points.forEach(point => {
@@ -440,8 +440,6 @@ export default {
 
     // 生命周期
     onMounted(() => {
-      updatePerformanceSummary();
-      initCharts();
       window.addEventListener('resize', handleResize);
     });
 
@@ -463,6 +461,8 @@ export default {
       currentDomainId,
       recommendations,
       performanceItems,
+      loading,
+      hasData,
       fetchLearnerData,
       selectDomain,
       getScoreClass,
@@ -664,6 +664,18 @@ export default {
 .partner-item span:first-child {
   width: 60px;
   flex-shrink: 0;
+}
+
+/* 空数据状态 */
+.empty-tip {
+  padding: 20px 0;
+}
+
+.empty-card {
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* 响应式设计 */

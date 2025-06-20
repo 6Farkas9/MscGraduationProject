@@ -12,7 +12,8 @@
 #include "crow.h"
 #include "FileReader.h"
 //#include "crow/middlewares/cors.h"
-#include "api_PlatformStats.h"
+// #include "api_PlatformStats.h"
+#include "api_handlers.h"
 
 // int main() {
 //     MySQLOperator& mysqlop = MySQLOperator::getInstance();
@@ -65,8 +66,11 @@ int main() {
     crow::SimpleApp app;
 
     // 注册API路由
-    api_PlatformStats::setup_stats_routes(app);
-    api_PlatformStats::setup_triggertrain_routes(app);
+    // api_PlatformStats::setup_stats_routes(app);
+    // api_PlatformStats::setup_triggertrain_routes(app);
+
+    api::setupLearnerInfoRoutes(app);
+    api::setupPlatformStatsRoutes(app);
 
     // 1. 处理静态资源
     CROW_ROUTE(app, "/assets/<string>")
