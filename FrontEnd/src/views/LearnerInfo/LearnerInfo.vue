@@ -20,7 +20,7 @@
           </div>
           <div v-if="hasData" class="info-item">
             <span>Email:</span>
-            <span>{{ learnerInfo.email }}</span>
+            <span class="email-value">{{ learnerInfo.email }}</span>
           </div>
           <div v-if="hasData" class="info-item">
             <span>手机号:</span>
@@ -28,21 +28,6 @@
           </div>
           <div v-if="!hasData" class="empty-tip">
             <el-empty description="请输入UID查询学习者数据"></el-empty>
-          </div>
-        </el-card>
-
-        <!-- 学习领域 -->
-        <el-card class="areas-card" v-if="hasData">
-          <div slot="header">学习过的领域</div>
-          <div class="areas-list">
-            <el-tag
-              v-for="area in learnerInfo.are_data"
-              :key="area.are_uid"
-              @click="selectArea(area)"
-              :type="currentAreUid === area.are_uid ? 'primary' : ''"
-            >
-              {{ area.are_name }}
-            </el-tag>
           </div>
         </el-card>
 
@@ -57,47 +42,9 @@
             </div>
           </div>
         </el-card>
-      </div>
-
-      <!-- 右侧面板 (2/3宽度) -->
-      <div class="right-panel" v-if="hasData">
-        <!-- 领域表现 -->
-        <el-card v-if="selectedArea" class="area-card">
-          <div slot="header">{{ selectedArea.are_name }}领域表现</div>
-          <div class="el-card__body" style="padding: 20px">
-            <div class="area-content">
-              <!-- 知识点区域 -->
-              <div class="concept-container">
-                <div class="concept-scroll-wrapper" @wheel.prevent="handleConceptScroll">
-                  <div class="concept-grid">
-                    <div v-for="cpt in selectedArea.cpt_data" :key="cpt.cpt_uid" class="cpt-item">
-                      <el-tooltip :content="`${cpt.cpt_name}: 预测正确率:${(cpt.score)}`" placement="top">
-                        <div class="cpt-container">
-                          <span class="cpt-name" :title="cpt.cpt_name">{{ truncateName(cpt.cpt_name) }}</span>
-                          <span :class="['cpt-score', getScoreClass(cpt.score)]"></span>
-                        </div>
-                      </el-tooltip>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 图表区域 -->
-              <div class="chart-container">
-                <div ref="areaChart" class="chart"></div>
-                <div class="area-evaluation">
-                  <el-tag :type="getEvaluationTagType(selectedArea.evaluation)" size="medium">
-                    {{ selectedArea.evaluation }}
-                  </el-tag>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-        </el-card>
 
         <!-- 推荐内容 -->
-        <el-card class="recommend-card">
+        <el-card class="recommend-card" v-if="hasData">
           <div slot="header">推荐知识点</div>
           <div class="recommend-list">
             <el-tag 
@@ -111,7 +58,7 @@
           </div>
         </el-card>
 
-        <el-card class="recommend-card">
+        <el-card class="recommend-card" v-if="hasData">
           <div slot="header">推荐学习伙伴</div>
           <div class="partner-list">
             <div v-for="(partner, index) in recommendations.studyPartners" :key="partner" class="partner-item">
@@ -121,12 +68,62 @@
           </div>
         </el-card>
 
-        <el-card class="recommend-card">
+        <el-card class="recommend-card" v-if="hasData">
           <div slot="header">推荐学习榜样</div>
           <div class="partner-list">
             <div v-for="(model, index) in recommendations.studyModels" :key="model" class="partner-item">
               <span>榜样{{ index + 1 }}:</span>
               <el-tag type="success" size="small">{{ model }}</el-tag>
+            </div>
+          </div>
+        </el-card>
+      </div>
+
+      <!-- 右侧面板 (2/3宽度) -->
+      <div class="right-panel" v-if="hasData">
+        <!-- 学习领域 -->
+        <el-card class="areas-card">
+          <div slot="header">学习过的领域</div>
+          <div class="areas-list">
+            <el-tag
+              v-for="area in learnerInfo.are_data"
+              :key="area.are_uid"
+              @click="selectArea(area)"
+              :type="currentAreUid === area.are_uid ? 'primary' : ''"
+            >
+              {{ area.are_name }}
+            </el-tag>
+          </div>
+        </el-card>
+
+        <!-- 领域表现 -->
+        <el-card v-if="selectedArea" class="area-card">
+          <div slot="header">{{ selectedArea.are_name }}领域表现</div>
+          <div class="area-content-wrapper">
+            <!-- 知识点区域 -->
+            <div class="concept-section">
+              <div class="concept-scroll-container">
+                <div class="concept-grid">
+                  <div v-for="cpt in selectedArea.cpt_data" :key="cpt.cpt_uid" class="concept-item">
+                    <el-tooltip :content="`${cpt.cpt_name}: 预测正确率:${(cpt.score)}`" placement="top">
+                      <div class="concept-content">
+                        <span class="concept-name">{{ truncateName(cpt.cpt_name) }}</span>
+                        <span :class="['concept-score', getScoreClass(cpt.score)]"></span>
+                      </div>
+                    </el-tooltip>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 图表区域 -->
+            <div class="chart-section">
+              <div ref="areaChart" class="chart"></div>
+              <div class="area-evaluation">
+                <el-tag :type="getEvaluationTagType(selectedArea.evaluation)" size="medium">
+                  {{ selectedArea.evaluation }}
+                </el-tag>
+              </div>
             </div>
           </div>
         </el-card>
@@ -286,11 +283,6 @@ export default {
           performanceItems.value[3].count++;
         }
       });
-    };
-
-    const handleConceptScroll = (e) => {
-      const container = e.currentTarget;
-      container.scrollTop += e.deltaY;
     };
 
     const initOverallChart = () => {
@@ -471,8 +463,7 @@ export default {
       selectArea,
       getScoreClass,
       getEvaluationTagType,
-      truncateName,
-      handleConceptScroll
+      truncateName
     };
   }
 };
@@ -503,10 +494,12 @@ export default {
 
 .left-panel {
   flex: 1;
+  min-width: 0;
 }
 
 .right-panel {
   flex: 2;
+  min-width: 0;
 }
 
 .el-card {
@@ -515,7 +508,7 @@ export default {
 
 .info-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Changed from center to flex-start for better wrapping */
   margin-bottom: 10px;
 }
 
@@ -523,6 +516,14 @@ export default {
   width: 80px;
   font-weight: bold;
   flex-shrink: 0;
+}
+
+.email-value {
+  word-break: break-all; /* Allow breaking long words */
+  overflow-wrap: break-word; /* Alternative to word-break */
+  white-space: normal; /* Allow wrapping */
+  display: inline-block;
+  max-width: calc(100% - 80px); /* Account for label width */
 }
 
 .uid-input-container {
@@ -571,124 +572,85 @@ export default {
 .problem { background-color: #E6A23C; }
 .warning { background-color: #F56C6C; }
 
-/* 重设卡片结构样式 */
+/* 领域表现卡片 */
 .area-card {
-  height: 380px; /* 或您需要的任何高度 */
+  min-height: 400px;
+}
+
+.area-content-wrapper {
   display: flex;
   flex-direction: column;
-  
-  /* 关键修改：穿透修改Element UI默认样式 */
-  :deep(.el-card__body) {
-    padding: 0;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* 防止内容溢出 */
-  }
+  height: 100%;
+  padding: 0;
 }
 
-.area-content {
+.concept-section {
   flex: 1;
   min-height: 0;
-  display: flex;
-  margin: 0;
-  /* 不再需要calc计算，flex:1会自动分配剩余空间 */
+  padding: 10px;
+  border-bottom: 1px solid #ebeef5;
 }
 
-/* 确保知识点容器填满空间 */
-.concept-container {
-  flex: 3;
+.concept-scroll-container {
   height: 100%;
-  overflow: hidden;
-  position: relative;
-  margin: 0;
-  padding: 0;
-  min-height: 0;
-}
-
-/* 确保滚动容器填满空间 */
-.concept-scroll-wrapper {
-  height: 100%;
-  width: 100%;
   overflow-y: auto;
-  padding-right: 10px;
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  margin: 0;
+  padding-right: 8px;
 }
 
-/* 知识点网格 - 移除底部padding */
 .concept-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 8px;
-  padding: 8px 10px 0 10px; /* 只保留顶部padding */
-  margin: 0;
-  min-height: min-content;
 }
 
-.cpt-item {
-  display: flex;
-  align-items: center;
+.concept-item {
   padding: 6px;
   background: #f5f7fa;
   border-radius: 4px;
-  height: 32px;
+  transition: all 0.2s;
 }
 
-.cpt-container {
+.concept-item:hover {
+  background: #e4e7ed;
+}
+
+.concept-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
 }
 
-.cpt-name {
-  flex: 1;
+.concept-name {
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: 8px;
-  font-size: 12px;
 }
 
-.cpt-score {
+.concept-score {
   width: 16px;
   height: 16px;
   border-radius: 4px;
   flex-shrink: 0;
 }
 
-/* 图表容器 - 精确控制高度 */
-/* 调整图表容器 */
-.chart-container {
-  flex: 1;
+.chart-section {
+  padding: 10px;
+  height: 250px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding-left: 10px;
-  border-left: 1px solid #ebeef5;
-  height: 100%;
-  min-width: 200px;
-  margin: 0;
 }
 
-/* 图表区域高度固定 */
-.chart-container .chart {
-  height: 180px; /* 适当增加高度，填充更多空间 */
-  margin: 0;
-  padding: 0;
+.chart-section .chart {
+  flex: 1;
 }
 
 .area-evaluation {
-  margin-top: 0; /* 改为0 */
-  padding-top: 10px; /* 使用padding替代margin */
   text-align: center;
+  margin-top: 10px;
 }
 
+/* 推荐内容 */
 .recommend-list {
   display: flex;
   flex-wrap: wrap;
@@ -729,41 +691,39 @@ export default {
   justify-content: center;
 }
 
+/* 滚动条样式 */
+.concept-scroll-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.concept-scroll-container::-webkit-scrollbar-thumb {
+  background-color: #c1c1c1;
+  border-radius: 3px;
+}
+
+.concept-scroll-container::-webkit-scrollbar-track {
+  background-color: #f1f1f1;
+}
+
+/* 响应式设计 */
 @media (max-width: 992px) {
   .dashboard-container {
     flex-direction: column;
   }
   
-  .area-content {
+  .area-content-wrapper {
     flex-direction: column;
   }
   
-  .concept-container {
-    flex: none;
+  .concept-section {
     height: 60%;
-    padding-right: 0;
+    border-right: none;
+    border-bottom: 1px solid #ebeef5;
   }
   
-  .chart-container {
-    flex: none;
+  .chart-section {
+    width: 100%;
     height: 40%;
-    padding-left: 0;
-    margin-top: 15px;
-    border-left: none;
-    border-top: 1px solid #ebeef5;
   }
-}
-
-.concept-scroll-wrapper::-webkit-scrollbar {
-  width: 6px;
-}
-
-.concept-scroll-wrapper::-webkit-scrollbar-thumb {
-  background-color: #c1c1c1;
-  border-radius: 3px;
-}
-
-.concept-scroll-wrapper::-webkit-scrollbar-track {
-  background-color: #f1f1f1;
 }
 </style>
