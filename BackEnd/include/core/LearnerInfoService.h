@@ -4,6 +4,7 @@
 #include "MongoDBOperator.h"
 #include "MySQLOperator.h"
 #include "MLS_config.h"
+#include "LearnerService.h"
 
 #include <string>
 #include <unordered_map>
@@ -33,6 +34,14 @@ public:
             std::string, std::pair<
                 std::string, std::unordered_map<std::string, std::pair<
                     std::string, float>>>> &are_info
+    );
+
+    // 获取推荐的知识点，学习伙伴，学习伴侣的uid
+    bool get_recommend_info(
+        std::string &lrn_uid,
+        std::unordered_map<std::string, std::string> &cpt_uid2name,
+        std::vector<std::string> &lrn_partners,
+        std::vector<std::string> &lrn_models
     );
 
 

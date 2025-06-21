@@ -48,7 +48,7 @@
           <div slot="header">推荐知识点</div>
           <div class="recommend-list">
             <el-tag 
-              v-for="item in recommendations.knowledgePoints" 
+              v-for="item in recommendations.cpts" 
               :key="item" 
               type="info"
               class="recommend-tag"
@@ -157,7 +157,7 @@ export default {
     const selectedArea = ref(null);
     const currentAreUid = ref('');
     const recommendations = ref({
-      knowledgePoints: [],
+      cpts: [],
       studyPartners: [],
       studyModels: []
     });
@@ -214,7 +214,7 @@ export default {
           // 获取推荐信息
           const recommendRes = await getRecommendations(currentLrnUid.value);
           recommendations.value = recommendRes.data || {
-            knowledgePoints: [],
+            cpts: [],
             studyPartners: [],
             studyModels: []
           };

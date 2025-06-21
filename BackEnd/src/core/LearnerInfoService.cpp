@@ -71,3 +71,53 @@ bool LearnerInfoService::get_lrn_info(
     }
     return true;
 }
+
+bool LearnerInfoService::get_recommend_info(
+    std::string &lrn_uid,
+    std::unordered_map<std::string, std::string> &cpt_uid2name,
+    std::vector<std::string> &lrn_partners,
+    std::vector<std::string> &lrn_models
+) {
+    if (!mysqlop.judge_lrn_uid_exist(lrn_uid)){
+        return false;
+    }
+    // 获取RR的结果
+    LearnerService lrn_ser;
+    auto pred_rr_res = lrn_ser.predict_topK_cpt(
+        lrn_uid,
+        20
+    );
+    // 构建cpt的set
+    std::unordered_set<std::string> cpt_uids_set;
+    for (auto & cpt_uid : pred_rr_res) {
+        cpt_uids_set.insert(cpt_uid);
+    }
+    // 获取对应cpt的name
+    cpt_uid2name = std::move(mysqlop.get_cpt_name_by_cpt_uid(
+        cpt_uids_set
+    ));
+    // 获取学习伙伴
+    auto partners = mongodbop.get_lrn_partners_by_lrn_cpt_uid(
+        lrn_uid,
+        cpt_uids_set,
+        0.1,
+        5
+    );
+    if (partners != std::nullopt) {
+        for (auto & lrn_p_uid : *partners) {
+            lrn_partners.emplace_back(std::move(lrn_p_uid));
+        }
+    }
+    // 构建学习榜样
+    auto models = mongodbop.get_lrn_models_by_lrn_cpt_uid(
+        lrn_uid,
+        cpt_uids_set,
+        5
+    );
+    if (models != std::nullopt) {
+        for (auto & lrn_m_uid : *models) {
+            lrn_models.emplace_back(std::move(lrn_m_uid));
+        }
+    }
+    return true;
+}

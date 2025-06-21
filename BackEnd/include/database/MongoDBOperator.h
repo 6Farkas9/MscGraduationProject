@@ -156,14 +156,14 @@ public:
     );
 
     // 根据学习者uid和知识点查找学习榜样
-    std::optional<std::vector<std::string>> findLrnModeling(
+    std::optional<std::vector<std::string>> get_lrn_models_by_lrn_cpt_uid(
         const std::string& lrn_uid,
         const std::unordered_set<std::string>& cpt_uids,
         size_t max_results /* = 5 */
     );
 
     // 根据学习者uid和知识点查找学习伙伴
-    std::optional<std::vector<std::string>> findLrnPartners(
+    std::optional<std::vector<std::string>> get_lrn_partners_by_lrn_cpt_uid(
         const std::string& lrn_uid,
         const std::unordered_set<std::string>& cpt_uids,
         double similarity_threshold /* = 0.1 */,

@@ -195,7 +195,12 @@ public:
 
     // 获取指定cpt所在的are
     std::unordered_map<std::string, std::string> get_are_uid_by_multi_cpt_uids(
-        std::unordered_set<std::string> cpt_uids
+        std::unordered_set<std::string> &cpt_uids
+    );
+
+    // 获取指定cpt_uid的cpt_name
+    std::unordered_map<std::string, std::string> get_cpt_name_by_cpt_uid(
+        std::unordered_set<std::string> &cpt_uids
     );
 };
 

@@ -21,7 +21,7 @@
 class SceneService{
 
 public:
-    SceneService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
+    SceneService();
     ~SceneService();
 
     std::string addOneScene(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);

@@ -1,8 +1,9 @@
 #include "SceneService.h"
 
-SceneService::SceneService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
-    mysqlop(mysqlop),
-    mongodbop(mongodbop) {
+SceneService::SceneService() :
+    mysqlop(MySQLOperator::getInstance()),
+    mongodbop(MongoDBOperator::getInstance())
+{
 
 }
 

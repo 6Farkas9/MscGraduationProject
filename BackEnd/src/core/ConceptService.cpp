@@ -1,8 +1,9 @@
 #include "ConceptService.h"
 
-ConceptService::ConceptService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
-    mysqlop(mysqlop),
-    mongodbop(mongodbop) {
+ConceptService::ConceptService() :
+    mysqlop(MySQLOperator::getInstance()),
+    mongodbop(MongoDBOperator::getInstance()) 
+{
 
 }
 

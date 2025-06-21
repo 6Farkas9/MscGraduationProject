@@ -758,7 +758,7 @@ std::unordered_map<std::string, std::unordered_map<std::string, std::string>> My
 }
 
 std::unordered_map<std::string, std::string> MySQLOperator::get_are_uid_by_multi_cpt_uids(
-    std::unordered_set<std::string> cpt_uids
+    std::unordered_set<std::string> &cpt_uids
 ) {
     std::string sql = 
         R"(select cpt.cpt_uid, bg.are_uid
@@ -779,6 +779,31 @@ std::unordered_map<std::string, std::string> MySQLOperator::get_are_uid_by_multi
 
     auto result = executeQuery(sql);
 
+    std::unordered_map<std::string, std::string> ans;
+    for(auto &row : result){
+        ans[row[0]] = row[1];
+    }
+    return ans;
+}
+
+std::unordered_map<std::string, std::string> MySQLOperator::get_cpt_name_by_cpt_uid(
+    std::unordered_set<std::string> &cpt_uids
+) {
+    std::string sql = 
+        R"(select cpt_uid, cpt_name
+        from concepts
+        where cpt_uid in ()";
+    // sql += are_uid + R"(";)";
+    int cpt_num = cpt_uids.size();
+    int i = 0;
+    for (auto & cpt_uid : cpt_uids) {
+        sql += R"(")" + cpt_uid + R"(")";
+        if(++i < cpt_num){
+            sql += R"(,)";
+        }
+    }
+    sql += R"())";
+    auto result = executeQuery(sql);
     std::unordered_map<std::string, std::string> ans;
     for(auto &row : result){
         ans[row[0]] = row[1];

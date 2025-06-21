@@ -1,8 +1,9 @@
 #include "LearnerService.h"
 
-LearnerService::LearnerService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop) :
-    mysqlop(mysqlop),
-    mongodbop(mongodbop) {
+LearnerService::LearnerService() :
+    mysqlop(MySQLOperator::getInstance()),
+    mongodbop(MongoDBOperator::getInstance())
+{
 
 }
 
@@ -184,6 +185,31 @@ std::unordered_map<std::string, float> LearnerService::predict_lrn_rr(const std:
     int cpt_num = cpt_emb.size();
     for (int i = 0; i < cpt_num; ++i) {
         ans[ordered_cpt_uid[i]] = r_pred[i];
+    }
+    return ans;
+}
+
+std::deque<std::string> LearnerService::predict_topK_cpt(
+    const std::string &lrn_uid,
+    int K
+) {
+    auto pred_rr_res = predict_lrn_rr(lrn_uid);
+
+    auto cmp = [&](const std::string& a, const std::string& b) {
+        return pred_rr_res[a] > pred_rr_res[b];
+    };
+
+    std::priority_queue<std::string, std::deque<std::string>, decltype(cmp)> heap(cmp);
+    for (auto & cpt_uid2score : pred_rr_res) {
+        heap.push(cpt_uid2score.first);
+        if (heap.size() > K) {
+            heap.pop();
+        }
+    }
+    std::deque<std::string> ans;
+    while(!heap.empty()) {
+        ans.push_front(heap.top());
+        heap.pop();
     }
     return ans;
 }

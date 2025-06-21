@@ -882,7 +882,7 @@ std::unordered_map<std::string, std::unordered_map<std::string, float>> MongoDBO
     }
 }
 
-std::optional<std::vector<std::string>> MongoDBOperator::findLrnPartners(
+std::optional<std::vector<std::string>> MongoDBOperator::get_lrn_partners_by_lrn_cpt_uid(
     const std::string& lrn_uid,
     const std::unordered_set<std::string>& cpt_uids,
     double similarity_threshold /* = 0.1 */,
@@ -984,7 +984,7 @@ std::optional<std::vector<std::string>> MongoDBOperator::findLrnPartners(
     }
 }
 
-std::optional<std::vector<std::string>> MongoDBOperator::findLrnModeling(
+std::optional<std::vector<std::string>> MongoDBOperator::get_lrn_models_by_lrn_cpt_uid(
     const std::string& lrn_uid,
     const std::unordered_set<std::string>& cpt_uids,
     size_t max_results /* = 5 */) {

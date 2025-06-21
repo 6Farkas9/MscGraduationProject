@@ -23,7 +23,7 @@
 class ConceptService{
 
 public:
-    ConceptService(MySQLOperator &mysqlop, MongoDBOperator &mongodbop);
+    ConceptService();
     ~ConceptService();
 
     // 添加一个新的知识点

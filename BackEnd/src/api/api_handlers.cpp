@@ -106,8 +106,53 @@ void setupLearnerInfoRoutes(crow::SimpleApp& app) {
     // 获取推荐内容
     CROW_ROUTE(app, "/api/recommendations/<string>")
     .methods("GET"_method)
-    ([](const crow::request& req, std::string uid){
-        return crow::response(DataSimulator::getRecommendations(uid));
+    ([](const crow::request& req, std::string lrn_uid) {
+        std::unordered_map<std::string, std::string> cpt_uids;
+        std::vector<std::string> lrn_partners;
+        std::vector<std::string> lrn_models;
+
+        crow::json::wvalue response;
+        crow::json::wvalue data;
+
+        LearnerInfoService lrn_info_ser;
+        if (!lrn_info_ser.get_recommend_info(
+            lrn_uid,
+            cpt_uids,
+            lrn_partners,
+            lrn_models
+        )) {
+            response["code"] = 404;
+            response["message"] = "获取失败";
+            response["data"] = std::move(data);
+        }
+        crow::json::wvalue cpts = crow::json::wvalue::list();
+        int idx = 0;
+        for (auto &cpt_uid2name : cpt_uids) {
+            cpts[idx++] = std::move(cpt_uid2name.second);
+        }
+        
+        crow::json::wvalue studyPartners = crow::json::wvalue::list();
+        idx = 0;
+        for (auto &lrn_p_uid : lrn_partners) {
+            studyPartners[idx++] = std::move(lrn_p_uid);
+        }
+        
+        crow::json::wvalue studyModels = crow::json::wvalue::list();
+        idx = 0;
+        for (auto &lrn_m_uid : lrn_models) {
+            studyModels[idx++] = std::move(lrn_m_uid);
+        }
+        
+        data["cpts"] = std::move(cpts);
+        data["studyPartners"] = std::move(studyPartners);
+        data["studyModels"] = std::move(studyModels);
+
+        response["code"] = 200;
+        response["message"] = "获取成功";
+        response["data"] = std::move(data);
+
+
+        return crow::response(response);
     });
 }
 

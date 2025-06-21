@@ -15,7 +15,6 @@
 #include "FileReader.h"
 #include "api_handlers.h"
 #include "crow/middlewares/cors.h"
-// #include "api_PlatformStats.h"
 
 // #include "LearnerInfoService.h"
 
@@ -56,15 +55,6 @@
 //         std::cout << kv.first << " - " << kv.second << std::endl;
 //     }
 //     std::cout << "RR finished" << std::endl;
-// }
-
-// std::string read_file_content(const std::string& file_path) {
-//     std::ifstream file(file_path, std::ios::binary);
-//     if (!file) {
-//         return "";
-//     }
-//     return std::string(std::istreambuf_iterator<char>(file), 
-//                       std::istreambuf_iterator<char>());
 // }
 
 int main() {
@@ -162,27 +152,39 @@ int main() {
 //     LearnerInfoService lrninfo_ser;
 
 //     std::string lrn_uid = "lrn_aee0624932cf4affa00626e8f038c4e8";
-//     std::unordered_map<std::string, std::string> lrn_info;
-//     std::unordered_map<
-//         std::string, std::pair<
-//             std::string, std::unordered_map<std::string, std::pair<
-//                 std::string, float>>>> are_info;
+//     std::unordered_set<std::string> cpt_uids;
 
-//     lrninfo_ser.get_lrn_info(
+//     cpt_uids.insert("cpt_f4e10b32f85746d7900fdbff3b27276e");
+//     cpt_uids.insert("cpt_5a315add91b0469f8537cb37feb0dc0c");
+//     cpt_uids.insert("cpt_a86e9f3aff6245979bf1c8a9454b5dde");
+//     cpt_uids.insert("cpt_f361c531a42048c18d55769b782c3fd5");
+//     cpt_uids.insert("cpt_c7d6af53b25944e6bb3b990c3076df05");
+
+//     auto partners = mongodbop.get_lrn_partners_by_lrn_cpt_uid(
 //         lrn_uid,
-//         lrn_info,
-//         are_info
+//         cpt_uids,
+//         0.1,
+//         5
 //     );
-//     for (auto &kv : lrn_info) {
-//         std::cout << kv.first << "-" << kv.second << std::endl;
-//     }
 
-//     for (auto &kv : are_info) {
-//         std::cout << kv.first << "-" << kv.second.first << " : " << std::endl;;
-//         for (auto &cpt_uid2pred : kv.second.second) {
-//             std::cout << cpt_uid2pred.first << " -- " << cpt_uid2pred.second.first << " : " << cpt_uid2pred.second.second << std::endl;
+//     auto models = mongodbop.get_lrn_models_by_lrn_cpt_uid(
+//         lrn_uid,
+//         cpt_uids,
+//         5
+//     );
+
+//     if (partners != std::nullopt) {
+//         for (auto & lrn_uid : *partners) {
+//             std::cout << lrn_uid << std::endl;
 //         }
 //     }
+//     std::cout << std::endl;
+//     if (models != std::nullopt) {
+//         for (auto & lrn_uid : *models) {
+//             std::cout << lrn_uid << std::endl;
+//         }
+//     }
+
 // }
 
 // int main() {
