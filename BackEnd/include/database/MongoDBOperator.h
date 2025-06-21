@@ -37,22 +37,6 @@ private:
     std::unique_ptr<Impl> pImpl_;
     static std::mutex instanceMutex_;
 
-public:
-    MongoDBOperator(const MongoDBOperator&) = delete;
-    MongoDBOperator& operator=(const MongoDBOperator&) = delete;
-    
-    // 获取单例实例
-    static MongoDBOperator& getInstance();
-    
-    // 初始化数据库连接
-    bool initialize();
-    
-    // 检查连接状态
-    bool isConnected() const;
-    
-    // 关闭连接池
-    void close();
-
     // ========== 通用操作方法 ==========
     
     // 查询文档（返回可选值）
@@ -111,6 +95,22 @@ public:
         const std::string& collection, 
         bsoncxx::document::view_or_value filter);
 
+public:
+    MongoDBOperator(const MongoDBOperator&) = delete;
+    MongoDBOperator& operator=(const MongoDBOperator&) = delete;
+    
+    // 获取单例实例
+    static MongoDBOperator& getInstance();
+    
+    // 初始化数据库连接
+    bool initialize();
+    
+    // 检查连接状态
+    bool isConnected() const;
+    
+    // 关闭连接池
+    void close();
+
     // ========== 业务方法示例 ==========
 
     // 获取指定scn的kcge嵌入表达
@@ -148,6 +148,12 @@ public:
 
     // 更新scene的kcge嵌入
     int update_scn_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &scn_emb);
+
+    // 获取单一学习者在指定cpt上的预测成绩
+    std::unordered_map<std::string, std::unordered_map<std::string, float>> get_lrn_kt_cd_by_cpt_uids(
+        std::string &lrn_uid,
+        std::unordered_set<std::string> &cpt_uids
+    );
 
     // 根据学习者uid和知识点查找学习榜样
     std::optional<std::vector<std::string>> findLrnModeling(

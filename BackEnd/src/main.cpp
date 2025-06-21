@@ -14,8 +14,10 @@
 #include "crow.h"
 #include "FileReader.h"
 #include "api_handlers.h"
-//#include "crow/middlewares/cors.h"
+#include "crow/middlewares/cors.h"
 // #include "api_PlatformStats.h"
+
+// #include "LearnerInfoService.h"
 
 
 // int main() {
@@ -150,6 +152,38 @@ int main() {
     std::cout << "Server running on http://localhost:8080\n";
     app.port(8080).multithreaded().run();
 }
+
+// int main() {
+//     MySQLOperator& mysqlop = MySQLOperator::getInstance();
+//     mysqlop.initialize();
+//     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
+//     mongodbop.initialize();
+
+//     LearnerInfoService lrninfo_ser;
+
+//     std::string lrn_uid = "lrn_aee0624932cf4affa00626e8f038c4e8";
+//     std::unordered_map<std::string, std::string> lrn_info;
+//     std::unordered_map<
+//         std::string, std::pair<
+//             std::string, std::unordered_map<std::string, std::pair<
+//                 std::string, float>>>> are_info;
+
+//     lrninfo_ser.get_lrn_info(
+//         lrn_uid,
+//         lrn_info,
+//         are_info
+//     );
+//     for (auto &kv : lrn_info) {
+//         std::cout << kv.first << "-" << kv.second << std::endl;
+//     }
+
+//     for (auto &kv : are_info) {
+//         std::cout << kv.first << "-" << kv.second.first << " : " << std::endl;;
+//         for (auto &cpt_uid2pred : kv.second.second) {
+//             std::cout << cpt_uid2pred.first << " -- " << cpt_uid2pred.second.first << " : " << cpt_uid2pred.second.second << std::endl;
+//         }
+//     }
+// }
 
 // int main() {
 //     MySQLOperator& mysqlop = MySQLOperator::getInstance();

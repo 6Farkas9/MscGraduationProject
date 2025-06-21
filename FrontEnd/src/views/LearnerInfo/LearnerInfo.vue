@@ -14,7 +14,7 @@
           <div class="info-item">
             <span>UID:</span>
             <div class="uid-input-container">
-              <el-input v-model="currentUid" size="small"></el-input>
+              <el-input v-model="currentLrnUid" size="small"></el-input>
               <el-button type="primary" size="small" @click="fetchLearnerData" :loading="loading">确定</el-button>
             </div>
           </div>
@@ -32,16 +32,16 @@
         </el-card>
 
         <!-- 学习领域 -->
-        <el-card class="domains-card" v-if="hasData">
+        <el-card class="areas-card" v-if="hasData">
           <div slot="header">学习过的领域</div>
-          <div class="domains-list">
+          <div class="areas-list">
             <el-tag
-              v-for="domain in learnerInfo.domains"
-              :key="domain.id"
-              @click="selectDomain(domain)"
-              :type="currentDomainId === domain.id ? 'primary' : ''"
+              v-for="area in learnerInfo.are_data"
+              :key="area.are_uid"
+              @click="selectArea(area)"
+              :type="currentAreUid === area.are_uid ? 'primary' : ''"
             >
-              {{ domain.name }}
+              {{ area.are_name }}
             </el-tag>
           </div>
         </el-card>
@@ -61,34 +61,39 @@
 
       <!-- 右侧面板 (2/3宽度) -->
       <div class="right-panel" v-if="hasData">
-        <!-- 领域表现 - 修改为左右布局 -->
-        <el-card v-if="selectedDomain" class="domain-card">
-          <div slot="header">{{ selectedDomain.name }}领域表现</div>
-          <div class="domain-content">
-            <!-- 知识点区域 (3/4宽度) -->
-            <div class="knowledge-container">
-              <div class="knowledge-grid">
-                <div v-for="point in selectedDomain.knowledgePoints" :key="point.name" class="knowledge-item">
-                  <el-tooltip :content="`${point.name}: 预测正确率:${(point.score)}`" placement="top">
-                    <div class="point-container">
-                      <span class="point-name" :title="point.name">{{ truncateName(point.name) }}</span>
-                      <span :class="['point-score', getScoreClass(point.score)]"></span>
+        <!-- 领域表现 -->
+        <el-card v-if="selectedArea" class="area-card">
+          <div slot="header">{{ selectedArea.are_name }}领域表现</div>
+          <div class="el-card__body" style="padding: 20px">
+            <div class="area-content">
+              <!-- 知识点区域 -->
+              <div class="concept-container">
+                <div class="concept-scroll-wrapper" @wheel.prevent="handleConceptScroll">
+                  <div class="concept-grid">
+                    <div v-for="cpt in selectedArea.cpt_data" :key="cpt.cpt_uid" class="cpt-item">
+                      <el-tooltip :content="`${cpt.cpt_name}: 预测正确率:${(cpt.score)}`" placement="top">
+                        <div class="cpt-container">
+                          <span class="cpt-name" :title="cpt.cpt_name">{{ truncateName(cpt.cpt_name) }}</span>
+                          <span :class="['cpt-score', getScoreClass(cpt.score)]"></span>
+                        </div>
+                      </el-tooltip>
                     </div>
-                  </el-tooltip>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 图表区域 -->
+              <div class="chart-container">
+                <div ref="areaChart" class="chart"></div>
+                <div class="area-evaluation">
+                  <el-tag :type="getEvaluationTagType(selectedArea.evaluation)" size="medium">
+                    {{ selectedArea.evaluation }}
+                  </el-tag>
                 </div>
               </div>
             </div>
-            
-            <!-- 图表区域 (1/4宽度) -->
-            <div class="chart-container">
-              <div ref="domainChart" class="chart"></div>
-              <div class="domain-evaluation">
-                <el-tag :type="getEvaluationTagType(selectedDomain.evaluation)" size="medium">
-                  {{ selectedDomain.evaluation }}
-                </el-tag>
-              </div>
-            </div>
           </div>
+          
         </el-card>
 
         <!-- 推荐内容 -->
@@ -140,20 +145,20 @@
 <script>
 import { ref, onMounted, watch, nextTick } from 'vue';
 import * as echarts from 'echarts';
-import { getLearnerInfo, getRecommendations } from '@/api/learnerInfo.js'; // 假设API文件路径
+import { getLearnerInfo, getRecommendations } from '@/api/learnerInfo.js';
 
 export default {
   setup() {
     // 响应式数据
-    const currentUid = ref('');
+    const currentLrnUid = ref('');
     const learnerInfo = ref({
-      uid: '',
+      lrn_uid: '',
       email: '',
       phone: '',
-      domains: []
+      are_data: []
     });
-    const selectedDomain = ref(null);
-    const currentDomainId = ref('');
+    const selectedArea = ref(null);
+    const currentAreUid = ref('');
     const recommendations = ref({
       knowledgePoints: [],
       studyPartners: [],
@@ -171,11 +176,11 @@ export default {
 
     // 图表实例
     const overallChart = ref(null);
-    const domainChart = ref(null);
+    const areaChart = ref(null);
 
     // 方法
     const fetchLearnerData = async () => {
-      if (!currentUid.value) {
+      if (!currentLrnUid.value) {
         ElMessage.warning('请输入UID');
         return;
       }
@@ -183,34 +188,34 @@ export default {
       loading.value = true;
       try {
         // 获取学习者信息
-        const learnerRes = await getLearnerInfo(currentUid.value);
+        const learnerRes = await getLearnerInfo(currentLrnUid.value);
         if (learnerRes.data) {
           learnerInfo.value = learnerRes.data;
           
           // 计算领域评价
-          learnerInfo.value.domains.forEach(domain => {
-            const scores = domain.knowledgePoints?.map(p => p.score) || [];
+          learnerInfo.value.are_data.forEach(area => {
+            const scores = area.cpt_data?.map(p => p.score) || [];
             const minScore = scores.length > 0 ? Math.min(...scores) : 0;
             
             if (minScore >= 0.8) {
-              domain.evaluation = '表现优秀';
+              area.evaluation = '表现优秀';
             } else if (minScore >= 0.6) {
-              domain.evaluation = '表现良好';
+              area.evaluation = '表现良好';
             } else if (minScore >= 0.4) {
-              domain.evaluation = '存在问题';
+              area.evaluation = '存在问题';
             } else {
-              domain.evaluation = '学情预警';
+              area.evaluation = '学情预警';
             }
           });
 
           // 设置默认选中的领域
-          if (learnerInfo.value.domains.length > 0) {
-            selectedDomain.value = learnerInfo.value.domains[0];
-            currentDomainId.value = learnerInfo.value.domains[0].id;
+          if (learnerInfo.value.are_data.length > 0) {
+            selectedArea.value = learnerInfo.value.are_data[0];
+            currentAreUid.value = learnerInfo.value.are_data[0].are_uid;
           }
 
           // 获取推荐信息
-          const recommendRes = await getRecommendations(currentUid.value);
+          const recommendRes = await getRecommendations(currentLrnUid.value);
           recommendations.value = recommendRes.data || {
             knowledgePoints: [],
             studyPartners: [],
@@ -238,11 +243,11 @@ export default {
       }
     };
 
-    const selectDomain = (domain) => {
-      selectedDomain.value = domain;
-      currentDomainId.value = domain.id;
+    const selectArea = (area) => {
+      selectedArea.value = area;
+      currentAreUid.value = area.are_uid;
       nextTick(() => {
-        initDomainChart();
+        initAreaChart();
       });
     };
 
@@ -268,30 +273,31 @@ export default {
     };
 
     const updatePerformanceSummary = () => {
-      // 重置计数器
       performanceItems.value.forEach(item => item.count = 0);
       
-      // 重新统计
-      learnerInfo.value.domains.forEach(domain => {
-        if (domain.evaluation === '表现优秀') {
+      learnerInfo.value.are_data.forEach(area => {
+        if (area.evaluation === '表现优秀') {
           performanceItems.value[0].count++;
-        } else if (domain.evaluation === '表现良好') {
+        } else if (area.evaluation === '表现良好') {
           performanceItems.value[1].count++;
-        } else if (domain.evaluation === '存在问题') {
+        } else if (area.evaluation === '存在问题') {
           performanceItems.value[2].count++;
-        } else if (domain.evaluation === '学情预警') {
+        } else if (area.evaluation === '学情预警') {
           performanceItems.value[3].count++;
         }
       });
     };
 
+    const handleConceptScroll = (e) => {
+      const container = e.currentTarget;
+      container.scrollTop += e.deltaY;
+    };
+
     const initOverallChart = () => {
-      // 销毁旧图表
       if (overallChart.value) {
         overallChart.value.dispose();
       }
       
-      // 初始化新图表
       overallChart.value = echarts.init(document.querySelector('.performance-card .chart'));
       
       const data = [
@@ -334,7 +340,6 @@ export default {
         }]
       };
       
-      // 设置空数据提示
       if (data.length === 0) {
         option.graphic = {
           type: 'text',
@@ -351,24 +356,25 @@ export default {
       overallChart.value.setOption(option);
     };
 
-    const initDomainChart = () => {
-      if (!selectedDomain.value) return;
+    const initAreaChart = () => {
+      if (!selectedArea.value) return;
       
-      // 销毁旧图表
-      if (domainChart.value) {
-        domainChart.value.dispose();
+      if (areaChart.value) {
+        areaChart.value.dispose();
       }
       
-      // 初始化新图表
-      domainChart.value = echarts.init(document.querySelector('.domain-card .chart'));
+      const chartDom = document.querySelector('.area-card .chart');
+      if (!chartDom) return;
       
-      const points = selectedDomain.value.knowledgePoints || [];
+      areaChart.value = echarts.init(chartDom);
+      
+      const cpts = selectedArea.value.cpt_data || [];
       let excellent = 0, good = 0, problem = 0, warning = 0;
       
-      points.forEach(point => {
-        if (point.score >= 0.8) excellent++;
-        else if (point.score >= 0.6) good++;
-        else if (point.score >= 0.4) problem++;
+      cpts.forEach(cpt => {
+        if (cpt.score >= 0.8) excellent++;
+        else if (cpt.score >= 0.6) good++;
+        else if (cpt.score >= 0.4) problem++;
         else warning++;
       });
       
@@ -411,7 +417,6 @@ export default {
         }]
       };
       
-      // 设置空数据提示
       if (data.length === 0) {
         option.graphic = {
           type: 'text',
@@ -425,17 +430,17 @@ export default {
         };
       }
       
-      domainChart.value.setOption(option);
+      areaChart.value.setOption(option);
     };
 
     const initCharts = () => {
       initOverallChart();
-      initDomainChart();
+      initAreaChart();
     };
 
     const handleResize = () => {
       if (overallChart.value) overallChart.value.resize();
-      if (domainChart.value) domainChart.value.resize();
+      if (areaChart.value) areaChart.value.resize();
     };
 
     // 生命周期
@@ -443,31 +448,31 @@ export default {
       window.addEventListener('resize', handleResize);
     });
 
-    // 组件卸载时清理
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize);
       if (overallChart.value) overallChart.value.dispose();
-      if (domainChart.value) domainChart.value.dispose();
+      if (areaChart.value) areaChart.value.dispose();
     });
 
-    watch(selectedDomain, () => {
-      initDomainChart();
+    watch(selectedArea, () => {
+      initAreaChart();
     });
 
     return {
-      currentUid,
+      currentLrnUid,
       learnerInfo,
-      selectedDomain,
-      currentDomainId,
+      selectedArea,
+      currentAreUid,
       recommendations,
       performanceItems,
       loading,
       hasData,
       fetchLearnerData,
-      selectDomain,
+      selectArea,
       getScoreClass,
       getEvaluationTagType,
-      truncateName
+      truncateName,
+      handleConceptScroll
     };
   }
 };
@@ -491,18 +496,17 @@ export default {
   margin-right: 20px;
 }
 
-/* 1. 左右面板1:2比例 */
 .dashboard-container {
   display: flex;
   gap: 20px;
 }
 
 .left-panel {
-  flex: 1; /* 1/3宽度 */
+  flex: 1;
 }
 
 .right-panel {
-  flex: 2; /* 2/3宽度 */
+  flex: 2;
 }
 
 .el-card {
@@ -532,13 +536,12 @@ export default {
   flex: 1;
 }
 
-.domains-list .el-tag {
+.areas-list .el-tag {
   margin-right: 10px;
   margin-bottom: 10px;
   cursor: pointer;
 }
 
-/* 总体表现图表 */
 .chart {
   height: 200px;
   width: 100%;
@@ -563,34 +566,71 @@ export default {
   flex-shrink: 0;
 }
 
-.excellent { background-color: #67C23A; } /* 绿色 */
-.good { background-color: #409EFF; } /* 浅蓝色 */
-.problem { background-color: #E6A23C; } /* 黄色 */
-.warning { background-color: #F56C6C; } /* 红色 */
+.excellent { background-color: #67C23A; }
+.good { background-color: #409EFF; }
+.problem { background-color: #E6A23C; }
+.warning { background-color: #F56C6C; }
 
-/* 3. 领域表现卡片左右布局 */
-.domain-card {
-  height: 380px; /* 固定高度以便滚动 */
-}
-
-.domain-content {
+/* 重设卡片结构样式 */
+.area-card {
+  height: 380px; /* 或您需要的任何高度 */
   display: flex;
-  height: calc(100% - 57px); /* 减去标题高度 */
+  flex-direction: column;
+  
+  /* 关键修改：穿透修改Element UI默认样式 */
+  :deep(.el-card__body) {
+    padding: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* 防止内容溢出 */
+  }
 }
 
-.knowledge-container {
-  flex: 3; /* 3/4宽度 */
-  overflow-y: auto; /* 垂直滚动 */
+.area-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  margin: 0;
+  /* 不再需要calc计算，flex:1会自动分配剩余空间 */
+}
+
+/* 确保知识点容器填满空间 */
+.concept-container {
+  flex: 3;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+/* 确保滚动容器填满空间 */
+.concept-scroll-wrapper {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
   padding-right: 10px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
 }
 
-.knowledge-grid {
+/* 知识点网格 - 移除底部padding */
+.concept-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   gap: 8px;
+  padding: 8px 10px 0 10px; /* 只保留顶部padding */
+  margin: 0;
+  min-height: min-content;
 }
 
-.knowledge-item {
+.cpt-item {
   display: flex;
   align-items: center;
   padding: 6px;
@@ -599,14 +639,14 @@ export default {
   height: 32px;
 }
 
-.point-container {
+.cpt-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
 }
 
-.point-name {
+.cpt-name {
   flex: 1;
   white-space: nowrap;
   overflow: hidden;
@@ -615,28 +655,40 @@ export default {
   font-size: 12px;
 }
 
-.point-score {
+.cpt-score {
   width: 16px;
   height: 16px;
   border-radius: 4px;
   flex-shrink: 0;
 }
 
+/* 图表容器 - 精确控制高度 */
+/* 调整图表容器 */
 .chart-container {
-  flex: 1; /* 1/4宽度 */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
   padding-left: 10px;
   border-left: 1px solid #ebeef5;
+  height: 100%;
+  min-width: 200px;
+  margin: 0;
 }
 
-.domain-evaluation {
-  margin-top: 10px;
+/* 图表区域高度固定 */
+.chart-container .chart {
+  height: 180px; /* 适当增加高度，填充更多空间 */
+  margin: 0;
+  padding: 0;
+}
+
+.area-evaluation {
+  margin-top: 0; /* 改为0 */
+  padding-top: 10px; /* 使用padding替代margin */
   text-align: center;
 }
 
-/* 推荐内容样式 */
 .recommend-list {
   display: flex;
   flex-wrap: wrap;
@@ -666,7 +718,6 @@ export default {
   flex-shrink: 0;
 }
 
-/* 空数据状态 */
 .empty-tip {
   padding: 20px 0;
 }
@@ -678,17 +729,16 @@ export default {
   justify-content: center;
 }
 
-/* 响应式设计 */
 @media (max-width: 992px) {
   .dashboard-container {
     flex-direction: column;
   }
   
-  .domain-content {
+  .area-content {
     flex-direction: column;
   }
   
-  .knowledge-container {
+  .concept-container {
     flex: none;
     height: 60%;
     padding-right: 0;
@@ -704,13 +754,16 @@ export default {
   }
 }
 
-/* 美化滚动条 */
-.knowledge-container::-webkit-scrollbar {
+.concept-scroll-wrapper::-webkit-scrollbar {
   width: 6px;
 }
 
-.knowledge-container::-webkit-scrollbar-thumb {
+.concept-scroll-wrapper::-webkit-scrollbar-thumb {
   background-color: #c1c1c1;
   border-radius: 3px;
+}
+
+.concept-scroll-wrapper::-webkit-scrollbar-track {
+  background-color: #f1f1f1;
 }
 </style>

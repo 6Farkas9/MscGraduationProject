@@ -4,6 +4,7 @@
 
 #include "crow.h"
 #include "PlatformStatsService.h"
+#include "LearnerInfoService.h"
 
 namespace api {
 

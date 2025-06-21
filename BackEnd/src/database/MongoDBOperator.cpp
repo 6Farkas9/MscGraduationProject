@@ -817,6 +817,71 @@ int MongoDBOperator::update_scn_kcge_emb(const std::unordered_map<std::string, s
     }
 }
 
+std::unordered_map<std::string, std::unordered_map<std::string, float>> MongoDBOperator::get_lrn_kt_cd_by_cpt_uids(
+    std::string &lrn_uid,
+    std::unordered_set<std::string> &cpt_uids
+) {
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+    
+    try {
+        // 1. 构建查询条件：_id 等于 lrn_uid
+        auto filter = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", lrn_uid)
+        );
+        
+        // 2. 构造投影参数，只返回KT和CD字段
+        auto projection = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("KT", 1),
+            bsoncxx::builder::basic::kvp("CD", 1)
+        );
+        
+        // 3. 使用findOne查询单个文档
+        auto result = findOne("learners", filter.view(), projection.view());
+        
+        // 4. 准备返回结果
+        std::unordered_map<std::string, std::unordered_map<std::string, float>> ans;
+        for (auto & cpt_uid : cpt_uids) {
+            ans[cpt_uid] = std::unordered_map<std::string, float>();
+        }
+        // std::unordered_map<std::string, float> kt_map;
+        // std::unordered_map<std::string, float> cd_map;
+        
+        if (!result) {
+            return ans; // 返回空map对
+        }
+        
+        // 5. 处理KT字段
+        if (auto kt_field = (*result)["KT"]; kt_field && kt_field.type() == bsoncxx::type::k_document) {
+            auto kt_doc = kt_field.get_document().value;
+            for (const auto& uid : cpt_uids) {
+                if (auto elem = kt_doc[uid]; elem && elem.type() == bsoncxx::type::k_double) {
+                    // kt_map[uid] = elem.get_double().value;
+                    ans[uid]["KT"] = elem.get_double().value;
+                }
+            }
+        }
+        
+        // 6. 处理CD字段
+        if (auto cd_field = (*result)["CD"]; cd_field && cd_field.type() == bsoncxx::type::k_document) {
+            auto cd_doc = cd_field.get_document().value;
+            for (const auto& uid : cpt_uids) {
+                if (auto elem = cd_doc[uid]; elem && elem.type() == bsoncxx::type::k_double) {
+                    // cd_map[uid] = elem.get_double().value;
+                    ans[uid]["CD"] = elem.get_double().value;
+                }
+            }
+        }
+        
+        return ans;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "System error: " << e.what() << std::endl;
+        throw;
+    }
+}
+
 std::optional<std::vector<std::string>> MongoDBOperator::findLrnPartners(
     const std::string& lrn_uid,
     const std::unordered_set<std::string>& cpt_uids,

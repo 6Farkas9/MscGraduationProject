@@ -680,3 +680,108 @@ int MySQLOperator::get_ict_num() {
     std::istringstream(result[0][0]) >> ans;
     return ans;
 }
+
+std::unordered_map<std::string, std::string> MySQLOperator::get_are_uid_name_by_lrn_uid(
+    std::string &lrn_uid
+) {
+    std::string sql = R"(
+        select are.are_uid, are.are_name
+        from areas as are
+        join graph_engage as ge
+        on are.are_uid = ge.are_uid
+        where ge.lrn_uid = ")" + lrn_uid + R"(")";
+    auto result = executeQuery(sql);
+    std::unordered_map<std::string, std::string> ans;
+    for (auto &oneare : result) {
+        ans[oneare[0]] = oneare[1];
+    }
+    return ans;
+}
+
+std::unordered_map<std::string, std::string> MySQLOperator::get_cpt_uid_name_of_multi_area(
+    std::unordered_set<std::string> &are_uids
+) {
+    std::string sql = 
+        R"(select cpt.cpt_uid, cpt.cpt_name
+        from concepts cpt
+        join graph_belong bg
+        on cpt.cpt_uid = bg.cpt_uid 
+        where bg.are_uid in ()";
+    // sql += are_uid + R"(";)";
+    int are_num = are_uids.size();
+    int i = 0;
+    for (auto & are_uid : are_uids) {
+        sql += R"(")" + are_uid + R"(")";
+        if(++i < are_num){
+            sql += R"(,)";
+        }
+    }
+    sql += R"())";
+
+    auto result = executeQuery(sql);
+
+    std::unordered_map<std::string, std::string> ans;
+    for(auto &row : result){
+        ans[row[0]] = row[1];
+    }
+    return ans;
+}
+
+std::unordered_map<std::string, std::unordered_map<std::string, std::string>> MySQLOperator::get_email_phone_by_lrn_uids(
+    std::unordered_set<std::string> lrn_uids
+) {
+    std::string sql = R"(
+        select lrn_uid, email, phone_number
+        from learners
+        where lrn_uid in ()";
+    int lrn_num = lrn_uids.size();
+    int i = 0;
+    for (auto & lrn_uid : lrn_uids) {
+        sql += R"(")" + lrn_uid + R"(")";
+        if(++i < lrn_num){
+            sql += R"(,)";
+        }
+    }
+    sql += R"())";
+
+    auto result = executeQuery(sql);
+
+    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> ans;
+    for(auto &row : result){
+        if (ans.find(row[0]) == ans.end()) {
+            ans[row[0]] = std::unordered_map<std::string, std::string>();
+        }
+        ans[row[0]]["email"] = row[1];
+        ans[row[0]]["phone"] = row[2];
+    }
+    return ans;
+}
+
+std::unordered_map<std::string, std::string> MySQLOperator::get_are_uid_by_multi_cpt_uids(
+    std::unordered_set<std::string> cpt_uids
+) {
+    std::string sql = 
+        R"(select cpt.cpt_uid, bg.are_uid
+        from concepts cpt
+        join graph_belong bg
+        on cpt.cpt_uid = bg.cpt_uid 
+        where cpt.cpt_uid in ()";
+    // sql += are_uid + R"(";)";
+    int cpt_num = cpt_uids.size();
+    int i = 0;
+    for (auto & cpt_uid : cpt_uids) {
+        sql += R"(")" + cpt_uid + R"(")";
+        if(++i < cpt_num){
+            sql += R"(,)";
+        }
+    }
+    sql += R"())";
+
+    auto result = executeQuery(sql);
+
+    std::unordered_map<std::string, std::string> ans;
+    for(auto &row : result){
+        ans[row[0]] = row[1];
+    }
+    return ans;
+}

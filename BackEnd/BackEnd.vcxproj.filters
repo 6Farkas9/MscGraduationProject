@@ -96,6 +96,9 @@
     <ClInclude Include="include\api\data_simulator.h">
       <Filter>include\api</Filter>
     </ClInclude>
+    <ClInclude Include="include\core\LearnerInfoService.h">
+      <Filter>include\core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp">
@@ -151,6 +154,9 @@
     </ClCompile>
     <ClCompile Include="src\api\data_simulator.cpp">
       <Filter>src\api</Filter>
+    </ClCompile>
+    <ClCompile Include="src\core\LearnerInfoService.cpp">
+      <Filter>src\core</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

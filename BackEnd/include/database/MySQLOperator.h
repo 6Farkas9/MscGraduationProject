@@ -179,6 +179,24 @@ public:
 
     // 获取交互数
     int get_ict_num();
+
+    // 获取指定lrn交互过的are的uid和name（单lrn版本）
+    std::unordered_map<std::string, std::string> get_are_uid_name_by_lrn_uid(std::string &lrn_uid);
+
+    // 获取指定are下属的cpt的uid和name
+    std::unordered_map<std::string, std::string> get_cpt_uid_name_of_multi_area(
+        std::unordered_set<std::string> &are_uids
+    );
+
+    // 获取指定lrn的email和phone
+    std::unordered_map<std::string, std::unordered_map<std::string, std::string>> get_email_phone_by_lrn_uids(
+        std::unordered_set<std::string> lrn_uids
+    );
+
+    // 获取指定cpt所在的are
+    std::unordered_map<std::string, std::string> get_are_uid_by_multi_cpt_uids(
+        std::unordered_set<std::string> cpt_uids
+    );
 };
 
 #endif

@@ -166,6 +166,7 @@
     <ClInclude Include="include\api\crow.h" />
     <ClInclude Include="include\api\data_simulator.h" />
     <ClInclude Include="include\core\ConceptService.h" />
+    <ClInclude Include="include\core\LearnerInfoService.h" />
     <ClInclude Include="include\core\LearnerService.h" />
     <ClInclude Include="include\core\MLS_config.h" />
     <ClInclude Include="include\core\PlatformStatsService.h" />
@@ -186,6 +187,7 @@
     <ClCompile Include="src\api\api_PlatformStats.cpp" />
     <ClCompile Include="src\api\data_simulator.cpp" />
     <ClCompile Include="src\core\ConceptService.cpp" />
+    <ClCompile Include="src\core\LearnerInfoService.cpp" />
     <ClCompile Include="src\core\LearnerService.cpp" />
     <ClCompile Include="src\core\PlatformStatsService.cpp" />
     <ClCompile Include="src\core\SceneService.cpp" />
