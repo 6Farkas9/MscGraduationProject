@@ -9,7 +9,23 @@ void setupPlatformStatsRoutes(crow::SimpleApp& app) {
     CROW_ROUTE(app, "/api/platform-stats")
     .methods("GET"_method)
     ([](){
-        return crow::response(DataSimulator::getPlatformStats());
+        PlatformStatsService plat_ser;
+        auto plat_data = plat_ser.get_count_data();
+
+        crow::json::wvalue stats;
+        stats["are_num"] = std::move(plat_data["are_num"]);
+        stats["lrn_num"] = std::move(plat_data["lrn_num"]);
+        stats["scn_num"] = std::move(plat_data["scn_num"]);
+        stats["cpt_num"] = std::move(plat_data["cpt_num"]);
+        stats["ict_num"] = std::move(plat_data["ict_num"]);
+
+        // auto sim_data = DataSimulator::getPlatformStats();
+        auto dl_meta_data = plat_ser.get_deeplearning_data();
+
+        stats["lastTrainingTime"] = std::move(dl_meta_data["lastTrainingTime"]);
+        stats["modelVersion"] = std::move(dl_meta_data["modelVersion"]);
+
+        return crow::response(stats);
     });
     
     // 触发模型训练

@@ -817,7 +817,207 @@ int MongoDBOperator::update_scn_kcge_emb(const std::unordered_map<std::string, s
     }
 }
 
+std::optional<std::vector<std::string>> MongoDBOperator::findLrnPartners(
+    const std::string& lrn_uid,
+    const std::unordered_set<std::string>& cpt_uids,
+    double similarity_threshold /* = 0.1 */,
+    size_t max_results /* = 5 */) {
+    
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
 
+    try {
+        // 1. 获取目标学习者的KT和CD数据
+        auto target_filter = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", lrn_uid)
+        );
+        
+        auto target_projection = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("KT", 1),
+            bsoncxx::builder::basic::kvp("CD", 1),
+            bsoncxx::builder::basic::kvp("_id", 0)
+        );
+        
+        auto target_result = findOne("learners", target_filter.view(), target_projection.view());
+        if (!target_result) {
+            return std::nullopt;
+        }
+        
+        auto target_view = target_result->view();
+        auto target_kt = target_view["KT"].get_document().view();
+        auto target_cd = target_view["CD"].get_document().view();
+        
+        // 计算目标学习者的平均分数
+        std::unordered_map<std::string, double> target_scores;
+        for (const auto& cpt_uid : cpt_uids) {
+            double kt_score = target_kt[cpt_uid] ? target_kt[cpt_uid].get_double().value : 0.0;
+            double cd_score = target_cd[cpt_uid] ? target_cd[cpt_uid].get_double().value : 0.0;
+            target_scores[cpt_uid] = (kt_score + cd_score) / 2.0;
+        }
+
+        // 2. 获取所有学习者的KT和CD数据
+        auto all_filter = bsoncxx::builder::basic::make_document();
+        auto all_projection = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 1),
+            bsoncxx::builder::basic::kvp("KT", 1),
+            bsoncxx::builder::basic::kvp("CD", 1)
+        );
+        
+        auto all_learners = findMany("learners", all_filter.view(), all_projection.view());
+        if (!all_learners) {
+            return std::nullopt;
+        }
+
+        // 3. 计算每个学习者与目标学习者的相似度
+        std::vector<std::pair<std::string, double>> similar_learners;
+        
+        for (auto&& doc : *all_learners) {
+            std::string current_uid = doc["_id"].get_string().value.data();
+            if (current_uid == lrn_uid) continue;  // 跳过目标学习者自己
+            
+            auto kt = doc["KT"].get_document().view();
+            auto cd = doc["CD"].get_document().view();
+            
+            double total_diff = 0.0;
+            int valid_count = 0;
+            
+            for (const auto& cpt_uid : cpt_uids) {
+                if (!kt[cpt_uid] || !cd[cpt_uid]) continue;
+                
+                double kt_score = kt[cpt_uid].get_double().value;
+                double cd_score = cd[cpt_uid].get_double().value;
+                double avg_score = (kt_score + cd_score) / 2.0;
+                
+                total_diff += std::abs(avg_score - target_scores[cpt_uid]);
+                valid_count++;
+            }
+            
+            if (valid_count == 0) continue;
+            
+            double avg_diff = total_diff / valid_count;
+            
+            if (avg_diff < similarity_threshold) {
+                similar_learners.emplace_back(current_uid, avg_diff);
+            }
+        }
+        
+        // 4. 对结果进行排序并取前max_results个
+        std::sort(similar_learners.begin(), similar_learners.end(), 
+            [](const auto& a, const auto& b) { return a.second < b.second; });
+        
+        std::vector<std::string> result;
+        for (size_t i = 0; i < std::min(similar_learners.size(), max_results); ++i) {
+            result.push_back(similar_learners[i].first);
+        }
+        
+        return result;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error in findSimilarScoredLearners: " << e.what() << std::endl;
+        throw;
+    }
+}
+
+std::optional<std::vector<std::string>> MongoDBOperator::findLrnModeling(
+    const std::string& lrn_uid,
+    const std::unordered_set<std::string>& cpt_uids,
+    size_t max_results /* = 5 */) {
+    
+    if (!isConnected()) {
+        throw std::runtime_error("MongoDB connection is not initialized");
+    }
+
+    try {
+        // 1. 获取目标学习者的KT和CD数据
+        auto target_filter = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", lrn_uid)
+        );
+        
+        auto target_projection = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("KT", 1),
+            bsoncxx::builder::basic::kvp("CD", 1),
+            bsoncxx::builder::basic::kvp("_id", 0)
+        );
+        
+        auto target_result = findOne("learners", target_filter.view(), target_projection.view());
+        if (!target_result) {
+            return std::nullopt;
+        }
+        
+        auto target_view = target_result->view();
+        auto target_kt = target_view["KT"].get_document().view();
+        auto target_cd = target_view["CD"].get_document().view();
+        
+        // 计算目标学习者的平均分数
+        std::unordered_map<std::string, double> target_scores;
+        for (const auto& cpt_uid : cpt_uids) {
+            double kt_score = target_kt[cpt_uid] ? target_kt[cpt_uid].get_double().value : 0.0;
+            double cd_score = target_cd[cpt_uid] ? target_cd[cpt_uid].get_double().value : 0.0;
+            target_scores[cpt_uid] = (kt_score + cd_score) / 2.0;
+        }
+
+        // 2. 获取所有学习者的KT和CD数据
+        auto all_filter = bsoncxx::builder::basic::make_document();
+        auto all_projection = bsoncxx::builder::basic::make_document(
+            bsoncxx::builder::basic::kvp("_id", 1),
+            bsoncxx::builder::basic::kvp("KT", 1),
+            bsoncxx::builder::basic::kvp("CD", 1)
+        );
+        
+        auto all_learners = findMany("learners", all_filter.view(), all_projection.view());
+        if (!all_learners) {
+            return std::nullopt;
+        }
+
+        // 3. 计算每个学习者高于目标学习者的分数
+        std::vector<std::pair<std::string, double>> higher_learners;
+        
+        for (auto&& doc : *all_learners) {
+            std::string current_uid = doc["_id"].get_string().value.data();
+            if (current_uid == lrn_uid) continue;  // 跳过目标学习者自己
+            
+            auto kt = doc["KT"].get_document().view();
+            auto cd = doc["CD"].get_document().view();
+            
+            double total_higher = 0.0;
+            int valid_count = 0;
+            
+            for (const auto& cpt_uid : cpt_uids) {
+                if (!kt[cpt_uid] || !cd[cpt_uid]) continue;
+                
+                double kt_score = kt[cpt_uid].get_double().value;
+                double cd_score = cd[cpt_uid].get_double().value;
+                double avg_score = (kt_score + cd_score) / 2.0;
+                
+                if (avg_score > target_scores[cpt_uid]) {
+                    total_higher += (avg_score - target_scores[cpt_uid]);
+                    valid_count++;
+                }
+            }
+            
+            if (valid_count > 0) {
+                double avg_higher = total_higher / valid_count;
+                higher_learners.emplace_back(current_uid, avg_higher);
+            }
+        }
+        
+        // 4. 对结果进行排序并取前max_results个
+        std::sort(higher_learners.begin(), higher_learners.end(), 
+            [](const auto& a, const auto& b) { return a.second > b.second; });
+        
+        std::vector<std::string> result;
+        for (size_t i = 0; i < std::min(higher_learners.size(), max_results); ++i) {
+            result.push_back(higher_learners[i].first);
+        }
+        
+        return result;
+        
+    } catch (const std::exception& e) {
+        std::cerr << "Error in findHigherScoredLearners: " << e.what() << std::endl;
+        throw;
+    }
+}
 
 
 
@@ -883,3 +1083,4 @@ std::vector<std::string> MongoDBOperator::getUserFavorites(const std::string& us
     auto result = findOne("user_preferences", filter.view(), projection.view());
     
 }
+

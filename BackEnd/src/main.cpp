@@ -1,9 +1,11 @@
 ﻿#include <iostream>
 #include <fstream>
 #include <string>
+
 #include "MLS_config.h"
-// #include "MongoDBOperator.h"
-// #include "MySQLOperator.h"
+#include "MongoDBOperator.h"
+#include "MySQLOperator.h"
+
 // #include "UidCreator.h"
 // #include "SceneService.h"
 // #include "LearnerService.h"
@@ -11,9 +13,10 @@
 
 #include "crow.h"
 #include "FileReader.h"
+#include "api_handlers.h"
 //#include "crow/middlewares/cors.h"
 // #include "api_PlatformStats.h"
-#include "api_handlers.h"
+
 
 // int main() {
 //     MySQLOperator& mysqlop = MySQLOperator::getInstance();
@@ -63,6 +66,11 @@
 // }
 
 int main() {
+    MySQLOperator &mysqlop = MySQLOperator::getInstance();
+    mysqlop.initialize();
+    MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
+    mongodbop.initialize();
+
     crow::SimpleApp app;
 
     // 注册API路由

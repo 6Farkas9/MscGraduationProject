@@ -3,9 +3,10 @@
 
 # 1. 设置变量（修改这些值为你实际需要的）
 $condaEnvName = "pyt240cu124"  # 替换为你的Anaconda环境名
-$pythonScript1 = "D:\Desktop\GraduationDesign\GraduationDesign\DeepLearning\KT\train.py"# 第一个要运行的Python脚本
-$pythonScript2 = "D:\Desktop\GraduationDesign\GraduationDesign\DeepLearning\CD\train.py"# 第二个要运行的Python脚本
-$pythonScript3 = "D:\Desktop\GraduationDesign\GraduationDesign\DeepLearning\RR\train.py"# 第三个要运行的Python脚本
+$pythonScript1 = "D:\Desktop\GraduationDesign\GraduationDesign\DeepLearning\KT\train.py" # 第一个要运行的Python脚本
+$pythonScript2 = "D:\Desktop\GraduationDesign\GraduationDesign\DeepLearning\CD\train.py" # 第二个要运行的Python脚本
+$pythonScript3 = "D:\Desktop\GraduationDesign\GraduationDesign\DeepLearning\RR\train.py" # 第三个要运行的Python脚本
+$modelVersion = "v1.0.0" # 模型版本号
 
 # 2. 激活Anaconda环境
 Write-Host "正在激活Anaconda环境: $condaEnvName"
@@ -38,3 +39,13 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "`n所有脚本执行完成"
+
+# 4. 记录训练元信息（改为 key=value 格式）
+$metadataContent = @"
+lastTrainingTime=$(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+modelVersion=$modelVersion
+"@
+
+# 保存到 training_metadata.txt
+$metadataContent | Out-File -FilePath "training_metadata.txt" -Force
+Write-Host "训练元信息已保存到 training_metadata.txt"

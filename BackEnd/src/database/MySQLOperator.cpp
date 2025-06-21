@@ -630,3 +630,53 @@ int MySQLOperator::insert_one_scn_cpt_to_graph_involve(std::string &scn_uid, std
         values (")" + scn_uid+ R"(", ")" + cpt_uid + R"(", )" + std::to_string(difficulty) + R"())";
     return executeUpdate(sql);
 }
+
+int MySQLOperator::get_are_num() {
+    std::string sql = R"(
+        select count(*)
+        from Areas)";
+    auto result = executeQuery(sql);
+    int ans;
+    std::istringstream(result[0][0]) >> ans;
+    return ans;
+}
+
+int MySQLOperator::get_lrn_num() {
+    std::string sql = R"(
+        select count(*)
+        from Learners)";
+    auto result = executeQuery(sql);
+    int ans;
+    std::istringstream(result[0][0]) >> ans;
+    return ans;
+}
+
+int MySQLOperator::get_cpt_num() {
+    std::string sql = R"(
+        select count(*)
+        from Concepts)";
+    auto result = executeQuery(sql);
+    int ans;
+    std::istringstream(result[0][0]) >> ans;
+    return ans;
+}
+
+int MySQLOperator::get_scn_num() {
+    std::string sql = R"(
+        select count(*)
+        from Scenes)";
+    auto result = executeQuery(sql);
+    int ans;
+    std::istringstream(result[0][0]) >> ans;
+    return ans;
+}
+
+int MySQLOperator::get_ict_num() {
+    std::string sql = R"(
+        select count(*)
+        from Interacts)";
+    auto result = executeQuery(sql);
+    int ans;
+    std::istringstream(result[0][0]) >> ans;
+    return ans;
+}

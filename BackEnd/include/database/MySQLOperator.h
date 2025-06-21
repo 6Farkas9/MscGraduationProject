@@ -164,6 +164,21 @@ public:
 
     // 向graph_involve中插入一条数据
     int insert_one_scn_cpt_to_graph_involve(std::string &scn_uid, std::string &cpt_uid, float difficulty);
+
+    // 获取系统中are数量
+    int get_are_num();
+
+    // 获取系统中lrn数量
+    int get_lrn_num();
+
+    // 获取系统中cpt数量
+    int get_cpt_num();
+
+    // 获取系统中scn数量
+    int get_scn_num();
+
+    // 获取交互数
+    int get_ict_num();
 };
 
 #endif

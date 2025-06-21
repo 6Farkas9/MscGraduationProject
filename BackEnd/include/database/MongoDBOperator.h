@@ -149,6 +149,21 @@ public:
     // 更新scene的kcge嵌入
     int update_scn_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &scn_emb);
 
+    // 根据学习者uid和知识点查找学习榜样
+    std::optional<std::vector<std::string>> findLrnModeling(
+        const std::string& lrn_uid,
+        const std::unordered_set<std::string>& cpt_uids,
+        size_t max_results /* = 5 */
+    );
+
+    // 根据学习者uid和知识点查找学习伙伴
+    std::optional<std::vector<std::string>> findLrnPartners(
+        const std::string& lrn_uid,
+        const std::unordered_set<std::string>& cpt_uids,
+        double similarity_threshold /* = 0.1 */,
+        size_t max_results /* = 5 */
+    );
+
     
     // 示例1: 获取用户信息（返回可选文档）
     std::optional<std::unordered_map<std::string, float>> testGetLearnerInfo(const std::string& lrn_uid);
