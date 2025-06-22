@@ -46,10 +46,10 @@
                 <el-icon><Opportunity /></el-icon>
               </div>
               <div class="card-text">
-                <h3>场景数量</h3>
+                <h3>学习单元数量</h3>
                 <p class="value" v-if="loading.scn_num"><span class="loading-text">加载中</span></p>
                 <p class="value" v-else>{{ stats.scn_num }}</p>
-                <p class="description">学习场景总数</p>
+                <p class="description">学习单元总数</p>
               </div>
             </div>
           </el-card>

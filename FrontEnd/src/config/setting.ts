@@ -4,7 +4,7 @@
 import logo from "@/assets/logo.png"
 export const basic = {
   logo,
-  title: "xjy_admin",
+  title: "MLS_sys",
   avatar: "",
 }
 export const defaultSettings = {
