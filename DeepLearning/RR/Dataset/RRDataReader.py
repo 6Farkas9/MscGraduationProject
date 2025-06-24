@@ -20,25 +20,25 @@ class RRDataReader():
         self.sample_num = sample_num
         self.hgcdr = HGCDataReader()
 
-    def get_concepts_of_scenes(self, scn_uids):
-        return mysqldb.get_concepts_of_scenes(scn_uids)
+    def get_concepts_of_units(self, unt_uids):
+        return mysqldb.get_concepts_of_units(unt_uids)
     
-    def get_interacts_with_scn_greater_4(self, lrn_uids):
-        # lrn_scn = [[] for _ in range(len(lrn_uids))]
-        lrn_scn = {lrn_uid : [] for lrn_uid in lrn_uids.keys()}
-        interacts = mysqldb.get_interacts_with_scn_greater_4()
+    def get_interacts_with_unt_greater_4(self, lrn_uids):
+        # lrn_unt = [[] for _ in range(len(lrn_uids))]
+        lrn_unt = {lrn_uid : [] for lrn_uid in lrn_uids.keys()}
+        interacts = mysqldb.get_interacts_with_unt_greater_4()
         for onedata in interacts:
-            lrn_scn[onedata[0]].append(onedata[1])
-        return lrn_scn
+            lrn_unt[onedata[0]].append(onedata[1])
+        return lrn_unt
 
     def load_data_from_db(self):
         uids, inits, p_matrixes = self.hgcdr.load_data_from_db()
         
-        lrn_scn = self.get_interacts_with_scn_greater_4(uids[0])
-        self.lrn_scn = lrn_scn
-        scn_cpt = self.get_concepts_of_scenes(list(uids[1].keys()))
+        lrn_unt = self.get_interacts_with_unt_greater_4(uids[0])
+        self.lrn_unt = lrn_unt
+        unt_cpt = self.get_concepts_of_units(list(uids[1].keys()))
 
-        # 为方便之后的计算，这里要计算出scn_cpt的二维矩阵，之后可以直接使用矩阵运算
+        # 为方便之后的计算，这里要计算出unt_cpt的二维矩阵，之后可以直接使用矩阵运算
         # 不用在这运算
         
         # 获取学习者和知识点之间的交互情况
@@ -50,20 +50,20 @@ class RRDataReader():
         self.max_interact_num = 0
         train_data = {lrn_uid : [[], np.zeros(len(uids[2]), dtype=np.float32)] for lrn_uid in uids[0].keys()}
         master_data = {lrn_uid : [[], np.zeros(len(uids[2]), dtype=np.float32)] for lrn_uid in uids[0].keys()}
-        for lrn_uid in lrn_scn:
-            scn_uids = list(lrn_scn[lrn_uid])
+        for lrn_uid in lrn_unt:
+            unt_uids = list(lrn_unt[lrn_uid])
 
-            self.max_interact_num = max(self.max_interact_num, len(scn_uids))
+            self.max_interact_num = max(self.max_interact_num, len(unt_uids))
 
             # 训练集
-            for i in range(len(scn_uids) - 2):
-                train_data[lrn_uid][0].append(scn_uids[i])
-                for cpt_uid in scn_cpt[scn_uids[i]]:
+            for i in range(len(unt_uids) - 2):
+                train_data[lrn_uid][0].append(unt_uids[i])
+                for cpt_uid in unt_cpt[unt_uids[i]]:
                     train_data[lrn_uid][1][uids[2][cpt_uid]] += 1
                     # 统计学习次数的话对于master_data不能只统计最后一次
                     master_data[lrn_uid][1][uids[2][cpt_uid]] += 1
 
-            for cpt_uid in scn_cpt[scn_uids[-2]]:
+            for cpt_uid in unt_cpt[unt_uids[-2]]:
                 train_data[lrn_uid][1][uids[2][cpt_uid]] += 1
                 master_data[lrn_uid][1][uids[2][cpt_uid]] += 1
             
@@ -75,8 +75,8 @@ class RRDataReader():
             for idx in select_indexes:
                 train_data[lrn_uid][1][idx] += 1
             # 测试集
-            master_data[lrn_uid][0].append(scn_uids[-1])
-            for cpt_uid in scn_cpt[scn_uids[-1]]:
+            master_data[lrn_uid][0].append(unt_uids[-1])
+            for cpt_uid in unt_cpt[unt_uids[-1]]:
                 master_data[lrn_uid][1][uids[2][cpt_uid]] += 1
             non_zero_num = np.count_nonzero(master_data[lrn_uid][1] != 0)
             neg_num = min(non_zero_num, len(uids[2]) - non_zero_num)
@@ -88,33 +88,33 @@ class RRDataReader():
         # 计算动态场景嵌入的知识点索引
         rows = []
         cols = []
-        for scn_uid, cpt_uids in scn_cpt.items():
-            scn_idx = uids[1][scn_uid]
+        for unt_uid, cpt_uids in unt_cpt.items():
+            unt_idx = uids[1][unt_uid]
             for cpt_uid in cpt_uids:
                 cpt_idx = uids[2][cpt_uid]
-                rows.append(scn_idx)
+                rows.append(unt_idx)
                 cols.append(cpt_idx)
 
         index_matrix = torch.tensor([rows, cols], dtype=torch.long)
         values = torch.ones(index_matrix.shape[1])
 
-        dynamic_scn_mat = torch.sparse_coo_tensor(
+        dynamic_unt_mat = torch.sparse_coo_tensor(
             indices=index_matrix,
             values=values,
             size=(len(uids[1]), len(uids[2])),
         )
 
-        return train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat
+        return train_data, master_data, uids, inits, p_matrixes, dynamic_unt_mat
     
-    def get_final_lrn_scn_index(self, lrn_uid, scn_uids):
-        # 根据这个lrn_scn去做出
-        # scn_seq_index : torch.Tensor,
-        # scn_seq_mask : torch.Tensor,
-        # 其中scn_seq_index的长度是最多的交互次数
-        current_interact_num = len(self.lrn_scn[lrn_uid])
+    def get_final_lrn_unt_index(self, lrn_uid, unt_uids):
+        # 根据这个lrn_unt去做出
+        # unt_seq_index : torch.Tensor,
+        # unt_seq_mask : torch.Tensor,
+        # 其中unt_seq_index的长度是最多的交互次数
+        current_interact_num = len(self.lrn_unt[lrn_uid])
 
-        scn_index = torch.zeros(1, current_interact_num, dtype=torch.long)
-        scn_mask  = torch.zeros(1, current_interact_num, dtype=torch.float32)
+        unt_index = torch.zeros(1, current_interact_num, dtype=torch.long)
+        unt_mask  = torch.zeros(1, current_interact_num, dtype=torch.float32)
         lrn_idx = 0
         row = []
         col = []
@@ -122,25 +122,25 @@ class RRDataReader():
         row.extend([lrn_idx] * current_interact_num)
         col.extend([idx for idx in range(current_interact_num)])
 
-        current_scn_seq = [scn_uids[scn_uid] for scn_uid in self.lrn_scn[lrn_uid]]
-        scn_index[lrn_idx][:current_interact_num] = torch.tensor(current_scn_seq, dtype=torch.long)
+        current_unt_seq = [unt_uids[unt_uid] for unt_uid in self.lrn_unt[lrn_uid]]
+        unt_index[lrn_idx][:current_interact_num] = torch.tensor(current_unt_seq, dtype=torch.long)
 
-        scn_mask[row, col] = 1.0
+        unt_mask[row, col] = 1.0
 
-        return scn_index, scn_mask
+        return unt_index, unt_mask
     
-    def save_final_hgc_data(self, lrn_uids, scn_uids, cpt_uids, lrn_emb, scn_emb, cpt_emb):
+    def save_final_hgc_data(self, lrn_uids, unt_uids, cpt_uids, lrn_emb, unt_emb, cpt_emb):
         lrn_emb_dict = {
             lrn_uid : c_lrn_emb.tolist() for lrn_uid, c_lrn_emb in zip(lrn_uids, lrn_emb)
         }
 
         mongodb.save_final_lrn_emb(lrn_emb_dict)
 
-        scn_emb_dict = {
-            scn_uid : c_scn_emb.tolist() for scn_uid, c_scn_emb in zip(scn_uids, scn_emb)
+        unt_emb_dict = {
+            unt_uid : c_unt_emb.tolist() for unt_uid, c_unt_emb in zip(unt_uids, unt_emb)
         }
 
-        mongodb.save_final_scn_emb(scn_emb_dict)
+        mongodb.save_final_unt_emb(unt_emb_dict)
 
         cpt_emb_dict = {
             cpt_uid : c_cpt_emb.tolist() for cpt_uid, c_cpt_emb in zip(cpt_uids, cpt_emb)

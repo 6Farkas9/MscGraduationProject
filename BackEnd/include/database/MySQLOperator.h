@@ -60,9 +60,9 @@ public:
         const std::string &time_end
     );
 
-    // 获取指定scn所涉及的cpt
-    std::unordered_map<std::string, std::unordered_set<std::string>> get_cpt_of_scn(
-        const std::unordered_set<std::string> &scn_uids
+    // 获取指定unt所涉及的cpt
+    std::unordered_map<std::string, std::unordered_set<std::string>> get_cpt_of_unt(
+        const std::unordered_set<std::string> &unt_uids
     );
 
     // 获取指定领域的所有cpt
@@ -71,8 +71,8 @@ public:
     // 获取指定领域的cpt数量
     int get_cpt_num_of_area(const std::string &are_uid);
 
-    // 获取指定领域的所有特殊scn和其对应的cpt
-    std::unordered_map<std::string, std::string> get_special_scn_cpt_uid_of_are(const std::string &are_uid);
+    // 获取指定领域的所有特殊unt和其对应的cpt
+    std::unordered_map<std::string, std::string> get_special_unt_cpt_uid_of_are(const std::string &are_uid);
 
     // 获取指定lrn的近一个月内的交互记录
     std::vector<std::vector<std::string>> get_lrn_interacts_time(
@@ -84,8 +84,8 @@ public:
     // 判断learners中是否有重复uid
     bool judge_lrn_uid_exist(std::string &uid);
 
-    // 判断scenes中是否有重复uid
-    bool judge_scn_uid_exist(std::string &uid);
+    // 判断units中是否有重复uid
+    bool judge_unt_uid_exist(std::string &uid);
 
     // 判断concepts中是否有重复uid
     bool judge_cpt_uid_exist(std::string &uid);
@@ -93,26 +93,26 @@ public:
     // 判断areas中是否有重复uid
     bool judge_are_uid_exist(std::string &uid);
 
-    // 向scenes中插入新的scn
-    int insert_one_scn_to_scenes(std::string &scn_uid, bool has_result);
+    // 向units中插入新的unt
+    int insert_one_unt_to_units(std::string &unt_uid, bool has_result);
 
-    // 从scenes中删除scn
-    int delete_one_scn_from_scenes(std::string &scn_uid);
+    // 从units中删除unt
+    int delete_one_unt_from_units(std::string &unt_uid);
 
-    // 从interacts中删除scn
-    int delete_one_scn_from_interacts(std::string &scn_uid);
+    // 从interacts中删除unt
+    int delete_one_unt_from_interacts(std::string &unt_uid);
 
-    // 从graph_interact中删除scn
-    int delete_one_scn_from_graph_interact(std::string &scn_uid);
+    // 从graph_interact中删除unt
+    int delete_one_unt_from_graph_interact(std::string &unt_uid);
 
     // 向graph_involve中添加数据
-    int insert_one_scn_to_graph_involve(
-        std::string &scn_uid, 
+    int insert_one_unt_to_graph_involve(
+        std::string &unt_uid, 
         std::unordered_map<std::string, float> &cpt_uid2diff
     );
 
-    // 根据scn_uid从graph_involve中删除数据
-    int delete_one_scn_from_graph_involve(std::string &scn_uid);
+    // 根据unt_uid从graph_involve中删除数据
+    int delete_one_unt_from_graph_involve(std::string &unt_uid);
 
     // 向concepts中插入新的cpt
     int insert_one_cpt_to_concepts(std::string &are_uid, std::string &cpt_uid, std::string &name);
@@ -150,20 +150,20 @@ public:
         std::unordered_set<std::string> &cpt_uids
     );
 
-    // 获取指定cpt相关的scn_uid
-    std::unordered_set<std::string> get_scn_uid_from_graph_involve_by_cpt_uid(std::string &cpt_uid);
+    // 获取指定cpt相关的unt_uid
+    std::unordered_set<std::string> get_unt_uid_from_graph_involve_by_cpt_uid(std::string &cpt_uid);
 
     // 获取指定cpt相关的前后置条件的cpt
     std::unordered_set<std::string> get_cpt_uid_from_graph_precondition_by_cpt_uid(std::string &cpt_uid);
 
-    // 根据指定的scn和cpt获取involve关系
-    std::unordered_map<std::string, std::unordered_map<std::string, float>> get_scn_cpt_from_graph_involve_by_scns_cpts(
-        std::unordered_set<std::string> &scn_uids,
+    // 根据指定的unt和cpt获取involve关系
+    std::unordered_map<std::string, std::unordered_map<std::string, float>> get_unt_cpt_from_graph_involve_by_unts_cpts(
+        std::unordered_set<std::string> &unt_uids,
         std::unordered_set<std::string> &cpt_uids
     );
 
     // 向graph_involve中插入一条数据
-    int insert_one_scn_cpt_to_graph_involve(std::string &scn_uid, std::string &cpt_uid, float difficulty);
+    int insert_one_unt_cpt_to_graph_involve(std::string &unt_uid, std::string &cpt_uid, float difficulty);
 
     // 获取系统中are数量
     int get_are_num();
@@ -174,8 +174,8 @@ public:
     // 获取系统中cpt数量
     int get_cpt_num();
 
-    // 获取系统中scn数量
-    int get_scn_num();
+    // 获取系统中unt数量
+    int get_unt_num();
 
     // 获取交互数
     int get_ict_num();

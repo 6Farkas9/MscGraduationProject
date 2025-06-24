@@ -39,11 +39,11 @@ def RRloss(r_pred : torch.tensor, r : torch.tensor, h_lrn : torch.tensor, h_cpt 
     loss = mse_loss + lambda_reg * regularization_loss
     return loss
 
-def save_final_hgc_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : RRDataReader):
+def save_final_hgc_data(uids, inits, p_matrixes, dynamic_unt_mat, datareader : RRDataReader):
     device = 'cpu'
 
-    lrn_uids, scn_uids, cpt_uids = uids
-    learners_init, scenes_init, concepts_init = inits
+    lrn_uids, unt_uids, cpt_uids = uids
+    learners_init, units_init, concepts_init = inits
 
     (p_lsl_edge_index, p_lsl_edge_attr), \
     (p_scs_edge_index, p_scs_edge_attr), \
@@ -58,15 +58,15 @@ def save_final_hgc_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : R
     HGC_CPT_use_path = os.path.join(HGC_pt_path, 'HGC_CPT_ues.pt')
 
     model_hgc_lrn = torch.jit.load(HGC_LRN_use_path)
-    model_hgc_scn = torch.jit.load(HGC_SCN_use_path)
+    model_hgc_unt = torch.jit.load(HGC_SCN_use_path)
     model_hgc_cpt = torch.jit.load(HGC_CPT_use_path)
 
     model_hgc_lrn = model_hgc_lrn.to(device)
-    model_hgc_scn = model_hgc_scn.to(device)
+    model_hgc_unt = model_hgc_unt.to(device)
     model_hgc_cpt = model_hgc_cpt.to(device)
 
     model_hgc_lrn.eval()
-    model_hgc_scn.eval()
+    model_hgc_unt.eval()
     model_hgc_cpt.eval()
 
     with torch.no_grad():
@@ -74,7 +74,7 @@ def save_final_hgc_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : R
         lrn_emb = model_hgc_lrn(learners_init, 
                                 p_lsl_edge_index, p_lsl_edge_attr
                                 )
-        scn_emb = model_hgc_scn(scenes_init, 
+        unt_emb = model_hgc_unt(units_init, 
                                 p_scs_edge_index, p_scs_edge_attr,
                                 p_sls_edge_index, p_sls_edge_attr
                                 )
@@ -84,23 +84,23 @@ def save_final_hgc_data(uids, inits, p_matrixes, dynamic_scn_mat, datareader : R
                                 p_csc_edge_index, p_csc_edge_attr
                                 )
 
-        scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat, cpt_emb)
+        unt_dynamic_emb = torch.sparse.mm(dynamic_unt_mat, cpt_emb)
 
     lrn_uids_list = [lrn_uid for lrn_uid, _ in sorted(lrn_uids.items(), key=itemgetter(1))]
-    scn_uids_list = [scn_uid for scn_uid, _ in sorted(scn_uids.items(), key=itemgetter(1))]
+    unt_uids_list = [unt_uid for unt_uid, _ in sorted(unt_uids.items(), key=itemgetter(1))]
     cpt_uids_list = [cpt_uid for cpt_uid, _ in sorted(cpt_uids.items(), key=itemgetter(1))]
 
-    # 保存lrn_emb，scn_emb，cpt_emb
+    # 保存lrn_emb，unt_emb，cpt_emb
     datareader.save_final_hgc_data(
-        lrn_uids_list, scn_uids_list, cpt_uids_list, 
-        lrn_emb, scn_dynamic_emb, cpt_emb,
+        lrn_uids_list, unt_uids_list, cpt_uids_list, 
+        lrn_emb, unt_dynamic_emb, cpt_emb,
     )
 
-    return cpt_uids_list, (lrn_emb, scn_dynamic_emb, cpt_emb)
+    return cpt_uids_list, (lrn_emb, unt_dynamic_emb, cpt_emb)
 
 def save_final_rr_data(
-        lrn_uid, scn_uids, 
-        lrn_emb, scn_dynamic_emb, cpt_emb,
+        lrn_uid, unt_uids, 
+        lrn_emb, unt_dynamic_emb, cpt_emb,
         cpt_uids_list, 
         datareader : RRDataReader
     ):
@@ -133,16 +133,16 @@ def save_final_rr_data(
 
     with torch.no_grad():
 
-        scn_index, scn_mask = datareader.get_final_lrn_scn_index(lrn_uid, scn_uids)
+        unt_index, unt_mask = datareader.get_final_lrn_unt_index(lrn_uid, unt_uids)
 
         r_pred, h_lrn, h_cpt =  model_rr(
             lrn_emb, 
-            scn_dynamic_emb, 
-            scn_index,
-            scn_mask,
+            unt_dynamic_emb, 
+            unt_index,
+            unt_mask,
             cpt_emb)
 
-    # 保存lrn_emb，scn_emb，cpt_emb
+    # 保存lrn_emb，unt_emb，cpt_emb
     datareader.save_final_rr_data(lrn_uid, cpt_uids_list, r_pred)
 
 def train_basic():
@@ -153,12 +153,12 @@ def train_basic():
 
     print(device)
     rrdatareader = RRDataReader(parsers.sample_num)
-    train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat = rrdatareader.load_data_from_db()
+    train_data, master_data, uids, inits, p_matrixes, dynamic_unt_mat = rrdatareader.load_data_from_db()
 
-    # (self.learners_init, self.scenes_init, self.concepts_init), \
+    # (self.learners_init, self.units_init, self.concepts_init), \
     # (self.p_lsl, self.p_scs, self.p_sls, self.p_cc, self.p_cac, self.p_csc,)
-    lrn_uids, scn_uids, cpt_uids = uids
-    learners_init, scenes_init, concepts_init = inits
+    lrn_uids, unt_uids, cpt_uids = uids
+    learners_init, units_init, concepts_init = inits
 
     (p_lsl_edge_index, p_lsl_edge_attr), \
     (p_scs_edge_index, p_scs_edge_attr), \
@@ -170,19 +170,19 @@ def train_basic():
     # model_hgc = HGC(parsers.embedding_dim, device).to(device)
     
     model_hgc_lrn = HGC_LRN(parsers.embedding_dim).to(device)
-    model_hgc_scn = HGC_SCN(parsers.embedding_dim).to(device)
+    model_hgc_unt = HGC_SCN(parsers.embedding_dim).to(device)
     model_hgc_cpt = HGC_CPT(parsers.embedding_dim).to(device)
 
     model_rr = RR(parsers.embedding_dim, parsers.hidden_dim).to(device)
 
     print(model_hgc_lrn)
-    print(model_hgc_scn)
+    print(model_hgc_unt)
     print(model_hgc_cpt)
     print(model_rr)
 
     optimizer = torch.optim.Adam([
             {'params':model_hgc_lrn.parameters()},
-            {'params':model_hgc_scn.parameters()},
+            {'params':model_hgc_unt.parameters()},
             {'params':model_hgc_cpt.parameters()},
             {'params':model_rr.parameters()}
         ], lr=parsers.lr)
@@ -209,7 +209,7 @@ def train_basic():
         continue_train = True
         checkpoint = torch.load(RR_temp_path, map_location= device)
         model_hgc_lrn.load_state_dict(checkpoint['model_hgc_lrn'])
-        model_hgc_scn.load_state_dict(checkpoint['model_hgc_scn'])
+        model_hgc_unt.load_state_dict(checkpoint['model_hgc_unt'])
         model_hgc_cpt.load_state_dict(checkpoint['model_hgc_cpt'])
         model_rr.load_state_dict(checkpoint['model_rr'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -230,7 +230,7 @@ def train_basic():
             print('HGC_SCN增量训练')
             # update_train = True
             checkpoint = torch.load(HGC_SCN_train_path, map_location=device)
-            model_hgc_scn.load_state_dict(checkpoint['model_hgc_scn'])
+            model_hgc_unt.load_state_dict(checkpoint['model_hgc_unt'])
         else:
             print('HGC_SCN初始训练')
 
@@ -268,15 +268,15 @@ def train_basic():
         loss_train = []
 
         model_hgc_lrn.train()
-        model_hgc_scn.train()
+        model_hgc_unt.train()
         model_hgc_cpt.train()
         model_rr.train()
 
         for item in batch_tqdm:
             learner_idx = item['learner_idx']
             learner_init = item['learner_init']
-            scn_seq_index = item['scn_seq_index']
-            scn_seq_mask = item['scn_seq_mask']
+            unt_seq_index = item['unt_seq_index']
+            unt_seq_mask = item['unt_seq_mask']
             r_uk_data = item['r_uk_data']
 
             p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
@@ -285,7 +285,7 @@ def train_basic():
             lrn_emb = model_hgc_lrn(sub_p_lsl.x.to(device), 
                                     sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
                                     )
-            scn_emb = model_hgc_scn(scenes_init.to(device), 
+            unt_emb = model_hgc_unt(units_init.to(device), 
                                     p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
                                     p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
                                     )
@@ -295,12 +295,12 @@ def train_basic():
                                     p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
                                     )
 
-            scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
+            unt_dynamic_emb = torch.sparse.mm(dynamic_unt_mat.to(device), cpt_emb)
 
             r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
-                                        scn_dynamic_emb, 
-                                        scn_seq_index.to(device),
-                                        scn_seq_mask.to(device),
+                                        unt_dynamic_emb, 
+                                        unt_seq_index.to(device),
+                                        unt_seq_mask.to(device),
                                         cpt_emb)
 
             loss = RRloss(r_pred, r_uk_data.to(device), h_lrn, h_cpt, parsers.lambda_reg)
@@ -325,15 +325,15 @@ def train_basic():
         loss_master = []
 
         model_hgc_lrn.eval()
-        model_hgc_scn.eval()
+        model_hgc_unt.eval()
         model_hgc_cpt.eval()
         model_rr.eval()
 
         for item in batch_tqdm:
             learner_idx = item['learner_idx']
             learner_init = item['learner_init']
-            scn_seq_index = item['scn_seq_index']
-            scn_seq_mask = item['scn_seq_mask']
+            unt_seq_index = item['unt_seq_index']
+            unt_seq_mask = item['unt_seq_mask']
             r_uk_data = item['r_uk_data']
 
             p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
@@ -344,7 +344,7 @@ def train_basic():
                 lrn_emb = model_hgc_lrn(sub_p_lsl.x.to(device), 
                                         sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
                                         )
-                scn_emb = model_hgc_scn(scenes_init.to(device), 
+                unt_emb = model_hgc_unt(units_init.to(device), 
                                         p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
                                         p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
                                         )
@@ -354,12 +354,12 @@ def train_basic():
                                         p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
                                         )
 
-                scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
+                unt_dynamic_emb = torch.sparse.mm(dynamic_unt_mat.to(device), cpt_emb)
 
                 r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
-                                            scn_dynamic_emb, 
-                                            scn_seq_index.to(device),
-                                            scn_seq_mask.to(device),
+                                            unt_dynamic_emb, 
+                                            unt_seq_index.to(device),
+                                            unt_seq_mask.to(device),
                                             cpt_emb)
 
             loss = RRloss(r_pred, r_uk_data.to(device), h_lrn, h_cpt, parsers.lambda_reg)
@@ -374,7 +374,7 @@ def train_basic():
         if (epoch + 1) % 8 == 0:
             torch.save({
                 'model_hgc_lrn': model_hgc_lrn.state_dict(),
-                'model_hgc_scn': model_hgc_scn.state_dict(),
+                'model_hgc_unt': model_hgc_unt.state_dict(),
                 'model_hgc_cpt': model_hgc_cpt.state_dict(),
                 'model_rr': model_rr.state_dict(),
                 'optimizer': optimizer.state_dict(),
@@ -389,7 +389,7 @@ def train_basic():
             'model_hgc_lrn': model_hgc_lrn.state_dict(),
         }, HGC_LRN_train_path)
         torch.save({
-            'model_hgc_scn': model_hgc_scn.state_dict(),
+            'model_hgc_unt': model_hgc_unt.state_dict(),
         }, HGC_SCN_train_path)
         torch.save({
             'model_hgc_cpt': model_hgc_cpt.state_dict(),
@@ -401,7 +401,7 @@ def train_basic():
     
         # torch.save(model.state_dict(), IPDKT_pt_use_path)
         model_hgc_lrn = model_hgc_lrn.to('cpu')
-        model_hgc_scn = model_hgc_scn.to('cpu')
+        model_hgc_unt = model_hgc_unt.to('cpu')
         model_hgc_cpt = model_hgc_cpt.to('cpu')
         model_rr = model_rr.to('cpu')
 
@@ -410,15 +410,15 @@ def train_basic():
         with torch.no_grad():  # 禁用梯度计算
             with torch.jit.optimized_execution(False):  # 禁止优化时隐式转移到GPU
                 scripted_model_hgc_lrn = torch.jit.script(model_hgc_lrn)
-                scripted_model_hgc_scn = torch.jit.script(model_hgc_scn)
+                scripted_model_hgc_unt = torch.jit.script(model_hgc_unt)
                 scripted_model_hgc_cpt = torch.jit.script(model_hgc_cpt)
                 scripted_model_rr = torch.jit.script(model_rr)
         
         scripted_model_hgc_lrn = torch.jit.optimize_for_inference(scripted_model_hgc_lrn)
         scripted_model_hgc_lrn.save(HGC_LRN_use_path)
 
-        scripted_model_hgc_scn = torch.jit.optimize_for_inference(scripted_model_hgc_scn)
-        scripted_model_hgc_scn.save(HGC_SCN_use_path)
+        scripted_model_hgc_unt = torch.jit.optimize_for_inference(scripted_model_hgc_unt)
+        scripted_model_hgc_unt.save(HGC_SCN_use_path)
 
         scripted_model_hgc_cpt = torch.jit.optimize_for_inference(scripted_model_hgc_cpt)
         scripted_model_hgc_cpt.save(HGC_CPT_use_path)
@@ -426,19 +426,19 @@ def train_basic():
         scripted_model_rr = torch.jit.optimize_for_inference(scripted_model_rr)
         scripted_model_rr.save(RR_use_path)
 
-        cpt_uids_list, embs = save_final_hgc_data(uids, inits, p_matrixes, dynamic_scn_mat, rrdatareader)
+        cpt_uids_list, embs = save_final_hgc_data(uids, inits, p_matrixes, dynamic_unt_mat, rrdatareader)
 
     train_single_lrn(
-        train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat, optimizer,
+        train_data, master_data, uids, inits, p_matrixes, dynamic_unt_mat, optimizer,
         cpt_uids_list,
         embs[0], embs[1], embs[2],
         rrdatareader
     )
 
 def train_single_lrn(
-    train_data, master_data, uids, inits, p_matrixes, dynamic_scn_mat, optimizer,
+    train_data, master_data, uids, inits, p_matrixes, dynamic_unt_mat, optimizer,
     cpt_uids_list,
-    lrn_emb_final, scn_emb_final, cpt_emb_final,
+    lrn_emb_final, unt_emb_final, cpt_emb_final,
     rrdatareader : RRDataReader):
     # 加载设备
     parsers = parser.parse_args()
@@ -446,8 +446,8 @@ def train_single_lrn(
     dataloader_kwargs = {'pin_memory': True} if torch.cuda.is_available() else {}
     
     # 加载各种数据
-    lrn_uids, scn_uids, cpt_uids = uids
-    learners_init, scenes_init, concepts_init = inits
+    lrn_uids, unt_uids, cpt_uids = uids
+    learners_init, units_init, concepts_init = inits
 
     (p_lsl_edge_index, p_lsl_edge_attr), \
     (p_scs_edge_index, p_scs_edge_attr), \
@@ -473,7 +473,7 @@ def train_single_lrn(
 
     # 声明模型
     model_hgc_lrn = HGC_LRN(parsers.embedding_dim).to(device)
-    model_hgc_scn = HGC_SCN(parsers.embedding_dim).to(device)
+    model_hgc_unt = HGC_SCN(parsers.embedding_dim).to(device)
     model_hgc_cpt = HGC_CPT(parsers.embedding_dim).to(device)
 
     model_rr = RR(parsers.embedding_dim, parsers.hidden_dim).to(device)
@@ -486,7 +486,7 @@ def train_single_lrn(
         checkpoint = torch.load(HGC_LRN_train_path, map_location=device)
         model_hgc_lrn.load_state_dict(checkpoint['model_hgc_lrn'])
         checkpoint = torch.load(HGC_SCN_train_path, map_location=device)
-        model_hgc_scn.load_state_dict(checkpoint['model_hgc_scn'])
+        model_hgc_unt.load_state_dict(checkpoint['model_hgc_unt'])
         checkpoint = torch.load(HGC_CPT_train_path, map_location=device)
         model_hgc_cpt.load_state_dict(checkpoint['model_hgc_cpt'])
         checkpoint = torch.load(RR_train_path, map_location=device)
@@ -500,7 +500,7 @@ def train_single_lrn(
 
             train_dataset = RRDataSet(
                 {lrn_uid : train_data[lrn_uid]}, 
-                ({lrn_uid : 0}, scn_uids, cpt_uids), 
+                ({lrn_uid : 0}, unt_uids, cpt_uids), 
                 learners_init, 
                 len(train_data[lrn_uid][0])
             )
@@ -511,15 +511,15 @@ def train_single_lrn(
             loss_train = []
 
             model_hgc_lrn.train()
-            model_hgc_scn.train()
+            model_hgc_unt.train()
             model_hgc_cpt.train()
             model_rr.train()
 
             for item in batch_tqdm:
                 learner_idx = item['learner_idx']
                 learner_init = item['learner_init']
-                scn_seq_index = item['scn_seq_index']
-                scn_seq_mask = item['scn_seq_mask']
+                unt_seq_index = item['unt_seq_index']
+                unt_seq_mask = item['unt_seq_mask']
                 r_uk_data = item['r_uk_data']
 
                 p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
@@ -528,7 +528,7 @@ def train_single_lrn(
                 lrn_emb = model_hgc_lrn(sub_p_lsl.x.to(device), 
                                         sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
                                         )
-                scn_emb = model_hgc_scn(scenes_init.to(device), 
+                unt_emb = model_hgc_unt(units_init.to(device), 
                                         p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
                                         p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
                                         )
@@ -538,12 +538,12 @@ def train_single_lrn(
                                         p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
                                         )
 
-                scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
+                unt_dynamic_emb = torch.sparse.mm(dynamic_unt_mat.to(device), cpt_emb)
 
                 r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
-                                            scn_dynamic_emb, 
-                                            scn_seq_index.to(device),
-                                            scn_seq_mask.to(device),
+                                            unt_dynamic_emb, 
+                                            unt_seq_index.to(device),
+                                            unt_seq_mask.to(device),
                                             cpt_emb)
 
                 loss = RRloss(r_pred, r_uk_data.to(device), h_lrn, h_cpt, parsers.lambda_reg)
@@ -562,7 +562,7 @@ def train_single_lrn(
 
             master_dataset = RRDataSet(
                 {lrn_uid : master_data[lrn_uid]}, 
-                ({lrn_uid : 0}, scn_uids, cpt_uids), 
+                ({lrn_uid : 0}, unt_uids, cpt_uids), 
                 learners_init, 
                 len(master_data[lrn_uid][0])
             )
@@ -573,15 +573,15 @@ def train_single_lrn(
             loss_master = []
 
             model_hgc_lrn.eval()
-            model_hgc_scn.eval()
+            model_hgc_unt.eval()
             model_hgc_cpt.eval()
             model_rr.eval()
 
             for item in batch_tqdm:
                 learner_idx = item['learner_idx']
                 learner_init = item['learner_init']
-                scn_seq_index = item['scn_seq_index']
-                scn_seq_mask = item['scn_seq_mask']
+                unt_seq_index = item['unt_seq_index']
+                unt_seq_mask = item['unt_seq_mask']
                 r_uk_data = item['r_uk_data']
 
                 p_lsl = Data(x = learners_init, edge_index = p_lsl_edge_index, edge_attr = p_lsl_edge_attr)
@@ -592,7 +592,7 @@ def train_single_lrn(
                     lrn_emb = model_hgc_lrn(sub_p_lsl.x.to(device), 
                                             sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
                                             )
-                    scn_emb = model_hgc_scn(scenes_init.to(device), 
+                    unt_emb = model_hgc_unt(units_init.to(device), 
                                             p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
                                             p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
                                             )
@@ -602,12 +602,12 @@ def train_single_lrn(
                                             p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
                                             )
 
-                    scn_dynamic_emb = torch.sparse.mm(dynamic_scn_mat.to(device), cpt_emb)
+                    unt_dynamic_emb = torch.sparse.mm(dynamic_unt_mat.to(device), cpt_emb)
 
                     r_pred, h_lrn, h_cpt =  model_rr(lrn_emb, 
-                                                scn_dynamic_emb, 
-                                                scn_seq_index.to(device),
-                                                scn_seq_mask.to(device),
+                                                unt_dynamic_emb, 
+                                                unt_seq_index.to(device),
+                                                unt_seq_mask.to(device),
                                                 cpt_emb)
 
                 loss = RRloss(r_pred, r_uk_data.to(device), h_lrn, h_cpt, parsers.lambda_reg)
@@ -637,9 +637,9 @@ def train_single_lrn(
         # row_i = A[i:i+1, :]
 
         save_final_rr_data(
-            lrn_uid, scn_uids, 
+            lrn_uid, unt_uids, 
             lrn_emb_final[lrn_uids[lrn_uid] : lrn_uids[lrn_uid] + 1, :].to('cpu'), 
-            scn_emb_final.to('cpu'), cpt_emb_final.to('cpu'),
+            unt_emb_final.to('cpu'), cpt_emb_final.to('cpu'),
             cpt_uids_list, 
             rrdatareader
         )

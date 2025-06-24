@@ -37,25 +37,25 @@ class KCGEDataReader():
         return edge_index, edge_attr, edge_type
 
     # 知识点 - 场景 ： 双向边， 边类型3， 边权重difficulty
-    def get_scn_cpt_uid_of_are(self):
-        scn_cpt_diff_tuple = mysqldb.get_scn_cpt_uid_of_are(self.are_uid)
+    def get_unt_cpt_uid_of_are(self):
+        unt_cpt_diff_tuple = mysqldb.get_unt_cpt_uid_of_are(self.are_uid)
 
-        unique_scn_uids = {item[0] for item in scn_cpt_diff_tuple}
+        unique_unt_uids = {item[0] for item in unt_cpt_diff_tuple}
 
         cpt_num = len(self.cpt_uidsinz)
-        self.scn_uidsinz = {scn_uid : idx + cpt_num + 1 for idx, scn_uid in enumerate(unique_scn_uids)}
-        self.scn_uids = {scn_uid : idx for idx, scn_uid in enumerate(unique_scn_uids)}
+        self.unt_uidsinz = {unt_uid : idx + cpt_num + 1 for idx, unt_uid in enumerate(unique_unt_uids)}
+        self.unt_uids = {unt_uid : idx for idx, unt_uid in enumerate(unique_unt_uids)}
 
-        self.scn_cpt = {}
-        for scn_uid, cpt_uid, _ in scn_cpt_diff_tuple:
-            if scn_uid not in self.scn_cpt:
-                self.scn_cpt[scn_uid] = []
-            self.scn_cpt[scn_uid].append(cpt_uid)
+        self.unt_cpt = {}
+        for unt_uid, cpt_uid, _ in unt_cpt_diff_tuple:
+            if unt_uid not in self.unt_cpt:
+                self.unt_cpt[unt_uid] = []
+            self.unt_cpt[unt_uid].append(cpt_uid)
 
-        edge = [(self.scn_uidsinz[scn_uid], self.cpt_uidsinz[cpt_uid]) for scn_uid, cpt_uid, _ in scn_cpt_diff_tuple]
-        edge = edge + [(cpt_id, scn_id) for scn_id, cpt_id in edge]
+        edge = [(self.unt_uidsinz[unt_uid], self.cpt_uidsinz[cpt_uid]) for unt_uid, cpt_uid, _ in unt_cpt_diff_tuple]
+        edge = edge + [(cpt_id, unt_id) for unt_id, cpt_id in edge]
 
-        attr = [difficuty for _, _, difficuty in scn_cpt_diff_tuple]
+        attr = [difficuty for _, _, difficuty in unt_cpt_diff_tuple]
         attr = attr + attr
 
         edge_index = torch.tensor(edge, dtype=torch.long).t()
@@ -66,7 +66,7 @@ class KCGEDataReader():
     
     # 自连接边：单向就行，边权重1，边类型0
     def add_self_link(self):
-        node_num = len(self.cpt_uidsinz) + len(self.scn_uidsinz) + 1
+        node_num = len(self.cpt_uidsinz) + len(self.unt_uidsinz) + 1
         edge = [(i, i) for i in range(node_num)]
 
         edge_index = torch.tensor(edge, dtype=torch.long).t()
@@ -85,7 +85,7 @@ class KCGEDataReader():
         # 也就是有三种关系 - 构建三个参数矩阵w
         # 加上节点自环边，一共四种关系，构建四个参数矩阵w
 
-        # KCGE - 计算出z矩阵(h_scn, h_cpt同时得到) - 使用cddatareader获得的30天内的交互数据 - 得到h_lrn
+        # KCGE - 计算出z矩阵(h_unt, h_cpt同时得到) - 使用cddatareader获得的30天内的交互数据 - 得到h_lrn
         # 在cd内部进行dtr和mirt操作
         # 仔细想想，cd也应该是按领域去搞
 
@@ -98,7 +98,7 @@ class KCGEDataReader():
 
         # 2.根据上述数据构建图data
         # 因为在使用的时候不会在工程中调用KCGE
-        #     中途添加scn则使用scn涉及的知识点的加权均值暂时替代
+        #     中途添加unt则使用unt涉及的知识点的加权均值暂时替代
         #     中途添加cpt则使用同领域内的cpt的均值替代
         # 不过以防万一还是不使用pyg的data去存储，将图拆分为x, index, attr三部分
 
@@ -108,7 +108,7 @@ class KCGEDataReader():
         # 由于图中的实体都是葫芦搅茄子放在一起，所以一定要有从uid到特征索引的索引
         # 让are_uid作为0
         # cpt_uid 从1 - cpt_num
-        # scn_uid 从cpt_num + 1 - 最后
+        # unt_uid 从cpt_num + 1 - 最后
 
         edge_index, edge_attr, edge_type = self.get_cpt_uid_of_are()
 
@@ -117,7 +117,7 @@ class KCGEDataReader():
         edge_attr = torch.cat((edge_attr, temp_edge_attr), dim = 0)
         edge_type = torch.cat((edge_type, temp_edge_type), dim = 0)
 
-        temp_edge_index, temp_edge_attr, temp_edge_type = self.get_scn_cpt_uid_of_are()
+        temp_edge_index, temp_edge_attr, temp_edge_type = self.get_unt_cpt_uid_of_are()
         edge_index = torch.cat((edge_index, temp_edge_index), dim = 1)
         edge_attr = torch.cat((edge_attr, temp_edge_attr), dim = 0)
         edge_type = torch.cat((edge_type, temp_edge_type), dim = 0)
@@ -130,16 +130,16 @@ class KCGEDataReader():
         cpt_idinz = [self.cpt_uidsinz[cpt_uid] for cpt_uid in self.cpt_uidsinz]
         cpt_idx = torch.tensor(cpt_idinz, dtype=torch.long)
 
-        scn_idinz = [self.scn_uidsinz[scn_uid] for scn_uid in self.scn_uidsinz]
-        scn_idx = torch.tensor(scn_idinz, dtype=torch.long)
+        unt_idinz = [self.unt_uidsinz[unt_uid] for unt_uid in self.unt_uidsinz]
+        unt_idx = torch.tensor(unt_idinz, dtype=torch.long)
 
-        return self.cpt_uids, self.scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type
+        return self.cpt_uids, self.unt_uids, cpt_idx, unt_idx, edge_index, edge_attr, edge_type
     
 if __name__ == '__main__':
     kcgedatareader =  KCGEDataReader('are_3fee9e47d0f3428382f4afbcb1004117')
     a,b,c = kcgedatareader.get_cpt_uid_of_are()
     d,e,f = kcgedatareader.get_cpt_cpt_of_are()
-    g,h,j = kcgedatareader.get_scn_cpt_uid_of_are()
+    g,h,j = kcgedatareader.get_unt_cpt_uid_of_are()
 
     print(a.shape, b.shape, c.shape)
     print(d.shape, e.shape, f.shape)

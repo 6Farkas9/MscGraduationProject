@@ -170,7 +170,7 @@
     <ClInclude Include="include\core\LearnerItemService.h" />
     <ClInclude Include="include\core\MLS_config.h" />
     <ClInclude Include="include\core\PlatformStatsService.h" />
-    <ClInclude Include="include\core\SceneItemService.h" />
+    <ClInclude Include="include\core\UnitItemService.h" />
     <ClInclude Include="include\database\MongoDBOperator.h" />
     <ClInclude Include="include\database\MySQLOperator.h" />
     <ClInclude Include="include\models\CD.h" />
@@ -190,7 +190,7 @@
     <ClCompile Include="src\core\LearnerInfoService.cpp" />
     <ClCompile Include="src\core\LearnerItemService.cpp" />
     <ClCompile Include="src\core\PlatformStatsService.cpp" />
-    <ClCompile Include="src\core\SceneItemService.cpp" />
+    <ClCompile Include="src\core\UnitItemService.cpp" />
     <ClCompile Include="src\database\MongoDBOperator.cpp" />
     <ClCompile Include="src\database\MySQLOperator.cpp" />
     <ClCompile Include="src\main.cpp" />

@@ -7,7 +7,7 @@
 #include "MySQLOperator.h"
 
 // #include "UidCreator.h"
-// #include "SceneItemService.h"
+// #include "UnitItemService.h"
 // #include "LearnerItemService.h"
 // #include "ConceptItemService.h"
 
@@ -217,9 +217,9 @@ int main() {
 
 //     std::cout << cpt_uid << std::endl;
 
-//     std::string scn_uid = "scn_6653ca78e6f74b8088769c4a08dc6784";
-//     mysqlop.insert_one_scn_cpt_to_graph_involve(
-//         scn_uid,
+//     std::string unt_uid = "unt_6653ca78e6f74b8088769c4a08dc6784";
+//     mysqlop.insert_one_unt_cpt_to_graph_involve(
+//         unt_uid,
 //         cpt_uid,
 //         0.3
 //     );

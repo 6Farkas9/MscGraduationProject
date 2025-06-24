@@ -47,8 +47,8 @@
               </div>
               <div class="card-text">
                 <h3>学习单元数量</h3>
-                <p class="value" v-if="loading.scn_num"><span class="loading-text">加载中</span></p>
-                <p class="value" v-else>{{ stats.scn_num }}</p>
+                <p class="value" v-if="loading.unt_num"><span class="loading-text">加载中</span></p>
+                <p class="value" v-else>{{ stats.unt_num }}</p>
                 <p class="description">学习单元总数</p>
               </div>
             </div>
@@ -124,7 +124,7 @@ import { fetchStats, triggerTraining } from '@/api'
 const stats = ref({
   are_num: 0,
   lrn_num: 0,
-  scn_num: 0,
+  unt_num: 0,
   cpt_num: 0,
   ict_num: 0,
   lastTrainingTime: '',
@@ -134,7 +134,7 @@ const stats = ref({
 const loading = ref({
   are_num: true,
   lrn_num: true,
-  scn_num: true,
+  unt_num: true,
   cpt_num: true,
   ict_num: true,
   lastTrainingTime: true,

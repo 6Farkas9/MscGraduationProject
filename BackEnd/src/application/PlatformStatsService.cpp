@@ -15,7 +15,7 @@ std::unordered_map<std::string, int> PlatformStatsService::get_count_data() {
     std::unordered_map<std::string, int> ans;
     ans["are_num"] = mysqlop.get_are_num();
     ans["lrn_num"] = mysqlop.get_lrn_num();
-    ans["scn_num"] = mysqlop.get_scn_num();
+    ans["unt_num"] = mysqlop.get_unt_num();
     ans["cpt_num"] = mysqlop.get_cpt_num();
     ans["ict_num"] = mysqlop.get_ict_num();
     return ans;

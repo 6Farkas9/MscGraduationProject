@@ -31,7 +31,7 @@ public:
     ~LearnerItemService();
 
     std::string addOneLearner(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);
-    bool deleteOneLearner(std::string scn_uid);
+    bool deleteOneLearner(std::string unt_uid);
 
     std::unordered_map<std::string, float> predict_lrn_kt_in_are(const std::string &lrn_uid, const std::string &are_uid);
 

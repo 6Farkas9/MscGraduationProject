@@ -1,5 +1,5 @@
-#ifndef SCENE_SERVICE_H
-#define SCENE_SERVICE_H
+#ifndef UNIT_SERVICE_H
+#define UNIT_SERVICE_H
 
 #include "MongoDBOperator.h"
 
@@ -18,20 +18,20 @@
 #include "MLSTimer.h"
 #include "UidCreator.h"
 
-class SceneItemService{
+class UnitItemService{
 
 public:
-    SceneItemService();
-    ~SceneItemService();
+    UnitItemService();
+    ~UnitItemService();
 
-    std::string addOneScene(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);
-    bool deleteOneScene(std::string scn_uid);
+    std::string addOneUnit(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);
+    bool deleteOneUnit(std::string unt_uid);
 
 private:
     MySQLOperator &mysqlop; 
     MongoDBOperator &mongodbop;
 
-    bool update_after_add_scn(std::string scn_uid);
+    bool update_after_add_unt(std::string unt_uid);
 };
 
-#endif //ifndef SCENE_SERVICE_H
+#endif //ifndef UNIT_SERVICE_H

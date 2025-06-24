@@ -13,9 +13,9 @@ RR::~RR(){
 std::vector<float> RR::forward(
     const std::string &lrn_uid,
     const std::vector<float> &lrn_emb_in,
-    const std::vector<std::vector<float>> &scn_emb_in,
+    const std::vector<std::vector<float>> &unt_emb_in,
     const std::vector<std::vector<float>> &cpt_emb_in,
-    const std::vector<int> &scn_index_vec
+    const std::vector<int> &unt_index_vec
 ) {
     // 构造pt路径
     std::string pt_path = R"(\RR\PT\lrn_use\)" + lrn_uid + "_use.pt";
@@ -29,17 +29,17 @@ std::vector<float> RR::forward(
         {static_cast<int64_t>(lrn_emb_in.size())},
         torch::kFloat32
     );
-    // 构造h_scn的tensor
-    std::vector<torch::Tensor> scn_emb_vec;
+    // 构造h_unt的tensor
+    std::vector<torch::Tensor> unt_emb_vec;
     int idx = 0;
-    for (const auto &scn_e : scn_emb_in){
-        scn_emb_vec.push_back(torch::from_blob(
-            const_cast<float*>(scn_e.data()),  // 避免拷贝数据
-            {static_cast<int64_t>(scn_e.size())},
+    for (const auto &unt_e : unt_emb_in){
+        unt_emb_vec.push_back(torch::from_blob(
+            const_cast<float*>(unt_e.data()),  // 避免拷贝数据
+            {static_cast<int64_t>(unt_e.size())},
             torch::kFloat32
         ));
     }
-    torch::Tensor scn_emb = torch::stack(scn_emb_vec);
+    torch::Tensor unt_emb = torch::stack(unt_emb_vec);
     // 构造h_cpt
     std::vector<torch::Tensor> cpt_emb_vec;
     for (const auto &cpt_e : cpt_emb_in){
@@ -50,19 +50,19 @@ std::vector<float> RR::forward(
         ));
     }
     torch::Tensor cpt_emb = torch::stack(cpt_emb_vec);
-    // 构造scn_index和scn_mask
-    int interact_num = scn_index_vec.size();
-    torch::Tensor scn_index = torch::tensor(scn_index_vec, torch::kLong);
-    torch::Tensor scn_mask = torch::ones(interact_num, torch::kFloat32);
+    // 构造unt_index和unt_mask
+    int interact_num = unt_index_vec.size();
+    torch::Tensor unt_index = torch::tensor(unt_index_vec, torch::kLong);
+    torch::Tensor unt_mask = torch::ones(interact_num, torch::kFloat32);
     // 构建输入
     lrn_emb = lrn_emb.unsqueeze(0);
-    scn_index = scn_index.unsqueeze(0);
-    scn_mask = scn_mask.unsqueeze(0);
+    unt_index = unt_index.unsqueeze(0);
+    unt_mask = unt_mask.unsqueeze(0);
     std::vector<torch::jit::IValue> input_data;
     input_data.push_back(lrn_emb);
-    input_data.push_back(scn_emb);
-    input_data.push_back(scn_index);
-    input_data.push_back(scn_mask);
+    input_data.push_back(unt_emb);
+    input_data.push_back(unt_index);
+    input_data.push_back(unt_mask);
     input_data.push_back(cpt_emb);
     // 数据输入模型
     torch::jit::IValue output_data = model_rr.forward(input_data);

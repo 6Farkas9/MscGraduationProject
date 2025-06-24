@@ -47,18 +47,18 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
-    def save_final_scn_emb(self, scn_emb_dict):
-        collection = self.mongo_db["scenes"]
+    def save_final_unt_emb(self, unt_emb_dict):
+        collection = self.mongo_db["units"]
 
         operations = [
             UpdateOne(
-                {"_id": scn_uid},  # 查询条件
+                {"_id": unt_uid},  # 查询条件
                 {"$set": {
                     "HGC_Emb" : data
                 }},    # 更新内容（完全替换匹配字段）
                 upsert=True        # 有则更新无则插入
             )
-            for scn_uid, data in scn_emb_dict.items()
+            for unt_uid, data in unt_emb_dict.items()
         ]
 
         result = collection.bulk_write(operations)
@@ -133,18 +133,18 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
-    def save_kcge_final_scn_emb(self, scn_emb_dict):
-        collection = self.mongo_db["scenes"]
+    def save_kcge_final_unt_emb(self, unt_emb_dict):
+        collection = self.mongo_db["units"]
 
         operations = [
             UpdateOne(
-                {"_id": scn_uid},  # 查询条件
+                {"_id": unt_uid},  # 查询条件
                 {"$set": {
                     "KCGE_Emb" : data
                 }},    # 更新内容（完全替换匹配字段）
                 upsert=True        # 有则更新无则插入
             )
-            for scn_uid, data in scn_emb_dict.items()
+            for unt_uid, data in unt_emb_dict.items()
         ]
 
         result = collection.bulk_write(operations)
@@ -165,8 +165,8 @@ class MongoDB:
 
         result = collection.bulk_write(operations)
 
-    def get_cd_emb_of_scn_uids(self, scn_uids):
-        collection = self.mongo_db["scnenes"]
+    def get_cd_emb_of_unt_uids(self, unt_uids):
+        collection = self.mongo_db["untenes"]
 
 
         return 0

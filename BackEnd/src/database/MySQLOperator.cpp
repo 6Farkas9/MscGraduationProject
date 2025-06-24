@@ -197,12 +197,12 @@ void MySQLOperator::testSelect(std::string table, int limit) {
 std::vector<std::vector<std::string>> MySQLOperator::get_interacts_in_area_of_lrn_with_time(const std::string &are_uid, const std::string &lrn_uid, const std::string &time_start, const std::string &time_end){
     std::string sql = R"(
         SELECT 
-            i.scn_uid, 
+            i.unt_uid, 
             i.result
         FROM 
             interacts i
         INNER JOIN 
-            graph_involve gi ON i.scn_uid = gi.scn_uid
+            graph_involve gi ON i.unt_uid = gi.unt_uid
         INNER JOIN 
             graph_belong gb ON gi.cpt_uid = gb.cpt_uid
         WHERE 
@@ -265,16 +265,16 @@ int MySQLOperator::get_cpt_num_of_area(const std::string &are_uid) {
     return std::stoi(result[0][0]);
 }
 
-std::unordered_map<std::string, std::unordered_set<std::string>> MySQLOperator::get_cpt_of_scn(const std::unordered_set<std::string> &scn_uids){
+std::unordered_map<std::string, std::unordered_set<std::string>> MySQLOperator::get_cpt_of_unt(const std::unordered_set<std::string> &unt_uids){
     std::string sql = R"(
-        select scn_uid, cpt_uid
+        select unt_uid, cpt_uid
         from graph_involve
-        where scn_uid in ()";
+        where unt_uid in ()";
 
     int i = 0;
-    int length = scn_uids.size() - 1;
-    for (auto &scn_uid : scn_uids){
-        sql += R"(")" + scn_uid + R"(")";
+    int length = unt_uids.size() - 1;
+    for (auto &unt_uid : unt_uids){
+        sql += R"(")" + unt_uid + R"(")";
         if(i++ < length) 
             sql += R"(,)";
     }
@@ -291,10 +291,10 @@ std::unordered_map<std::string, std::unordered_set<std::string>> MySQLOperator::
     return ans;
 }
 
-std::unordered_map<std::string, std::string> MySQLOperator::get_special_scn_cpt_uid_of_are(const std::string &are_uid) {
+std::unordered_map<std::string, std::string> MySQLOperator::get_special_unt_cpt_uid_of_are(const std::string &are_uid) {
     std::string sql = R"(
-        SELECT ss.scn_uid, ss.cpt_uid
-        FROM special_scenes ss
+        SELECT ss.unt_uid, ss.cpt_uid
+        FROM special_units ss
         JOIN graph_belong gb ON ss.cpt_uid = gb.cpt_uid
         WHERE gb.are_uid = ")";
     sql = sql + are_uid + R"(";)";
@@ -309,7 +309,7 @@ std::unordered_map<std::string, std::string> MySQLOperator::get_special_scn_cpt_
 std::vector<std::vector<std::string>> MySQLOperator::get_lrn_interacts_time(const std::string &lrn_uid, const std::string &time_start, const std::string &time_end) {
     std::string sql = R"(
     SELECT 
-        scn_uid, 
+        unt_uid, 
         result
     FROM 
         interacts
@@ -355,10 +355,10 @@ bool MySQLOperator::judge_lrn_uid_exist(std::string &uid) {
     return judge_uid_exist(table, pre, uid);
 }
 
-// 判断scenes中是否有重复uid
-bool MySQLOperator::judge_scn_uid_exist(std::string &uid) {
-    std::string table = "scenes";
-    std::string pre = "scn_";
+// 判断units中是否有重复uid
+bool MySQLOperator::judge_unt_uid_exist(std::string &uid) {
+    std::string table = "units";
+    std::string pre = "unt_";
     return judge_uid_exist(table, pre, uid);
 }
 
@@ -376,10 +376,10 @@ bool MySQLOperator::judge_are_uid_exist(std::string &uid) {
     return judge_uid_exist(table, pre, uid);
 }
 
-int MySQLOperator::insert_one_scn_to_scenes(std::string &scn_uid, bool has_result) {
+int MySQLOperator::insert_one_unt_to_units(std::string &unt_uid, bool has_result) {
     std::string sql = R"(
-        insert into scenes (scn_uid, has_result)
-        values (")" + scn_uid + R"(", )";
+        insert into units (unt_uid, has_result)
+        values (")" + unt_uid + R"(", )";
     if (has_result) {
         sql += R"(1))";
     }
@@ -390,21 +390,21 @@ int MySQLOperator::insert_one_scn_to_scenes(std::string &scn_uid, bool has_resul
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_one_scn_from_scenes(std::string &scn_uid) {
+int MySQLOperator::delete_one_unt_from_units(std::string &unt_uid) {
     std::string sql = R"(
-        delete from scenes
-        where scn_uid = ")" + scn_uid + R"(")";
+        delete from units
+        where unt_uid = ")" + unt_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::insert_one_scn_to_graph_involve(std::string &scn_uid, std::unordered_map<std::string, float> &cpt_uid2diff) {
+int MySQLOperator::insert_one_unt_to_graph_involve(std::string &unt_uid, std::unordered_map<std::string, float> &cpt_uid2diff) {
     std::string sql = R"(
-        insert into graph_involve(scn_uid, cpt_uid, difficulty)
+        insert into graph_involve(unt_uid, cpt_uid, difficulty)
         values )";
     int cpt_num = cpt_uid2diff.size();
     int count = 0;
     for (auto &cpt_dif : cpt_uid2diff) {
-        sql += R"((")" + scn_uid + R"(", ")" + cpt_dif.first + R"(", )" + std::to_string(cpt_dif.second) + R"())";
+        sql += R"((")" + unt_uid + R"(", ")" + cpt_dif.first + R"(", )" + std::to_string(cpt_dif.second) + R"())";
         if (++count != cpt_num) {
             sql += R"(,)";
         }
@@ -412,24 +412,24 @@ int MySQLOperator::insert_one_scn_to_graph_involve(std::string &scn_uid, std::un
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_one_scn_from_graph_involve(std::string &scn_uid) {
+int MySQLOperator::delete_one_unt_from_graph_involve(std::string &unt_uid) {
     std::string sql = R"(
         delete from graph_involve
-        where scn_uid = ")" + scn_uid + R"(")";
+        where unt_uid = ")" + unt_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_one_scn_from_interacts(std::string &scn_uid) {
+int MySQLOperator::delete_one_unt_from_interacts(std::string &unt_uid) {
     std::string sql = R"(
         delete from interacts
-        where scn_uid = ")" + scn_uid + R"(")";
+        where unt_uid = ")" + unt_uid + R"(")";
     return executeUpdate(sql);
 }
 
-int MySQLOperator::delete_one_scn_from_graph_interact(std::string &scn_uid) {
+int MySQLOperator::delete_one_unt_from_graph_interact(std::string &unt_uid) {
     std::string sql = R"(
         delete from graph_interact
-        where scn_uid = ")" + scn_uid + R"(")";
+        where unt_uid = ")" + unt_uid + R"(")";
     return executeUpdate(sql);
 }
 
@@ -548,15 +548,15 @@ std::unordered_map<std::string, std::string> MySQLOperator::get_are_uid_by_multi
     return ans;
 }
 
-std::unordered_set<std::string> MySQLOperator::get_scn_uid_from_graph_involve_by_cpt_uid(std::string &cpt_uid) {
+std::unordered_set<std::string> MySQLOperator::get_unt_uid_from_graph_involve_by_cpt_uid(std::string &cpt_uid) {
     std::string sql = R"(
-        select scn_uid
+        select unt_uid
         from graph_involve
         where cpt_uid = ")" + cpt_uid + R"(")";
     auto result = executeQuery(sql);
     std::unordered_set<std::string> ans;
-    for (auto & scn_uid_vec : result) {
-        ans.insert(std::move(scn_uid_vec[0]));
+    for (auto & unt_uid_vec : result) {
+        ans.insert(std::move(unt_uid_vec[0]));
     }
     return ans;
 }
@@ -572,28 +572,28 @@ std::unordered_set<std::string> MySQLOperator::get_cpt_uid_from_graph_preconditi
         where ")" + cpt_uid + R"(" in (cpt_uid_pre, cpt_uid_aft))";
     auto result = executeQuery(sql);
     std::unordered_set<std::string> ans;
-    for (auto & scn_uid_vec : result) {
-        ans.insert(std::move(scn_uid_vec[0]));
+    for (auto & unt_uid_vec : result) {
+        ans.insert(std::move(unt_uid_vec[0]));
     }
     return ans;
 }
 
-std::unordered_map<std::string, std::unordered_map<std::string, float>> MySQLOperator::get_scn_cpt_from_graph_involve_by_scns_cpts(
-    std::unordered_set<std::string> &scn_uids,
+std::unordered_map<std::string, std::unordered_map<std::string, float>> MySQLOperator::get_unt_cpt_from_graph_involve_by_unts_cpts(
+    std::unordered_set<std::string> &unt_uids,
     std::unordered_set<std::string> &cpt_uids
 ) {
     int i, length;
 
-    std::string scn_uids_str = R"(()";
-    length = scn_uids.size();
+    std::string unt_uids_str = R"(()";
+    length = unt_uids.size();
     i = 0;
-    for (auto & scn_uid : scn_uids) {
-        scn_uids_str += R"(")" + scn_uid + R"(")";
+    for (auto & unt_uid : unt_uids) {
+        unt_uids_str += R"(")" + unt_uid + R"(")";
         if (++i < length) {
-            scn_uids_str += R"(,)";
+            unt_uids_str += R"(,)";
         }
     }
-    scn_uids_str += R"())";
+    unt_uids_str += R"())";
 
     std::string cpt_uids_str = R"(()";
     length = cpt_uids.size();
@@ -607,27 +607,27 @@ std::unordered_map<std::string, std::unordered_map<std::string, float>> MySQLOpe
     cpt_uids_str += R"())";
 
     std::string sql = R"(
-        select scn_uid, cpt_uid, difficulty
+        select unt_uid, cpt_uid, difficulty
         from graph_involve
-        where scn_uid in )" + scn_uids_str + R"( and cpt_uid in )" + cpt_uids_str;
+        where unt_uid in )" + unt_uids_str + R"( and cpt_uid in )" + cpt_uids_str;
 
     auto result = executeQuery(sql);
     float difficulty;
     std::unordered_map<std::string, std::unordered_map<std::string, float>> ans;
-    for (auto & scn_cpt_dif : result) {
-        if (ans.find(scn_cpt_dif[0]) == ans.end()) {
-            ans[scn_cpt_dif[0]] = std::unordered_map<std::string, float>();
+    for (auto & unt_cpt_dif : result) {
+        if (ans.find(unt_cpt_dif[0]) == ans.end()) {
+            ans[unt_cpt_dif[0]] = std::unordered_map<std::string, float>();
         }
-        std::istringstream(scn_cpt_dif[2]) >> difficulty;
-        ans[scn_cpt_dif[0]][scn_cpt_dif[1]] = difficulty;
+        std::istringstream(unt_cpt_dif[2]) >> difficulty;
+        ans[unt_cpt_dif[0]][unt_cpt_dif[1]] = difficulty;
     }
     return ans;
 }
 
-int MySQLOperator::insert_one_scn_cpt_to_graph_involve(std::string &scn_uid, std::string &cpt_uid, float difficulty) {
+int MySQLOperator::insert_one_unt_cpt_to_graph_involve(std::string &unt_uid, std::string &cpt_uid, float difficulty) {
     std::string sql = R"(
-        insert into graph_involve (scn_uid, cpt_uid, difficulty)
-        values (")" + scn_uid+ R"(", ")" + cpt_uid + R"(", )" + std::to_string(difficulty) + R"())";
+        insert into graph_involve (unt_uid, cpt_uid, difficulty)
+        values (")" + unt_uid+ R"(", ")" + cpt_uid + R"(", )" + std::to_string(difficulty) + R"())";
     return executeUpdate(sql);
 }
 
@@ -661,10 +661,10 @@ int MySQLOperator::get_cpt_num() {
     return ans;
 }
 
-int MySQLOperator::get_scn_num() {
+int MySQLOperator::get_unt_num() {
     std::string sql = R"(
         select count(*)
-        from Scenes)";
+        from Units)";
     auto result = executeQuery(sql);
     int ans;
     std::istringstream(result[0][0]) >> ans;

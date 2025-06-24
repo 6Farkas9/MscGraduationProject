@@ -20,7 +20,7 @@ class MySQLDB():
     # 获取从time_start开始的所有交互数据
     def get_all_interacts(self):
         sql = f"""
-        select lrn_uid, scn_uid, result
+        select lrn_uid, unt_uid, result
         from interacts 
         order by created_at desc
         """
@@ -33,7 +33,7 @@ class MySQLDB():
     # 获取从time_start开始的所有交互数据
     def get_interacts_from(self, time_start, limit = -1):
         sql = f"""
-        select lrn_uid, scn_uid, result from interacts 
+        select lrn_uid, unt_uid, result from interacts 
         where created_at >= %s 
         order by created_at desc
         """
@@ -48,8 +48,8 @@ class MySQLDB():
     # 获取are_uid下的知识点相关的所有从time_start开始的交互数据
     def get_interacts_of_are(self, are_uid, time_start, limit = -1):
         sql = f"""
-        WITH relevant_scenes AS (
-            SELECT DISTINCT gi.scn_uid
+        WITH relevant_units AS (
+            SELECT DISTINCT gi.unt_uid
             FROM graph_belong gb
             JOIN graph_involve gi ON gb.cpt_uid = gi.cpt_uid
             WHERE gb.are_uid = %s
@@ -57,14 +57,14 @@ class MySQLDB():
         qualified_learners AS (
             SELECT i.lrn_uid
             FROM interacts i
-            JOIN relevant_scenes rs ON i.scn_uid = rs.scn_uid
+            JOIN relevant_units rs ON i.unt_uid = rs.unt_uid
             WHERE i.created_at > %s
             GROUP BY i.lrn_uid
             HAVING COUNT(*) >= 4
         )
-        SELECT i.lrn_uid, i.scn_uid, i.result
+        SELECT i.lrn_uid, i.unt_uid, i.result
         FROM interacts i
-        JOIN relevant_scenes rs ON i.scn_uid = rs.scn_uid
+        JOIN relevant_units rs ON i.unt_uid = rs.unt_uid
         JOIN qualified_learners ql ON i.lrn_uid = ql.lrn_uid
         WHERE i.created_at > %s
         ORDER BY i.created_at;
@@ -85,22 +85,22 @@ class MySQLDB():
             FROM graph_belong 
             WHERE are_uid = %s
         ),
-        scn_has_result AS (
-            SELECT gi.scn_uid
+        unt_has_result AS (
+            SELECT gi.unt_uid
             FROM graph_involve gi
             LEFT JOIN cpt_in_are cia ON gi.cpt_uid = cia.cpt_uid
-            GROUP BY gi.scn_uid
+            GROUP BY gi.unt_uid
             HAVING COUNT(*) = COUNT(cia.cpt_uid)
         )
-        SELECT i.lrn_uid, i.scn_uid, i.result
+        SELECT i.lrn_uid, i.unt_uid, i.result
         FROM interacts i
-        JOIN scenes s ON i.scn_uid = s.scn_uid AND s.has_result = 1
-        JOIN scn_has_result shr ON i.scn_uid = shr.scn_uid
+        JOIN units s ON i.unt_uid = s.unt_uid AND s.has_result = 1
+        JOIN unt_has_result shr ON i.unt_uid = shr.unt_uid
         WHERE i.created_at >= %s and i.lrn_uid IN (
             SELECT i2.lrn_uid
             FROM interacts i2
-            JOIN scenes s2 ON i2.scn_uid = s2.scn_uid AND s2.has_result = 1
-            JOIN scn_has_result shr2 ON i2.scn_uid = shr2.scn_uid
+            JOIN units s2 ON i2.unt_uid = s2.unt_uid AND s2.has_result = 1
+            JOIN unt_has_result shr2 ON i2.unt_uid = shr2.unt_uid
             WHERE i2.created_at >= %s
             GROUP BY i2.lrn_uid
             HAVING COUNT(*) >= 4
@@ -149,21 +149,21 @@ class MySQLDB():
         cursor.close()
         return result
     
-    # 获取scn_uids中所有场景所涉及的知识点 - scn_uid cpt_uid
-    def get_concepts_of_scenes(self, scn_uids):
+    # 获取unt_uids中所有场景所涉及的知识点 - unt_uid cpt_uid
+    def get_concepts_of_units(self, unt_uids):
         sql = f"""
-        select scn_uid, cpt_uid
+        select unt_uid, cpt_uid
         from graph_involve
-        where scn_uid in (%s)
+        where unt_uid in (%s)
         """
-        place_holders = ','.join(['%s'] * len(scn_uids))
+        place_holders = ','.join(['%s'] * len(unt_uids))
         cursor = self.con.cursor()
-        cursor.execute(sql % place_holders, scn_uids)
+        cursor.execute(sql % place_holders, unt_uids)
         result = {}
-        for scn_uid, cpt_uid in cursor.fetchall():
-            if scn_uid not in result:
-                result[scn_uid] = set()
-            result[scn_uid].add(cpt_uid)
+        for unt_uid, cpt_uid in cursor.fetchall():
+            if unt_uid not in result:
+                result[unt_uid] = set()
+            result[unt_uid].add(cpt_uid)
         cursor.close()
         return result
     
@@ -181,22 +181,22 @@ class MySQLDB():
         return result
     
     # 获取场景涉及的知识点的内部id
-    def get_concepts_uid_of_scenes(self, scn_uids):
+    def get_concepts_uid_of_units(self, unt_uids):
         sql = f"""
-        select gi.scn_uid, cpt.cpt_uid
+        select gi.unt_uid, cpt.cpt_uid
         from graph_involve gi
         join concepts cpt
         on gi.cpt_uid = cpt.cpt_uid
-        where gi.scn_uid in (%s)
+        where gi.unt_uid in (%s)
         """
-        place_holders = ','.join(['%s'] * len(scn_uids))
+        place_holders = ','.join(['%s'] * len(unt_uids))
         cursor = self.con.cursor()
-        cursor.execute(sql % place_holders, scn_uids)
+        cursor.execute(sql % place_holders, unt_uids)
         result = {}
-        for scn_uid, cpt_uid in cursor.fetchall():
-            if scn_uid not in result:
-                result[scn_uid] = []
-            result[scn_uid].append(cpt_uid)
+        for unt_uid, cpt_uid in cursor.fetchall():
+            if unt_uid not in result:
+                result[unt_uid] = []
+            result[unt_uid].append(cpt_uid)
         cursor.close()
         return result
     
@@ -213,10 +213,10 @@ class MySQLDB():
         return result
     
     # 获取场景数量
-    def get_scene_num(self):
+    def get_unit_num(self):
         sql = '''
         select count(*)
-        from scenes
+        from units
         '''
         cursor = self.con.cursor()
         cursor.execute(sql)
@@ -251,10 +251,10 @@ class MySQLDB():
         return result
     
     # 获取所有场景的uid
-    def get_scenes_uid(self):
+    def get_units_uid(self):
         sql = '''
-        select scn_uid
-        from scenes
+        select unt_uid
+        from units
         '''
         cursor = self.con.cursor()
         cursor.execute(sql)
@@ -279,9 +279,9 @@ class MySQLDB():
         return result
     
     # 从graph_interact中获取所有的交互记录以及交互总次数
-    def get_lrn_scn_num(self):
+    def get_lrn_unt_num(self):
         sql = '''
-        select lrn_uid, scn_uid, all_times
+        select lrn_uid, unt_uid, all_times
         from graph_interact
         '''
         cursor = self.con.cursor()
@@ -291,9 +291,9 @@ class MySQLDB():
         return result
     
     # 从graph_involve中获取所有场景和知识点的难度信息
-    def get_scn_cpt_dif(self):
+    def get_unt_cpt_dif(self):
         sql = '''
-        select scn_uid, cpt_uid, difficulty
+        select unt_uid, cpt_uid, difficulty
         from graph_involve
         '''
         cursor = self.con.cursor()
@@ -365,7 +365,7 @@ class MySQLDB():
         return result
     
     # 获取所有至少交互过两个场景的学习者
-    def get_learners_uid_with_scn_greater_4(self):
+    def get_learners_uid_with_unt_greater_4(self):
         sql = '''
         select lrn_uid
         from interacts
@@ -381,9 +381,9 @@ class MySQLDB():
         return result
     
      # 获取所有至少交互过两个场景的学习者的交互图信息
-    def get_lrn_scn_num_with_scn_greater_4(self):
+    def get_lrn_unt_num_with_unt_greater_4(self):
         sql = '''
-        select lrn_uid, scn_uid, all_times
+        select lrn_uid, unt_uid, all_times
         from graph_interact
         where lrn_uid in (
             select lrn_uid
@@ -399,9 +399,9 @@ class MySQLDB():
         return result
     
     # 获取所有至少交互过4个场景的学习者的所有交互信息
-    def get_interacts_with_scn_greater_4(self):
+    def get_interacts_with_unt_greater_4(self):
         sql = f"""
-        select ict1.lrn_uid, ict1.scn_uid, ict1.result
+        select ict1.lrn_uid, ict1.unt_uid, ict1.result
         from interacts ict1
         where ict1.lrn_uid in (
             select ict2.lrn_uid
@@ -417,11 +417,11 @@ class MySQLDB():
         cursor.close()
         return result
     
-    # 获取指定are下的special_scenes中的所有scn_uid和cpt_uid
-    def get_special_scn_cpt_uid_of_are(self, are_uid):
+    # 获取指定are下的special_units中的所有unt_uid和cpt_uid
+    def get_special_unt_cpt_uid_of_are(self, are_uid):
         sql = f"""
-        SELECT ss.scn_uid, ss.cpt_uid
-        FROM special_scenes ss
+        SELECT ss.unt_uid, ss.cpt_uid
+        FROM special_units ss
         JOIN graph_belong gb ON ss.cpt_uid = gb.cpt_uid
         WHERE gb.are_uid = %s;
         """
@@ -460,9 +460,9 @@ class MySQLDB():
         return result
     
     # 从graph_involve中获取are相关的所有记录
-    def get_scn_cpt_uid_of_are(self, are_uid):
+    def get_unt_cpt_uid_of_are(self, are_uid):
         sql = f"""
-        SELECT gi.scn_uid, gi.cpt_uid, gi.difficulty
+        SELECT gi.unt_uid, gi.cpt_uid, gi.difficulty
         FROM graph_involve AS gi
         JOIN graph_belong AS gb ON gb.cpt_uid = gi.cpt_uid
         WHERE gb.are_uid = %s
@@ -492,13 +492,13 @@ class MySQLDB():
         cursor.close()
         return result
     
-    # 获取are下的所有有result的scn的uid
-    def get_scn_of_are_with_result(self, are_uid):
+    # 获取are下的所有有result的unt的uid
+    def get_unt_of_are_with_result(self, are_uid):
         sql = f"""
-        SELECT DISTINCT s.scn_uid
+        SELECT DISTINCT s.unt_uid
         FROM graph_belong gb
         JOIN graph_involve gi ON gb.cpt_uid = gi.cpt_uid
-        JOIN scenes s ON gi.scn_uid = s.scn_uid
+        JOIN units s ON gi.unt_uid = s.unt_uid
         WHERE gb.are_uid = %s AND s.has_result = 1;
         """
         cursor = self.con.cursor()

@@ -25,26 +25,26 @@ class HGCDataReader():
         uids = mysqldb.get_areas_uid()
         return {uid : uids.index(uid) for uid in uids}
     
-    def get_learners_uid_with_scn_greater_4(self):
-        uids = mysqldb.get_learners_uid_with_scn_greater_4()
+    def get_learners_uid_with_unt_greater_4(self):
+        uids = mysqldb.get_learners_uid_with_unt_greater_4()
         self.lrn_uids = {uid : idx for idx, uid in enumerate(uids)}
         self.lrn_num = len(uids)
 
-    def get_scenes_uid(self):
-        uids = mysqldb.get_scenes_uid()
-        self.scn_uids = {uid : idx for idx, uid in enumerate(uids)}
-        self.scn_num = len(uids)
+    def get_units_uid(self):
+        uids = mysqldb.get_units_uid()
+        self.unt_uids = {uid : idx for idx, uid in enumerate(uids)}
+        self.unt_num = len(uids)
 
     def get_concepts_uid(self):
         uids = mysqldb.get_concepts_uid()
         self.cpt_uids = {uid : idx for idx, uid in enumerate(uids)}
         self.cpt_num = len(uids)
 
-    def get_lrn_scn_num_with_scn_greater_4(self):
-        return mysqldb.get_lrn_scn_num_with_scn_greater_4()
+    def get_lrn_unt_num_with_unt_greater_4(self):
+        return mysqldb.get_lrn_unt_num_with_unt_greater_4()
     
-    def get_scn_cpt_dif(self):
-        return mysqldb.get_scn_cpt_dif()
+    def get_unt_cpt_dif(self):
+        return mysqldb.get_unt_cpt_dif()
     
     def get_cpt_uid_name(self):
         return mysqldb.get_cpt_uid_name()
@@ -104,7 +104,7 @@ class HGCDataReader():
         self.p_cac = (torch.stack([row, col], dim=0), weight)
     
     def get_P_csc(self):
-        A = self.scenes_init.clone().t()
+        A = self.units_init.clone().t()
         A_T = A.t()
         A = torch.matmul(A, A_T)
         A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
@@ -119,7 +119,7 @@ class HGCDataReader():
         self.p_csc = (torch.stack([row, col], dim=0), weight)
     
     def get_P_scs(self):
-        A = self.scenes_init.clone()
+        A = self.units_init.clone()
         A_T = A.t()
         A = torch.matmul(A, A_T)
         A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
@@ -155,13 +155,13 @@ class HGCDataReader():
         # 构建ls矩阵
         # 计算出学习者的初始嵌入表达
         # 返回初始嵌入的结果
-        self.learners_init = torch.zeros(self.lrn_num, self.scn_num, dtype=torch.float)
-        lrn_scn_num = self.get_lrn_scn_num_with_scn_greater_4()
-        for onedata in lrn_scn_num:
+        self.learners_init = torch.zeros(self.lrn_num, self.unt_num, dtype=torch.float)
+        lrn_unt_num = self.get_lrn_unt_num_with_unt_greater_4()
+        for onedata in lrn_unt_num:
             lrn_pos = self.lrn_uids[onedata[0]]
-            scn_pos = self.scn_uids[onedata[1]]
+            unt_pos = self.unt_uids[onedata[1]]
             times   = onedata[2]
-            self.learners_init[lrn_pos][scn_pos] += times
+            self.learners_init[lrn_pos][unt_pos] += times
         
         self.get_P_lsl()
         self.get_P_sls()
@@ -193,27 +193,27 @@ class HGCDataReader():
             for i in range(len(onedata[1])):
                 self.concepts_init[cpt_pos][i] = ord(onedata[1][i])
     
-    def scene_init_embedding(self):
+    def unit_init_embedding(self):
         # 使用sc初始化
         # 获取所有场景uid - 数量
         # 获取所有知识点uid - 数量
         # 构建sc矩阵
         # 计算出场景的初始嵌入表达
         # 返回初始嵌入的结果
-        self.scenes_init = torch.zeros(self.scn_num, self.cpt_num, dtype=torch.float)
-        scn_cpt_dif = self.get_scn_cpt_dif()
-        for onedata in scn_cpt_dif:
-            scn_pos = self.scn_uids[onedata[0]]
+        self.units_init = torch.zeros(self.unt_num, self.cpt_num, dtype=torch.float)
+        unt_cpt_dif = self.get_unt_cpt_dif()
+        for onedata in unt_cpt_dif:
+            unt_pos = self.unt_uids[onedata[0]]
             cpt_pos = self.cpt_uids[onedata[1]]
             difficulty = onedata[2]
-            self.scenes_init[scn_pos][cpt_pos] += difficulty
+            self.units_init[unt_pos][cpt_pos] += difficulty
         
         self.get_P_scs()
         self.get_P_csc()
 
         # 计算度矩阵 D：每个学习者与不同场景的交互次数（非零元素的个数）
         # 计算每个学习者与不同场景的交互次数（非零元素的个数）
-        D_diag = (self.scenes_init > 0).sum(dim=1) 
+        D_diag = (self.units_init > 0).sum(dim=1) 
 
         # 计算度矩阵 D 的逆（每个对角元素取倒数）
         D_inv_diag = torch.where(
@@ -223,19 +223,19 @@ class HGCDataReader():
         )
         
         # D_inv = torch.diag(D_inv_diag)
-        # self.learners_init = torch.matmul(D_inv, self.scenes_init)
-        self.scenes_init = self.scenes_init * D_inv_diag.unsqueeze(1)
+        # self.learners_init = torch.matmul(D_inv, self.units_init)
+        self.units_init = self.units_init * D_inv_diag.unsqueeze(1)
 
     def load_data_from_db(self):
-        self.get_learners_uid_with_scn_greater_4()
-        self.get_scenes_uid()
+        self.get_learners_uid_with_unt_greater_4()
+        self.get_units_uid()
         self.get_concepts_uid()
         # 学习者初始嵌入
         # 知识点的初始tensor
         # 场景的初始嵌入
         # 以上三个单独返回
         self.learner_init_embedding()
-        self.scene_init_embedding()
+        self.unit_init_embedding()
         self.concept_init_embedding()
 
         # l-s-l（两个学习者和同一个场景交互过）      2 - 2   
@@ -248,19 +248,19 @@ class HGCDataReader():
         self.get_P_cc()
         self.get_P_cac()
 
-        return  (self.lrn_uids, self.scn_uids, self.cpt_uids), \
-                (self.learners_init, self.scenes_init, self.concepts_init), \
+        return  (self.lrn_uids, self.unt_uids, self.cpt_uids), \
+                (self.learners_init, self.units_init, self.concepts_init), \
                 (self.p_lsl, self.p_scs, self.p_sls, self.p_cc, self.p_cac, self.p_csc,)
     
     
 if __name__ == '__main__':
     datareader =  HGCDataReader()
     # datareader.get_learners_uid()
-    # datareader.get_scenes_uid()
+    # datareader.get_units_uid()
     # datareader.get_concepts_uid()
-    # print(datareader.lrn_num, datareader.scn_num, datareader.cpt_num)
+    # print(datareader.lrn_num, datareader.unt_num, datareader.cpt_num)
 
-    # res = datareader.get_lrn_scn_num()
+    # res = datareader.get_lrn_unt_num()
     # print(type(res), res)
 
     ids, inits, ps =  datareader.load_data_from_db()

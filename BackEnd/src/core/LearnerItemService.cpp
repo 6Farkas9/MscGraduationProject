@@ -35,18 +35,18 @@ std::unordered_map<std::string, float> LearnerItemService::predict_lrn_kt_in_are
         end_time
     );
     // 获取交互过的所有场景uid
-    std::unordered_set<std::string> scn_uids;
+    std::unordered_set<std::string> unt_uids;
     for(auto & interact : interacts) {
-        scn_uids.insert(interact[0]);
+        unt_uids.insert(interact[0]);
     }
     // 获取每个场景所涉及的知识点
-    auto scn_cpt = mysqlop.get_cpt_of_scn(scn_uids);
+    auto unt_cpt = mysqlop.get_cpt_of_unt(unt_uids);
     // 构造输入interact
     std::vector<std::vector<int>> interacts_input;
     for (auto & interact : interacts) {
         int skip_num = interact[1] == "1" ? 0 : cpt_num;
         std::vector<int> cpt_idx;
-        for (auto & cpt_uid : scn_cpt[interact[0]]) {
+        for (auto & cpt_uid : unt_cpt[interact[0]]) {
             cpt_idx.emplace_back(cpt_uids[cpt_uid] + skip_num);
         }
         interacts_input.emplace_back(std::move(cpt_idx));
@@ -82,31 +82,31 @@ std::unordered_map<std::string, float> LearnerItemService::predict_lrn_cd_in_are
         start_time, 
         end_time
     );
-    // 从交互记录中获取交互的scn_uid
-    std::unordered_set<std::string> scn_uids, cpt_uids;
+    // 从交互记录中获取交互的unt_uid
+    std::unordered_set<std::string> unt_uids, cpt_uids;
     for(auto & interact : interacts) {
-        scn_uids.insert(interact[0]);
+        unt_uids.insert(interact[0]);
     }
-    // 获取对应scn_uid的KCGE_Emb
-    auto interact_scn_emb_map = mongodbop.get_scn_kcge_by_scn_uid(scn_uids);
-    scn_uids.clear();
-    std::vector<std::vector<float>> interact_scn_emb;
-    for (auto & kv : interact_scn_emb_map) {
-        interact_scn_emb.emplace_back(std::move(kv.second));
+    // 获取对应unt_uid的KCGE_Emb
+    auto interact_unt_emb_map = mongodbop.get_unt_kcge_by_unt_uid(unt_uids);
+    unt_uids.clear();
+    std::vector<std::vector<float>> interact_unt_emb;
+    for (auto & kv : interact_unt_emb_map) {
+        interact_unt_emb.emplace_back(std::move(kv.second));
     }
-    // 获取are_uid相关的所有special_scn及其对应的cpt
-    std::unordered_map<std::string, std::string> special_scn_cpt = mysqlop.get_special_scn_cpt_uid_of_are(are_uid);
-    // 获取special_scn和cpt的KCGE_Emb - h_scn和h_cpt
-    for (auto &scn_cpt : special_scn_cpt) {
-        scn_uids.insert(std::move(scn_cpt.first));
-        cpt_uids.insert(std::move(scn_cpt.second));
+    // 获取are_uid相关的所有special_unt及其对应的cpt
+    std::unordered_map<std::string, std::string> special_unt_cpt = mysqlop.get_special_unt_cpt_uid_of_are(are_uid);
+    // 获取special_unt和cpt的KCGE_Emb - h_unt和h_cpt
+    for (auto &unt_cpt : special_unt_cpt) {
+        unt_uids.insert(std::move(unt_cpt.first));
+        cpt_uids.insert(std::move(unt_cpt.second));
     }
-    std::unordered_map<std::string, std::vector<float>> scn_emb_map = mongodbop.get_scn_kcge_by_scn_uid(scn_uids);
+    std::unordered_map<std::string, std::vector<float>> unt_emb_map = mongodbop.get_unt_kcge_by_unt_uid(unt_uids);
     std::unordered_map<std::string, std::vector<float>> cpt_emb_map = mongodbop.get_cpt_kcge_by_cpt_uid(cpt_uids);
-    std::vector<std::vector<float>> scn_emb, cpt_emb;
+    std::vector<std::vector<float>> unt_emb, cpt_emb;
     std::vector<std::string> ordered_cpt_uid;
-    for (auto &scn_e : scn_emb_map) {
-        scn_emb.emplace_back(std::move(scn_e.second));
+    for (auto &unt_e : unt_emb_map) {
+        unt_emb.emplace_back(std::move(unt_e.second));
     }
     for (auto &cpt_e : cpt_emb_map) {
         ordered_cpt_uid.emplace_back(std::move(cpt_e.first));
@@ -117,8 +117,8 @@ std::unordered_map<std::string, float> LearnerItemService::predict_lrn_cd_in_are
     auto r_pred = cd.forward(
         lrn_uid,
         are_uid,
-        interact_scn_emb,
-        scn_emb,
+        interact_unt_emb,
+        unt_emb,
         cpt_emb
     );
     std::unordered_map<std::string, float> ans;
@@ -135,7 +135,7 @@ std::unordered_map<std::string, float> LearnerItemService::predict_lrn_rr(const 
     auto end_time = twotime[0];
     auto start_time = twotime[1];
     // 获取指定lrn的HGC_Emb
-    std::unordered_set<std::string> lrn_uids, scn_uids, cpt_uids;
+    std::unordered_set<std::string> lrn_uids, unt_uids, cpt_uids;
     lrn_uids.insert(lrn_uid);
     std::unordered_map<std::string, std::vector<float>> lrn_emb_map = mongodbop.get_lrn_hgc_by_lrn_uid(lrn_uids);
     std::vector<float> lrn_emb = std::move(lrn_emb_map[lrn_uid]);
@@ -145,18 +145,18 @@ std::unordered_map<std::string, float> LearnerItemService::predict_lrn_rr(const 
         start_time, 
         end_time
     );
-    // 获取交互记录中的scn_uids
+    // 获取交互记录中的unt_uids
     for(auto & interact : interacts) {
-        scn_uids.insert(interact[0]);
+        unt_uids.insert(interact[0]);
     }
-    // 获取scn_uids对应的HGC_Emb
-    std::unordered_map<std::string, std::vector<float>> scn_emb_map = mongodbop.get_scn_hgc_by_scn_uid(scn_uids);
-    std::vector<std::vector<float>> scn_emb;
-    std::unordered_map<std::string, int> scn_uid2idx;
+    // 获取unt_uids对应的HGC_Emb
+    std::unordered_map<std::string, std::vector<float>> unt_emb_map = mongodbop.get_unt_hgc_by_unt_uid(unt_uids);
+    std::vector<std::vector<float>> unt_emb;
+    std::unordered_map<std::string, int> unt_uid2idx;
     int idx = -1;
-    for (auto &scn_e : scn_emb_map) {
-        scn_uid2idx[scn_e.first] = ++idx;
-        scn_emb.emplace_back(std::move(scn_e.second));
+    for (auto &unt_e : unt_emb_map) {
+        unt_uid2idx[unt_e.first] = ++idx;
+        unt_emb.emplace_back(std::move(unt_e.second));
     }
     // 获取所有知识点（涉及推荐范围）的HGC_Emb
     std::unordered_map<std::string, std::vector<float>> cpt_emb_map = mongodbop.get_all_cpt_hgc();
@@ -166,19 +166,19 @@ std::unordered_map<std::string, float> LearnerItemService::predict_lrn_rr(const 
         ordered_cpt_uid.emplace_back(std::move(cpt_e.first));
         cpt_emb.emplace_back(std::move(cpt_e.second));
     }
-    // 构造scn_index_vec
-    std::vector<int> scn_index;
+    // 构造unt_index_vec
+    std::vector<int> unt_index;
     for (auto & interact : interacts) {
-        scn_index.emplace_back(scn_uid2idx[interact[0]]);
+        unt_index.emplace_back(unt_uid2idx[interact[0]]);
     }
     // 调用模型
     RR rr = RR(mysqlop, mongodbop);
     auto r_pred = rr.forward(
         lrn_uid,
         lrn_emb, 
-        scn_emb, 
+        unt_emb, 
         cpt_emb, 
-        scn_index
+        unt_index
     );
     // 构建结果
     std::unordered_map<std::string, float> ans;

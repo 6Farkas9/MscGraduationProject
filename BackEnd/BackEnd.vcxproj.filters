@@ -66,7 +66,7 @@
     <ClInclude Include="include\core\LearnerItemService.h">
       <Filter>include\core</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\SceneItemService.h">
+    <ClInclude Include="include\core\UnitItemService.h">
       <Filter>include\core</Filter>
     </ClInclude>
     <ClInclude Include="include\models\HGC.h">
@@ -125,7 +125,7 @@
     <ClCompile Include="src\core\LearnerItemService.cpp">
       <Filter>src\core</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\SceneItemService.cpp">
+    <ClCompile Include="src\core\UnitItemService.cpp">
       <Filter>src\core</Filter>
     </ClCompile>
     <ClCompile Include="src\models\HGC.cpp">

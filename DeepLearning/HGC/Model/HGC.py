@@ -145,12 +145,12 @@ class HGC_SCN(nn.Module):
     def __init__(self, embedding_dim):
         super(HGC_SCN, self).__init__()
 
-        self.proj_scn = Projection(embedding_dim)
+        self.proj_unt = Projection(embedding_dim)
 
         self.GCN_scs = GCNConvEmbedding(embedding_dim)
         self.GCN_sls = GCNConvEmbedding(embedding_dim)
 
-        self.attention_scn = MetaPathAttention(embedding_dim)
+        self.attention_unt = MetaPathAttention(embedding_dim)
 
     def forward(self, 
                 init : torch.Tensor,
@@ -158,21 +158,21 @@ class HGC_SCN(nn.Module):
                 p_sls_edge_index : torch.Tensor, p_sls_edge_attr : torch.Tensor
                 ) -> torch.Tensor:
 
-        embeddings_scn = self.proj_scn(init)
+        embeddings_unt = self.proj_unt(init)
 
-        out_scs = self.GCN_scs(embeddings_scn.clone(),
+        out_scs = self.GCN_scs(embeddings_unt.clone(),
                                 p_scs_edge_index.clone(),
                                 p_scs_edge_attr.clone())
         
-        out_sls = self.GCN_sls(embeddings_scn.clone(),
+        out_sls = self.GCN_sls(embeddings_unt.clone(),
                                 p_sls_edge_index.clone(),
                                 p_sls_edge_attr.clone())
         
-        combined_scn = torch.stack([out_scs, out_sls], dim=0)
+        combined_unt = torch.stack([out_scs, out_sls], dim=0)
 
-        fin_out_scn = self.attention_scn(combined_scn)
+        fin_out_unt = self.attention_unt(combined_unt)
 
-        return fin_out_scn
+        return fin_out_unt
 
 class HGC_CPT(nn.Module):
     def __init__(self, embedding_dim):

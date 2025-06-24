@@ -15,7 +15,7 @@ void setupPlatformStatsRoutes(crow::SimpleApp& app) {
         crow::json::wvalue stats;
         stats["are_num"] = std::move(plat_data["are_num"]);
         stats["lrn_num"] = std::move(plat_data["lrn_num"]);
-        stats["scn_num"] = std::move(plat_data["scn_num"]);
+        stats["unt_num"] = std::move(plat_data["unt_num"]);
         stats["cpt_num"] = std::move(plat_data["cpt_num"]);
         stats["ict_num"] = std::move(plat_data["ict_num"]);
 

@@ -31,13 +31,13 @@ parser.add_argument('--num_workers',type=int,default=3,help='num of workers')
 parser.add_argument('--max_step',type=int,default=256,help='num of max_step')
 
 def save_final_kcge_data(x, datareader : CDDataReader):
-    scn_idx, cpt_idx = datareader.get_scn_and_cpt_idx()
+    unt_idx, cpt_idx = datareader.get_unt_and_cpt_idx()
     # 获取嵌入式表达
     h_are = x[0]
-    h_scn = x[scn_idx]
+    h_unt = x[unt_idx]
     h_cpt = x[cpt_idx]
     # 保存
-    cddatareader.save_final_kcge_data(h_are, h_scn, h_cpt)
+    cddatareader.save_final_kcge_data(h_are, h_unt, h_cpt)
 
 def save_final_data(lrn_uid, x, datareader : CDDataReader):
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -57,32 +57,32 @@ def save_final_data(lrn_uid, x, datareader : CDDataReader):
 
     model_cd.eval()
 
-    scn_index, scn_mask, scn_index_special, scn_mask_special, scn_idx ,cpt_idx = datareader.get_final_Data(lrn_uid)
+    unt_index, unt_mask, unt_index_special, unt_mask_special, unt_idx ,cpt_idx = datareader.get_final_Data(lrn_uid)
 
-    # 根据返回的scn_idx和cpt_idx从x中获取h_scn和h_cpt
-    h_scn = x[scn_idx]
+    # 根据返回的unt_idx和cpt_idx从x中获取h_unt和h_cpt
+    h_unt = x[unt_idx]
     h_cpt = x[cpt_idx]
 
-    # 根据近期的交互记录结合h_scn获取h_lrn
+    # 根据近期的交互记录结合h_unt获取h_lrn
 
     # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
-    selected = h_scn[scn_index]  # 形状 (lrn_num, max_step, embedding_dim)
+    selected = h_unt[unt_index]  # 形状 (lrn_num, max_step, embedding_dim)
     # 2. 计算加权和（利用广播机制）
-    weighted_sum = (selected * scn_mask.unsqueeze(-1)).sum(dim=1)  # (lrn_num, embedding_dim)
+    weighted_sum = (selected * unt_mask.unsqueeze(-1)).sum(dim=1)  # (lrn_num, embedding_dim)
     # 3. 计算有效计数（每行有多少个 1）
-    valid_counts = scn_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
+    valid_counts = unt_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
     # 4. 直接归一化
     h_lrn = weighted_sum / valid_counts  # (lrn_num, embedding_dim)
 
-    # 然后输入到model中的交互记录是和特殊scn的交互记录
-    r_pred = model_cd(scn_index_special, scn_mask_special, h_lrn, h_scn, h_cpt)
+    # 然后输入到model中的交互记录是和特殊unt的交互记录
+    r_pred = model_cd(unt_index_special, unt_mask_special, h_lrn, h_unt, h_cpt)
     
     # print(r_pred.shape)
 
     cddatareader.save_final_cd_data(lrn_uid, r_pred)
 
 def train_single_are(cddatareader, parsers, are_uid):
-    train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type = cddatareader.load_Data_from_db()
+    train_data, master_data, lrn_uids, cpt_uids, unt_uids, cpt_idx, unt_idx, edge_index, edge_attr, edge_type = cddatareader.load_Data_from_db()
 
     # 这里获得两个set
 
@@ -155,7 +155,7 @@ def train_single_are(cddatareader, parsers, are_uid):
         model_kcge.train()
         model_cd.train()
 
-        train_dataset = CDDataset(train_data, lrn_uids, cpt_uids, scn_uids, parsers.max_step)
+        train_dataset = CDDataset(train_data, lrn_uids, cpt_uids, unt_uids, parsers.max_step)
         train_dataloader = DataLoader(train_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
 
         batch_tqdm = tqdm(train_dataloader)
@@ -166,30 +166,30 @@ def train_single_are(cddatareader, parsers, are_uid):
 
         for item in batch_tqdm:
             # 'learner_idx' : learner_idx,
-            # 'scn_seq_index' : scn_seq_index,
-            # 'scn_seq_mask' : scn_seq_mask,
+            # 'unt_seq_index' : unt_seq_index,
+            # 'unt_seq_mask' : unt_seq_mask,
             # 'result' : result
             lrn_uids_in = item['learner_uid']
-            scn_seq_idx = item['scn_seq_index']
-            scn_seq_mask = item['scn_seq_mask']
+            unt_seq_idx = item['unt_seq_index']
+            unt_seq_mask = item['unt_seq_mask']
             result = item['result']
 
             z = model_kcge(x, edge_index.to(device), edge_type.to(device), edge_attr.to(device))
             x = z.detach().clone()
 
-            h_scn = z[scn_idx]
+            h_unt = z[unt_idx]
             h_cpt = z[cpt_idx]
 
             # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
-            selected = h_scn[scn_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
+            selected = h_unt[unt_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
             # 2. 计算加权和（利用广播机制）
-            weighted_sum = (selected * scn_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
+            weighted_sum = (selected * unt_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
             # 3. 计算有效计数（每行有多少个 1）
-            valid_counts = scn_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
+            valid_counts = unt_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
             # 4. 直接归一化
             h_lrn = weighted_sum / valid_counts.to(device)  # (lrn_num, embedding_dim)
 
-            r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_lrn, h_scn, h_cpt)
+            r_pred = model_cd(unt_seq_idx.to(device), unt_seq_mask.to(device), h_lrn, h_unt, h_cpt)
 
             result = result.flatten().to(device)
             r_pred = r_pred.flatten()
@@ -216,7 +216,7 @@ def train_single_are(cddatareader, parsers, are_uid):
         model_kcge.eval()
         model_cd.eval()
 
-        master_dataset = CDDataset(master_data, lrn_uids, cpt_uids, scn_uids, parsers.max_step)
+        master_dataset = CDDataset(master_data, lrn_uids, cpt_uids, unt_uids, parsers.max_step)
         master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
 
         batch_tqdm = tqdm(master_dataloader)
@@ -227,12 +227,12 @@ def train_single_are(cddatareader, parsers, are_uid):
 
         for item in batch_tqdm:
             # 'learner_idx' : learner_idx,
-            # 'scn_seq_index' : scn_seq_index,
-            # 'scn_seq_mask' : scn_seq_mask,
+            # 'unt_seq_index' : unt_seq_index,
+            # 'unt_seq_mask' : unt_seq_mask,
             # 'result' : result
             lrn_uids_in = item['learner_uid']
-            scn_seq_idx = item['scn_seq_index']
-            scn_seq_mask = item['scn_seq_mask']
+            unt_seq_idx = item['unt_seq_index']
+            unt_seq_mask = item['unt_seq_mask']
             result = item['result']
 
             with torch.no_grad():
@@ -241,15 +241,15 @@ def train_single_are(cddatareader, parsers, are_uid):
                 x = z.detach().clone()
 
                 # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
-                selected = h_scn[scn_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
+                selected = h_unt[unt_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
                 # 2. 计算加权和（利用广播机制）
-                weighted_sum = (selected * scn_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
+                weighted_sum = (selected * unt_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
                 # 3. 计算有效计数（每行有多少个 1）
-                valid_counts = scn_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
+                valid_counts = unt_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
                 # 4. 直接归一化
                 h_lrn = weighted_sum / valid_counts.to(device)  # (lrn_num, embedding_dim)
 
-                r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_lrn, h_scn, h_cpt)
+                r_pred = model_cd(unt_seq_idx.to(device), unt_seq_mask.to(device), h_lrn, h_unt, h_cpt)
 
             result = result.flatten().to(device)
             r_pred = r_pred.flatten()
@@ -307,13 +307,13 @@ def train_single_are(cddatareader, parsers, are_uid):
 
     train_lrn_are(
         cddatareader, parsers, are_uid, x, 
-        train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type,
+        train_data, master_data, lrn_uids, cpt_uids, unt_uids, cpt_idx, unt_idx, edge_index, edge_attr, edge_type,
         optimizer, criterion
     )
 
 def train_lrn_are(
         cddatareader, parsers, are_uid, x,
-        train_data, master_data, lrn_uids, cpt_uids, scn_uids, cpt_idx, scn_idx, edge_index, edge_attr, edge_type,
+        train_data, master_data, lrn_uids, cpt_uids, unt_uids, cpt_idx, unt_idx, edge_index, edge_attr, edge_type,
         optimizer, criterion):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -354,7 +354,7 @@ def train_lrn_are(
             train_dataset = CDDataset(
                 {lrn_uid : train_data[lrn_uid]}, 
                 {lrn_uid : 0}, 
-                cpt_uids, scn_uids, 
+                cpt_uids, unt_uids, 
                 len(train_data[lrn_uid][1])
             )
             train_dataloader = DataLoader(train_dataset, batch_size=1, shuffle=True, num_workers=1, **dataloader_kwargs)
@@ -367,30 +367,30 @@ def train_lrn_are(
 
             for item in batch_tqdm:
                 # 'learner_idx' : learner_idx,
-                # 'scn_seq_index' : scn_seq_index,
-                # 'scn_seq_mask' : scn_seq_mask,
+                # 'unt_seq_index' : unt_seq_index,
+                # 'unt_seq_mask' : unt_seq_mask,
                 # 'result' : result
                 lrn_uids_in = item['learner_uid']
-                scn_seq_idx = item['scn_seq_index']
-                scn_seq_mask = item['scn_seq_mask']
+                unt_seq_idx = item['unt_seq_index']
+                unt_seq_mask = item['unt_seq_mask']
                 result = item['result']
 
                 z = model_kcge(x, edge_index.to(device), edge_type.to(device), edge_attr.to(device))
                 x = z.detach().clone()
 
-                h_scn = z[scn_idx]
+                h_unt = z[unt_idx]
                 h_cpt = z[cpt_idx]
 
                 # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
-                selected = h_scn[scn_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
+                selected = h_unt[unt_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
                 # 2. 计算加权和（利用广播机制）
-                weighted_sum = (selected * scn_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
+                weighted_sum = (selected * unt_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
                 # 3. 计算有效计数（每行有多少个 1）
-                valid_counts = scn_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
+                valid_counts = unt_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
                 # 4. 直接归一化
                 h_lrn = weighted_sum / valid_counts.to(device)  # (lrn_num, embedding_dim)
 
-                r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_lrn, h_scn, h_cpt)
+                r_pred = model_cd(unt_seq_idx.to(device), unt_seq_mask.to(device), h_lrn, h_unt, h_cpt)
 
                 result = result.flatten().to(device)
                 r_pred = r_pred.flatten()
@@ -420,7 +420,7 @@ def train_lrn_are(
             master_dataset = CDDataset(
                 {lrn_uid : master_data[lrn_uid]}, 
                 {lrn_uid : 0}, 
-                cpt_uids, scn_uids, 
+                cpt_uids, unt_uids, 
                 len(master_data[lrn_uid][1])
             )
             master_dataloader = DataLoader(master_dataset, batch_size=parsers.batch_size, shuffle=True, num_workers=3, **dataloader_kwargs)
@@ -433,12 +433,12 @@ def train_lrn_are(
 
             for item in batch_tqdm:
                 # 'learner_idx' : learner_idx,
-                # 'scn_seq_index' : scn_seq_index,
-                # 'scn_seq_mask' : scn_seq_mask,
+                # 'unt_seq_index' : unt_seq_index,
+                # 'unt_seq_mask' : unt_seq_mask,
                 # 'result' : result
                 lrn_uids_in = item['learner_uid']
-                scn_seq_idx = item['scn_seq_index']
-                scn_seq_mask = item['scn_seq_mask']
+                unt_seq_idx = item['unt_seq_index']
+                unt_seq_mask = item['unt_seq_mask']
                 result = item['result']
 
                 with torch.no_grad():
@@ -447,15 +447,15 @@ def train_lrn_are(
                     x = z.detach().clone()
 
                     # 1. 提取所有可能需要的行 (lrn_num, max_step, embedding_dim)
-                    selected = h_scn[scn_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
+                    selected = h_unt[unt_seq_idx]  # 形状 (lrn_num, max_step, embedding_dim)
                     # 2. 计算加权和（利用广播机制）
-                    weighted_sum = (selected * scn_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
+                    weighted_sum = (selected * unt_seq_mask.unsqueeze(-1).to(device)).sum(dim=1)  # (lrn_num, embedding_dim)
                     # 3. 计算有效计数（每行有多少个 1）
-                    valid_counts = scn_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
+                    valid_counts = unt_seq_mask.sum(dim=1, keepdim=True)  # (lrn_num, 1)
                     # 4. 直接归一化
                     h_lrn = weighted_sum / valid_counts.to(device)  # (lrn_num, embedding_dim)
 
-                    r_pred = model_cd(scn_seq_idx.to(device), scn_seq_mask.to(device), h_lrn, h_scn, h_cpt)
+                    r_pred = model_cd(unt_seq_idx.to(device), unt_seq_mask.to(device), h_lrn, h_unt, h_cpt)
 
                 result = result.flatten().to(device)
                 r_pred = r_pred.flatten()

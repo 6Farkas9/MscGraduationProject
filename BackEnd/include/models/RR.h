@@ -26,9 +26,9 @@ public:
     std::vector<float> forward(
         const std::string &lrn_uid,
         const std::vector<float> &lrn_emb_in,
-        const std::vector<std::vector<float>> &scn_emb_in,
+        const std::vector<std::vector<float>> &unt_emb_in,
         const std::vector<std::vector<float>> &cpt_emb_in,
-        const std::vector<int> &scn_index_vec
+        const std::vector<int> &unt_index_vec
     );
 
 private:

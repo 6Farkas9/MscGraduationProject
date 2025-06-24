@@ -344,7 +344,7 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_are_kcg
         throw std::runtime_error("MongoDB connection is not initialized");
     }
     try {
-        // 1. 构建查询条件：_id 在 scn_uids 集合中
+        // 1. 构建查询条件：_id 在 unt_uids 集合中
         bsoncxx::builder::basic::array in_array;
         for (const auto& uid : are_uids) {
             in_array.append(uid);
@@ -368,10 +368,10 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_are_kcg
             return ans;
         }
         for (auto &&doc : *res){
-            std::string scn_uid = doc["_id"].get_string().value.data();
-            ans[scn_uid] = std::vector<float>();
+            std::string unt_uid = doc["_id"].get_string().value.data();
+            ans[unt_uid] = std::vector<float>();
             for (auto & ele : doc["KCGE_Emb"].get_array().value){
-                ans[scn_uid].emplace_back(ele.get_double().value);
+                ans[unt_uid].emplace_back(ele.get_double().value);
             }
         }
         return ans;
@@ -381,14 +381,14 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_are_kcg
     }
 }
 
-std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_scn_kcge_by_scn_uid(const std::unordered_set<std::string> &scn_uids) {
+std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_unt_kcge_by_unt_uid(const std::unordered_set<std::string> &unt_uids) {
     if (!isConnected()) {
         throw std::runtime_error("MongoDB connection is not initialized");
     }
     try {
-        // 1. 构建查询条件：_id 在 scn_uids 集合中
+        // 1. 构建查询条件：_id 在 unt_uids 集合中
         bsoncxx::builder::basic::array in_array;
-        for (const auto& uid : scn_uids) {
+        for (const auto& uid : unt_uids) {
             in_array.append(uid);
         }
         auto filter = bsoncxx::builder::basic::make_document(
@@ -404,16 +404,16 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_scn_kcg
             bsoncxx::builder::basic::kvp("KCGE_Emb", 1)
         ); // 返回KCGE字段
         std::optional<int64_t> limit = std::nullopt; // 不限制结果数量
-        std::optional<mongocxx::cursor> res = findMany("scenes", filter.view(), projection.view(), limit);
+        std::optional<mongocxx::cursor> res = findMany("units", filter.view(), projection.view(), limit);
         std::unordered_map<std::string, std::vector<float>> ans;
         if (res == std::nullopt || res->begin() == res->end()) {
             return ans;
         }
         for (auto &&doc : *res){
-            std::string scn_uid = doc["_id"].get_string().value.data();
-            ans[scn_uid] = std::vector<float>();
+            std::string unt_uid = doc["_id"].get_string().value.data();
+            ans[unt_uid] = std::vector<float>();
             for (auto & ele : doc["KCGE_Emb"].get_array().value){
-                ans[scn_uid].emplace_back(ele.get_double().value);
+                ans[unt_uid].emplace_back(ele.get_double().value);
             }
         }
         return ans;
@@ -428,7 +428,7 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_cpt_kcg
         throw std::runtime_error("MongoDB connection is not initialized");
     }
     try {
-        // 1. 构建查询条件：_id 在 scn_uids 集合中
+        // 1. 构建查询条件：_id 在 unt_uids 集合中
         bsoncxx::builder::basic::array in_array;
         for (const auto& uid : cpt_uids) {
             in_array.append(uid);
@@ -452,10 +452,10 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_cpt_kcg
             return ans;
         }
         for (auto &&doc : *res){
-            std::string scn_uid = doc["_id"].get_string().value.data();
-            ans[scn_uid] = std::vector<float>();
+            std::string unt_uid = doc["_id"].get_string().value.data();
+            ans[unt_uid] = std::vector<float>();
             for (auto & ele : doc["KCGE_Emb"].get_array().value){
-                ans[scn_uid].emplace_back(ele.get_double().value);
+                ans[unt_uid].emplace_back(ele.get_double().value);
             }
         }
         return ans;
@@ -495,10 +495,10 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_lrn_hgc
             return ans;
         }
         for (auto &&doc : *res){
-            std::string scn_uid = doc["_id"].get_string().value.data();
-            ans[scn_uid] = std::vector<float>();
+            std::string unt_uid = doc["_id"].get_string().value.data();
+            ans[unt_uid] = std::vector<float>();
             for (auto & ele : doc["HGC_Emb"].get_array().value){
-                ans[scn_uid].emplace_back(ele.get_double().value);
+                ans[unt_uid].emplace_back(ele.get_double().value);
             }
         }
         return ans;
@@ -509,14 +509,14 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_lrn_hgc
     }
 }
 
-std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_scn_hgc_by_scn_uid(const std::unordered_set<std::string> &scn_uids) {
+std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_unt_hgc_by_unt_uid(const std::unordered_set<std::string> &unt_uids) {
     if (!isConnected()) {
         throw std::runtime_error("MongoDB connection is not initialized");
     }
     try {
         // 1. 构建查询条件：_id 在 lrn_uids 集合中
         bsoncxx::builder::basic::array in_array;
-        for (const auto& uid : scn_uids) {
+        for (const auto& uid : unt_uids) {
             in_array.append(uid);
         }
         auto filter = bsoncxx::builder::basic::make_document(
@@ -532,16 +532,16 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_scn_hgc
             bsoncxx::builder::basic::kvp("HGC_Emb", 1)
         ); // 返回HGC字段
         std::optional<int64_t> limit = std::nullopt; // 不限制结果数量
-        std::optional<mongocxx::cursor> res = findMany("scenes", filter.view(), projection.view(), limit);
+        std::optional<mongocxx::cursor> res = findMany("units", filter.view(), projection.view(), limit);
         std::unordered_map<std::string, std::vector<float>> ans;
         if (res == std::nullopt || res->begin() == res->end()) {
             return ans;
         }
         for (auto &&doc : *res){
-            std::string scn_uid = doc["_id"].get_string().value.data();
-            ans[scn_uid] = std::vector<float>();
+            std::string unt_uid = doc["_id"].get_string().value.data();
+            ans[unt_uid] = std::vector<float>();
             for (auto & ele : doc["HGC_Emb"].get_array().value){
-                ans[scn_uid].emplace_back(ele.get_double().value);
+                ans[unt_uid].emplace_back(ele.get_double().value);
             }
         }
         return ans;
@@ -581,10 +581,10 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_cpt_hgc
             return ans;
         }
         for (auto &&doc : *res){
-            std::string scn_uid = doc["_id"].get_string().value.data();
-            ans[scn_uid] = std::vector<float>();
+            std::string unt_uid = doc["_id"].get_string().value.data();
+            ans[unt_uid] = std::vector<float>();
             for (auto & ele : doc["HGC_Emb"].get_array().value){
-                ans[scn_uid].emplace_back(ele.get_double().value);
+                ans[unt_uid].emplace_back(ele.get_double().value);
             }
         }
         return ans;
@@ -613,10 +613,10 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_all_cpt
             return ans;
         }
         for (auto &&doc : *res){
-            std::string scn_uid = doc["_id"].get_string().value.data();
-            ans[scn_uid] = std::vector<float>();
+            std::string unt_uid = doc["_id"].get_string().value.data();
+            ans[unt_uid] = std::vector<float>();
             for (auto & ele : doc["HGC_Emb"].get_array().value){
-                ans[scn_uid].emplace_back(ele.get_double().value);
+                ans[unt_uid].emplace_back(ele.get_double().value);
             }
         }
         return ans;
@@ -627,7 +627,7 @@ std::unordered_map<std::string, std::vector<float>> MongoDBOperator::get_all_cpt
     }
 }
 
-int MongoDBOperator::delete_scn_from_scenes(const std::vector<std::string> &scn_uids) {
+int MongoDBOperator::delete_unt_from_units(const std::vector<std::string> &unt_uids) {
     if (!isConnected()) {
         throw std::runtime_error("MongoDB connection is not initialized");
     }
@@ -635,7 +635,7 @@ int MongoDBOperator::delete_scn_from_scenes(const std::vector<std::string> &scn_
     try {
         // 构建过滤条件：_id等于输入字符串
         auto in_array = bsoncxx::builder::basic::array{};
-        for (const auto& id : scn_uids) {
+        for (const auto& id : unt_uids) {
             in_array.append(id);
         }
 
@@ -647,9 +647,9 @@ int MongoDBOperator::delete_scn_from_scenes(const std::vector<std::string> &scn_
             )
         );
         
-        return deleteMany("scenes", filter.view());
+        return deleteMany("units", filter.view());
     } catch (const std::exception& e) {
-        std::cerr << "MongoDB Delete Scene Error: " << e.what() << std::endl;
+        std::cerr << "MongoDB Delete Unit Error: " << e.what() << std::endl;
         return -1;
     }
 }
@@ -676,7 +676,7 @@ int MongoDBOperator::delete_cpt_from_concepts(const std::vector<std::string> &cp
         
         return deleteMany("concepts", filter.view());
     } catch (const std::exception& e) {
-        std::cerr << "MongoDB Delete Scene Error: " << e.what() << std::endl;
+        std::cerr << "MongoDB Delete Unit Error: " << e.what() << std::endl;
         return -1;
     }
 }
@@ -772,7 +772,7 @@ int MongoDBOperator::update_are_kcge_emb(const std::unordered_map<std::string, s
     }
 }
 
-int MongoDBOperator::update_scn_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &scn_emb) {
+int MongoDBOperator::update_unt_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &unt_emb) {
     if (!isConnected()) {
         throw std::runtime_error("MongoDB connection is not initialized");
     }
@@ -783,7 +783,7 @@ int MongoDBOperator::update_scn_kcge_emb(const std::unordered_map<std::string, s
             bsoncxx::document::view_or_value
         >> filter_updates;
 
-        for (const auto& [key, vec] : scn_emb) {
+        for (const auto& [key, vec] : unt_emb) {
             auto filter = bsoncxx::builder::basic::make_document(
                 bsoncxx::builder::basic::kvp("_id", key)
             );
@@ -804,12 +804,12 @@ int MongoDBOperator::update_scn_kcge_emb(const std::unordered_map<std::string, s
         }
 
         // 2. 调用批量更新
-        return bulkUpdateMany("scenes", filter_updates, true);
+        return bulkUpdateMany("units", filter_updates, true);
     } catch (const bsoncxx::exception& e) {  // 正确：bsoncxx 确实有 exception 类
-        std::cerr << "scn update BSON Error: " << e.what() << std::endl;
+        std::cerr << "unt update BSON Error: " << e.what() << std::endl;
         return -2;
     } catch (const mongocxx::exception& e) {  // 特定操作异常
-        std::cerr << "scn update MongoDB Operation Failed: " << e.what() << std::endl;
+        std::cerr << "unt update MongoDB Operation Failed: " << e.what() << std::endl;
         return -3;
     }catch (const std::exception& e) {  // 兜底
         std::cerr << "System Error: " << e.what() << std::endl;

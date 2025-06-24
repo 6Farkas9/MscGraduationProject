@@ -113,11 +113,11 @@ public:
 
     // ========== 业务方法示例 ==========
 
-    // 获取指定scn的kcge嵌入表达
+    // 获取指定unt的kcge嵌入表达
     std::unordered_map<std::string, std::vector<float>> get_are_kcge_by_are_uid(const std::unordered_set<std::string> &are_uids);
 
-    // 获取指定scn的kcge嵌入表达
-    std::unordered_map<std::string, std::vector<float>> get_scn_kcge_by_scn_uid(const std::unordered_set<std::string> &scn_uids);
+    // 获取指定unt的kcge嵌入表达
+    std::unordered_map<std::string, std::vector<float>> get_unt_kcge_by_unt_uid(const std::unordered_set<std::string> &unt_uids);
     
     // 获取指定cpt的kcge嵌入表达
     std::unordered_map<std::string, std::vector<float>> get_cpt_kcge_by_cpt_uid(const std::unordered_set<std::string> &cpt_uids);
@@ -125,8 +125,8 @@ public:
     // 获取指定lrn的HGC嵌入表达
     std::unordered_map<std::string, std::vector<float>> get_lrn_hgc_by_lrn_uid(const std::unordered_set<std::string> &lrn_uids);
 
-    // 获取指定scn的HGC嵌入表达
-    std::unordered_map<std::string, std::vector<float>> get_scn_hgc_by_scn_uid(const std::unordered_set<std::string> &scn_uids);
+    // 获取指定unt的HGC嵌入表达
+    std::unordered_map<std::string, std::vector<float>> get_unt_hgc_by_unt_uid(const std::unordered_set<std::string> &unt_uids);
 
     // 获取指定cpt的HGC嵌入表达
     std::unordered_map<std::string, std::vector<float>> get_cpt_hgc_by_cpt_uid(const std::unordered_set<std::string> &cpt_uids);
@@ -134,8 +134,8 @@ public:
     // 获取所有cpt的HGC嵌入表达
     std::unordered_map<std::string, std::vector<float>> get_all_cpt_hgc();
 
-    // 从scenes中删除指定scn_uid的文档
-    int delete_scn_from_scenes(const std::vector<std::string> &scn_uids);
+    // 从units中删除指定unt_uid的文档
+    int delete_unt_from_units(const std::vector<std::string> &unt_uids);
 
     // 从concepts中删除指定cpt_uid的文档
     int delete_cpt_from_concepts(const std::vector<std::string> &cpt_uids);
@@ -146,8 +146,8 @@ public:
     // 更新area的kcge嵌入
     int update_are_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &are_emb);
 
-    // 更新scene的kcge嵌入
-    int update_scn_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &scn_emb);
+    // 更新unit的kcge嵌入
+    int update_unt_kcge_emb(const std::unordered_map<std::string, std::vector<float>> &unt_emb);
 
     // 获取单一学习者在指定cpt上的预测成绩
     std::unordered_map<std::string, std::unordered_map<std::string, float>> get_lrn_kt_cd_by_cpt_uids(

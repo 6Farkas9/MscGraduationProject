@@ -69,30 +69,30 @@ class RR(nn.Module):
 
     def forward(self, 
                 lrn_static : torch.Tensor, 
-                scn_dynamic : torch.Tensor,
-                scn_seq_index : torch.Tensor,
-                scn_seq_mask : torch.Tensor,
+                unt_dynamic : torch.Tensor,
+                unt_seq_index : torch.Tensor,
+                unt_seq_mask : torch.Tensor,
                 cpt_static : torch.Tensor
                 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         # lrn_static : 学习者静态嵌入
-        # scn_dynamic : 计算出的场景的动态嵌入
-        # scn_seq_index : 当前batch的学习者和场景的互动序列
-        # scn_seq_mask : 指名scn_seq_index中的有效位
+        # unt_dynamic : 计算出的场景的动态嵌入
+        # unt_seq_index : 当前batch的学习者和场景的互动序列
+        # unt_seq_mask : 指名unt_seq_index中的有效位
         # -> 返回的应该是计算出的r_uk
 
         # print(lrn_static.shape)
-        # print(scn_dynamic.shape)
-        # print(scn_seq_index.shape)
-        # print(scn_seq_mask.shape)
+        # print(unt_dynamic.shape)
+        # print(unt_seq_index.shape)
+        # print(unt_seq_mask.shape)
         # print(cpt_static.shape)
 
         # 只能假定知识点是相对稳定，不会随时变化的，那么将知识点的潜在嵌入直接作为参数
         # 学习者的潜在嵌入通过在HGC中类似的投影手段来获得
 
-        scn_record = scn_dynamic[scn_seq_index]
-        scn_record = scn_record * scn_seq_mask.unsqueeze(-1)
+        unt_record = unt_dynamic[unt_seq_index]
+        unt_record = unt_record * unt_seq_mask.unsqueeze(-1)
 
-        lrn_dynamic = self.gru(scn_record)
+        lrn_dynamic = self.gru(unt_record)
 
         # print('lrn_static:', lrn_static.shape, 'lrn_dynamic:', lrn_dynamic.shape)
         lrn = torch.cat((lrn_static, lrn_dynamic), dim=1)
