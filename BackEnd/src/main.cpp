@@ -16,7 +16,7 @@
 #include "api_handlers.h"
 #include "crow/middlewares/cors.h"
 
-// #include "LearnerInfoService.h"
+// #include "LearnerInfoApplication.h"
 
 
 // int main() {
@@ -149,7 +149,7 @@ int main() {
 //     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
 //     mongodbop.initialize();
 
-//     LearnerInfoService lrninfo_ser;
+//     LearnerInfoApplication lrninfo_ser;
 
 //     std::string lrn_uid = "lrn_aee0624932cf4affa00626e8f038c4e8";
 //     std::unordered_set<std::string> cpt_uids;

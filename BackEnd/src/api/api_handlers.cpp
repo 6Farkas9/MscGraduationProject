@@ -9,7 +9,7 @@ void setupPlatformStatsRoutes(crow::SimpleApp& app) {
     CROW_ROUTE(app, "/api/platform-stats")
     .methods("GET"_method)
     ([](){
-        PlatformStatsService plat_ser;
+        PlatformStatsApplication plat_ser;
         auto plat_data = plat_ser.get_count_data();
 
         crow::json::wvalue stats;
@@ -55,7 +55,7 @@ void setupLearnerInfoRoutes(crow::SimpleApp& app) {
         
         crow::json::wvalue response;
 
-        LearnerInfoService lrninfo_ser;
+        LearnerInfoApplication lrninfo_ser;
         if (!lrninfo_ser.get_lrn_info(
             lrn_uid,
             lrn_info,
@@ -114,7 +114,7 @@ void setupLearnerInfoRoutes(crow::SimpleApp& app) {
         crow::json::wvalue response;
         crow::json::wvalue data;
 
-        LearnerInfoService lrn_info_ser;
+        LearnerInfoApplication lrn_info_ser;
         if (!lrn_info_ser.get_recommend_info(
             lrn_uid,
             cpt_uids,

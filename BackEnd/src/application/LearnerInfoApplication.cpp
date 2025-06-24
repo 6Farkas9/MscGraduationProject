@@ -1,17 +1,17 @@
-#include "LearnerInfoService.h"
+#include "LearnerInfoApplication.h"
 
-LearnerInfoService::LearnerInfoService() :
+LearnerInfoApplication::LearnerInfoApplication() :
     mysqlop(MySQLOperator::getInstance()),
     mongodbop(MongoDBOperator::getInstance())
 {
 
 }
 
-LearnerInfoService::~LearnerInfoService() {
+LearnerInfoApplication::~LearnerInfoApplication() {
 
 }
 
-bool LearnerInfoService::get_lrn_info(
+bool LearnerInfoApplication::get_lrn_info(
     std::string &lrn_uid,
     std::unordered_map<std::string, std::string> &lrn_info,
     std::unordered_map<
@@ -72,7 +72,7 @@ bool LearnerInfoService::get_lrn_info(
     return true;
 }
 
-bool LearnerInfoService::get_recommend_info(
+bool LearnerInfoApplication::get_recommend_info(
     std::string &lrn_uid,
     std::unordered_map<std::string, std::string> &cpt_uid2name,
     std::vector<std::string> &lrn_partners,

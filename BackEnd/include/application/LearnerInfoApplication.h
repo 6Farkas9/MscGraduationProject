@@ -13,11 +13,11 @@
 #include <string>
 #include <map>
 
-class LearnerInfoService {
+class LearnerInfoApplication {
 
 public:
-    LearnerInfoService();
-    ~LearnerInfoService();
+    LearnerInfoApplication();
+    ~LearnerInfoApplication();
 
     // 根据lrn_uid获取该学习者的基础信息以及交互过的领域
     // are_info:

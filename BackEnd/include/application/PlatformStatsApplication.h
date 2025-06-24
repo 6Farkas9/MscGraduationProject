@@ -12,11 +12,11 @@
 #include <string>
 #include <map>
 
-class PlatformStatsService {
+class PlatformStatsApplication {
 
 public:
-    PlatformStatsService();
-    ~PlatformStatsService();
+    PlatformStatsApplication();
+    ~PlatformStatsApplication();
 
     // 获取平台状态页面的各种数量数据
     std::unordered_map<std::string, int> get_count_data();

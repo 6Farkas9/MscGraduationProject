@@ -3,8 +3,8 @@
 #define API_HANDLERS_H
 
 #include "crow.h"
-#include "PlatformStatsService.h"
-#include "LearnerInfoService.h"
+#include "PlatformStatsApplication.h"
+#include "LearnerInfoApplication.h"
 
 namespace api {
 

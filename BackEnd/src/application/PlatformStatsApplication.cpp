@@ -1,17 +1,17 @@
-#include "PlatformStatsService.h"
+#include "PlatformStatsApplication.h"
 
-PlatformStatsService::PlatformStatsService() :
+PlatformStatsApplication::PlatformStatsApplication() :
     mysqlop(MySQLOperator::getInstance()),
     mongodbop(MongoDBOperator::getInstance())
 {
 
 }
 
-PlatformStatsService::~PlatformStatsService() {
+PlatformStatsApplication::~PlatformStatsApplication() {
 
 }
 
-std::unordered_map<std::string, int> PlatformStatsService::get_count_data() {
+std::unordered_map<std::string, int> PlatformStatsApplication::get_count_data() {
     std::unordered_map<std::string, int> ans;
     ans["are_num"] = mysqlop.get_are_num();
     ans["lrn_num"] = mysqlop.get_lrn_num();
@@ -21,7 +21,7 @@ std::unordered_map<std::string, int> PlatformStatsService::get_count_data() {
     return ans;
 }
 
-std::unordered_map<std::string, std::string> PlatformStatsService::get_deeplearning_data() {
+std::unordered_map<std::string, std::string> PlatformStatsApplication::get_deeplearning_data() {
     std::string meta_data_path = R"(\training_metadata.txt)";
     meta_data_path = DEEPLEARNING_ROOT + meta_data_path;
 
