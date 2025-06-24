@@ -82,7 +82,7 @@ bool LearnerInfoService::get_recommend_info(
         return false;
     }
     // 获取RR的结果
-    LearnerService lrn_ser;
+    LearnerItemService lrn_ser;
     auto pred_rr_res = lrn_ser.predict_topK_cpt(
         lrn_uid,
         20

@@ -1,17 +1,17 @@
-#include "ConceptService.h"
+#include "ConceptItemService.h"
 
-ConceptService::ConceptService() :
+ConceptItemService::ConceptItemService() :
     mysqlop(MySQLOperator::getInstance()),
     mongodbop(MongoDBOperator::getInstance()) 
 {
 
 }
 
-ConceptService::~ConceptService(){
+ConceptItemService::~ConceptItemService(){
 
 }
 
-std::string ConceptService::addOneConcept(
+std::string ConceptItemService::addOneConcept(
     std::string &are_uid, 
     std::unordered_set<std::string> &pre_cpt_uids, 
     std::unordered_set<std::string> &aft_cpt_uids,
@@ -49,7 +49,7 @@ std::string ConceptService::addOneConcept(
     return cpt_uid;
 }
 
-bool ConceptService::deleteOneConcept(std::string &cpt_uid) {
+bool ConceptItemService::deleteOneConcept(std::string &cpt_uid) {
     // 重新计算相关kcge_emb
     recalculate_kcge_cpt_before_delete(cpt_uid);
     // 从graph_belong中删除记录
@@ -66,7 +66,7 @@ bool ConceptService::deleteOneConcept(std::string &cpt_uid) {
     return true;
 }
 
-bool ConceptService::recalculate_kcge_cpt_after_add(
+bool ConceptItemService::recalculate_kcge_cpt_after_add(
     std::string &are_uid,
     std::string &cpt_uid,
     std::unordered_set<std::string> &pre_cpt_uids, 
@@ -169,7 +169,7 @@ bool ConceptService::recalculate_kcge_cpt_after_add(
     return true;
 }
 
-bool ConceptService::recalculate_kcge_cpt_before_delete(std::string &cpt_uid) {
+bool ConceptItemService::recalculate_kcge_cpt_before_delete(std::string &cpt_uid) {
     // 不能假定知识点是刚添加的
     // 重新计算are
     // 重新计算相关的cpt

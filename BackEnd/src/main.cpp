@@ -7,9 +7,9 @@
 #include "MySQLOperator.h"
 
 // #include "UidCreator.h"
-// #include "SceneService.h"
-// #include "LearnerService.h"
-// #include "ConceptService.h"
+// #include "SceneItemService.h"
+// #include "LearnerItemService.h"
+// #include "ConceptItemService.h"
 
 #include "crow.h"
 #include "FileReader.h"
@@ -25,7 +25,7 @@
 //     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
 //     mongodbop.initialize();
 
-//     LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
+//     LearnerItemService lrn_ser = LearnerItemService(mysqlop, mongodbop);
 
 //     auto res_kt = lrn_ser.predict_lrn_kt_in_are(
 //         "lrn_aee0624932cf4affa00626e8f038c4e8",
@@ -193,7 +193,7 @@ int main() {
 //     MongoDBOperator &mongodbop = MongoDBOperator::getInstance();
 //     mongodbop.initialize();
 
-//     ConceptService cpt_ser = ConceptService(mysqlop, mongodbop);
+//     ConceptItemService cpt_ser = ConceptItemService(mysqlop, mongodbop);
 
 //     std::string are_uid = "are_3fee9e47d0f3428382f4afbcb1004117";
 //     std::string name = "test_name";
@@ -231,7 +231,7 @@ int main() {
 
 //     return 0;
 
-//     // LearnerService lrn_ser = LearnerService(mysqlop, mongodbop);
+//     // LearnerItemService lrn_ser = LearnerItemService(mysqlop, mongodbop);
 
 //     // auto res = lrn_ser.predict_lrn_rr(
 //     //     "lrn_aee0624932cf4affa00626e8f038c4e8"

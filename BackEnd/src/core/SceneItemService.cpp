@@ -1,17 +1,17 @@
-#include "SceneService.h"
+#include "SceneItemService.h"
 
-SceneService::SceneService() :
+SceneItemService::SceneItemService() :
     mysqlop(MySQLOperator::getInstance()),
     mongodbop(MongoDBOperator::getInstance())
 {
 
 }
 
-SceneService::~SceneService(){
+SceneItemService::~SceneItemService(){
 
 }
 
-std::string SceneService::addOneScene(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff) {
+std::string SceneItemService::addOneScene(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff) {
     /*
         1. scene的基本信息
         2. scene的cpt难度信息
@@ -33,7 +33,7 @@ std::string SceneService::addOneScene(bool has_result, std::unordered_map<std::s
     return scn_uid;
 }
 
-bool SceneService::deleteOneScene(std::string scn_uid) {
+bool SceneItemService::deleteOneScene(std::string scn_uid) {
     // 从graph_involve中删除scn_uid
     mysqlop.delete_one_scn_from_graph_involve(scn_uid);
     // 既然上面的都删除了，那么从interacts中删除scn_uid

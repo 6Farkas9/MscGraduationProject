@@ -18,11 +18,11 @@
 #include "MLSTimer.h"
 #include "UidCreator.h"
 
-class SceneService{
+class SceneItemService{
 
 public:
-    SceneService();
-    ~SceneService();
+    SceneItemService();
+    ~SceneItemService();
 
     std::string addOneScene(bool has_result, std::unordered_map<std::string, float> &cpt_uid2diff);
     bool deleteOneScene(std::string scn_uid);

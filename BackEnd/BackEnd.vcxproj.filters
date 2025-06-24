@@ -63,10 +63,10 @@
     <ClInclude Include="include\models\RR.h">
       <Filter>include\models</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\LearnerService.h">
+    <ClInclude Include="include\core\LearnerItemService.h">
       <Filter>include\core</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\SceneService.h">
+    <ClInclude Include="include\core\SceneItemService.h">
       <Filter>include\core</Filter>
     </ClInclude>
     <ClInclude Include="include\models\HGC.h">
@@ -78,7 +78,7 @@
     <ClInclude Include="include\utils\UidCreator.h">
       <Filter>include\utils</Filter>
     </ClInclude>
-    <ClInclude Include="include\core\ConceptService.h">
+    <ClInclude Include="include\core\ConceptItemService.h">
       <Filter>include\core</Filter>
     </ClInclude>
     <ClInclude Include="include\api\api_PlatformStats.h">
@@ -122,10 +122,10 @@
     <ClCompile Include="src\models\RR.cpp">
       <Filter>src\models</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\LearnerService.cpp">
+    <ClCompile Include="src\core\LearnerItemService.cpp">
       <Filter>src\core</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\SceneService.cpp">
+    <ClCompile Include="src\core\SceneItemService.cpp">
       <Filter>src\core</Filter>
     </ClCompile>
     <ClCompile Include="src\models\HGC.cpp">
@@ -137,7 +137,7 @@
     <ClCompile Include="src\utils\UidCreator.cpp">
       <Filter>src\utils</Filter>
     </ClCompile>
-    <ClCompile Include="src\core\ConceptService.cpp">
+    <ClCompile Include="src\core\ConceptItemService.cpp">
       <Filter>src\core</Filter>
     </ClCompile>
     <ClCompile Include="src\api\api_PlatformStats.cpp">

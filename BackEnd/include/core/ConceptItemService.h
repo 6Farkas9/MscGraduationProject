@@ -20,11 +20,11 @@
 
 #include "KCGE.h"
 
-class ConceptService{
+class ConceptItemService{
 
 public:
-    ConceptService();
-    ~ConceptService();
+    ConceptItemService();
+    ~ConceptItemService();
 
     // 添加一个新的知识点
     std::string addOneConcept(
