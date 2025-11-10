@@ -16,234 +16,156 @@ from Dataset.HGCDataReader import HGCDataReader
 
 class MetaPathAttention(nn.Module):
     def __init__(self, embedding_dim):
-        super(MetaPathAttention, self).__init__()
-        self.W_att = nn.Linear(embedding_dim, 1)  # 可训练参数（原文中的 W_att^mp）
+        super().__init__()
+        self.W_att = nn.Linear(embedding_dim, 1)
         self.activation = nn.ReLU()
 
-    def forward(self, embeddings : torch.Tensor) -> torch.Tensor:
+    def forward(self, embeddings: torch.Tensor) -> torch.Tensor:
         """
-        embeddings: 形状为 [num_paths, x, embedding_dim]
-        - num_paths: 元路径的数量
-        - x: 节点数（如学习单元数量）
-        - embedding_dim: 每个节点的嵌入维度
+        embeddings: [num_paths, num_nodes, embedding_dim]
         """
-        # embeddings 是一个形状为 [num_paths, x, embedding_dim] 的张量
-        num_paths, _, _ = embeddings.shape
-        
-        # 计算每个元路径的注意力分数
+        num_paths, num_nodes, emb_dim = embeddings.shape
         scores = []
         for i in range(num_paths):
-            score = self.W_att(embeddings[i])  # 计算每个元路径的注意力分数，形状为 [x, 1]
+            score = self.W_att(embeddings[i])  # [num_nodes, 1]
             scores.append(score)
-        
-        # 拼接所有元路径的分数，形状为 [x, num_paths]
-        scores = torch.cat(scores, dim=1)
-
-        # 计算注意力权重，进行 softmax 归一化
-        attention_weights = F.softmax(scores, dim=1)  # softmax，形状为 [x, num_paths]
-
-        # 加权求和，得到最终的融合嵌入
-        weighted_embeddings = torch.zeros_like(embeddings[0])  # 初始化融合的结果
+        scores = torch.cat(scores, dim=1)  # [num_nodes, num_paths]
+        attn_weights = F.softmax(scores, dim=1)  # [num_nodes, num_paths]
+        weighted_emb = torch.zeros_like(embeddings[0])
         for i in range(num_paths):
-            weighted_embeddings += attention_weights[:, i].unsqueeze(-1) * embeddings[i]
-
-        return weighted_embeddings
+            weighted_emb += attn_weights[:, i].unsqueeze(-1) * embeddings[i]
+        return weighted_emb
 
 class GCNConvEmbedding(nn.Module):
-
-    def __init__(self, embedding_dim):
-        super(GCNConvEmbedding, self).__init__()
-        self.W = nn.Parameter(torch.Tensor(embedding_dim, embedding_dim))
-        self.reset_parameters()
-        
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.W)  # Xavier初始化
-
-    def forward(self, 
-                h : torch.Tensor,
-                edge_index : torch.Tensor,
-                edge_attr : torch.Tensor
-                ) -> torch.Tensor:
-        
-        for _ in range(3):  # 三层共享参数的卷积
-            # 1. 计算 P*h (通过边索引和边权重隐式构造传播矩阵P)
-            row, col = edge_index[0], edge_index[1]
-            # 加权聚合 (edge_attr作为P的非零元素值)
-
-            h_agg = scatter_add(h[row] * edge_attr.unsqueeze(1), col, dim=0, dim_size=h.size(0))
-
-            # 2. 计算 h*P*W (等价于 (P*h)*W)
-            h = torch.mm(h_agg, self.W)
-
-            # 3. ReLU激活
-            h = F.relu(h)
-        
-        return h
-    
-class Projection(nn.Module):
     def __init__(self, embedding_dim):
         super().__init__()
-        # 输入维度为场景数量（动态），输出固定维度
+        self.W = nn.Parameter(torch.Tensor(embedding_dim, embedding_dim))
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.W)
+
+    def forward(self, h: torch.Tensor, edge_index: torch.Tensor, edge_weight: torch.Tensor) -> torch.Tensor:
+        for _ in range(3):  # 3层共享参数GCN
+            row, col = edge_index[0], edge_index[1]
+            h_agg = scatter_add(h[row] * edge_weight.unsqueeze(1), col, dim=0, dim_size=h.size(0))
+            h = torch.mm(h_agg, self.W)
+            h = F.relu(h)
+        return h
+
+class Projection(nn.Module):
+    def __init__(self, input_dim, embedding_dim):
+        super().__init__()
         self.proj = nn.Sequential(
-            nn.Linear(1, 32),
-            nn.LeakyReLU(0.1),  # 改用LeakyReLU防止负值完全消失
-            nn.Linear(32, 64),
+            nn.Linear(input_dim, 64),
             nn.LeakyReLU(0.1),
             nn.Linear(64, embedding_dim)
         )
-        
-        # 初始化权重
         self._init_weights()
 
     def _init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
-                nn.init.constant_(m.bias, 0.1)  # 小的正偏置
-        
-    def forward(self, normalized_matrix: torch.Tensor) -> torch.Tensor:
-        num_learners = normalized_matrix.size(0)
-        embeddings = []
-        
-        for i in range(num_learners):
-            # 获取当前学习者的所有交互值（包括零）
-            interactions = normalized_matrix[i].view(-1, 1)
-            
-            # 对非零交互使用更强的权重
-            mask = (interactions > 0).float()
-            embs = self.proj(interactions) * mask
-            
-            # 加权聚合（考虑交互强度）
-            sum_weights = mask.sum(dim=0) + 1e-6  # 防止除零
-            emb = embs.sum(dim=0) / sum_weights
-            
-            embeddings.append(emb.unsqueeze(0))
-            
-        return torch.cat(embeddings, dim=0)
+                nn.init.constant_(m.bias, 0.1)
 
-class HGC_LRN(nn.Module):
-    def __init__(self, embedding_dim):
-        super(HGC_LRN, self).__init__()
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.proj(x)
 
-        self.proj_lrn = Projection(embedding_dim)
-        self.GCN_lul = GCNConvEmbedding(embedding_dim)
+class StaticEmbeddingModel(nn.Module):
+    def __init__(self, embedding_dim=64, lrn_input_dim=None, unt_input_dim=None, cpt_input_dim=None):
+        super().__init__()
+        self.embedding_dim = embedding_dim
 
-    def forward(self,
-                init : torch.Tensor,
-                p_lul_edge_index : torch.Tensor, p_lul_edge_attr : torch.Tensor
-                ) -> torch.Tensor:    
-        
-        embeddings_lrn = self.proj_lrn(init)
+        # 学习者模块
+        self.lrn_proj = Projection(input_dim=lrn_input_dim, embedding_dim=embedding_dim)
+        self.lrn_gcn_lul = GCNConvEmbedding(embedding_dim)
+        self.lrn_gcn_lcl = GCNConvEmbedding(embedding_dim)
+        self.lrn_gcn_ltl = GCNConvEmbedding(embedding_dim)
+        self.lrn_attn = MetaPathAttention(embedding_dim)
 
-        out_lsl = self.GCN_lul(embeddings_lrn,
-                               p_lul_edge_index,
-                               p_lul_edge_attr)
+        # 学习单元模块
+        self.unt_proj = Projection(input_dim=unt_input_dim, embedding_dim=embedding_dim)
+        self.unt_gcn_ulu = GCNConvEmbedding(embedding_dim)
+        self.unt_gcn_ucrsu = GCNConvEmbedding(embedding_dim)
+        self.unt_gcn_ucptu = GCNConvEmbedding(embedding_dim)
+        self.unt_gcn_uu = GCNConvEmbedding(embedding_dim)
+        self.unt_attn = MetaPathAttention(embedding_dim)
 
-        return out_lsl
-    
-class HGC_UNT(nn.Module):
-    def __init__(self, embedding_dim):
-        super(HGC_UNT, self).__init__()
+        # 知识点模块
+        self.cpt_proj = Projection(input_dim=cpt_input_dim, embedding_dim=embedding_dim)
+        self.cpt_gcn_cc = GCNConvEmbedding(embedding_dim)
+        self.cpt_gcn_cuc = GCNConvEmbedding(embedding_dim)
+        self.cpt_gcn_ctc = GCNConvEmbedding(embedding_dim)
+        self.cpt_attn = MetaPathAttention(embedding_dim)
 
-        self.proj_unt = Projection(embedding_dim)
+    def forward(self, hgcdr, device):
+        # 学习者嵌入
+        lrn_init = self.lrn_proj(hgcdr.lrn_init.to(device))
+        lrn_lul = self.lrn_gcn_lul(lrn_init, 
+                                  hgcdr.p_lul[0].to(device), 
+                                  hgcdr.p_lul[1].to(device))
+        lrn_lcl = self.lrn_gcn_lcl(lrn_init, 
+                                  hgcdr.p_lcl[0].to(device), 
+                                  hgcdr.p_lcl[1].to(device))
+        lrn_ltl = self.lrn_gcn_ltl(lrn_init, 
+                                  hgcdr.p_ltl[0].to(device), 
+                                  hgcdr.p_ltl[1].to(device))
+        lrn_emb = self.lrn_attn(torch.stack([lrn_lul, lrn_lcl, lrn_ltl]))
 
-        self.GCN_ucu = GCNConvEmbedding(embedding_dim)
-        self.GCN_ulu = GCNConvEmbedding(embedding_dim)
+        # 学习单元嵌入
+        unt_init = self.unt_proj(hgcdr.untqus_init.to(device))
+        unt_ulu = self.unt_gcn_ulu(unt_init, 
+                                  hgcdr.p_ulu[0].to(device), 
+                                  hgcdr.p_ulu[1].to(device))
+        unt_ucrsu = self.unt_gcn_ucrsu(unt_init, 
+                                      hgcdr.p_ucrsu[0].to(device), 
+                                      hgcdr.p_ucrsu[1].to(device))
+        unt_ucptu = self.unt_gcn_ucptu(unt_init, 
+                                      hgcdr.p_ucptu[0].to(device), 
+                                      hgcdr.p_ucptu[1].to(device))
+        unt_uu = self.unt_gcn_uu(unt_init, 
+                                hgcdr.p_uu[0].to(device), 
+                                hgcdr.p_uu[1].to(device))
+        unt_emb = self.unt_attn(torch.stack([unt_ulu, unt_ucrsu, unt_ucptu, unt_uu]))
 
-        self.attention_scn = MetaPathAttention(embedding_dim)
+        # 知识点嵌入 - 关键修复：将推理张量转换为可训练张量
+        cpt_init_tensor = hgcdr.cpt_init.clone().detach().requires_grad_(True)
+        cpt_init = self.cpt_proj(cpt_init_tensor.to(device))
+        cpt_cc = self.cpt_gcn_cc(cpt_init, 
+                                hgcdr.p_cc[0].to(device), 
+                                hgcdr.p_cc[1].to(device))
+        cpt_cuc = self.cpt_gcn_cuc(cpt_init, 
+                                  hgcdr.p_cuc[0].to(device), 
+                                  hgcdr.p_cuc[1].to(device))
+        cpt_ctc = self.cpt_gcn_ctc(cpt_init, 
+                                  hgcdr.p_ctc[0].to(device), 
+                                  hgcdr.p_ctc[1].to(device))
+        cpt_emb = self.cpt_attn(torch.stack([cpt_cc, cpt_cuc, cpt_ctc]))
 
-    def forward(self, 
-                init : torch.Tensor,
-                p_ucu_edge_index : torch.Tensor, p_ucu_edge_attr : torch.Tensor,
-                p_ulu_edge_index : torch.Tensor, p_ulu_edge_attr : torch.Tensor
-                ) -> torch.Tensor:
-
-        embeddings_scn = self.proj_unt(init)
-
-        out_ucu = self.GCN_ucu(embeddings_scn.clone(),
-                                p_ucu_edge_index.clone(),
-                                p_ucu_edge_attr.clone())
-        
-        out_ulu = self.GCN_ulu(embeddings_scn.clone(),
-                                p_ulu_edge_index.clone(),
-                                p_ulu_edge_attr.clone())
-        
-        combined_scn = torch.stack([out_ucu, out_ulu], dim=0)
-
-        fin_out_unt = self.attention_scn(combined_scn)
-
-        return fin_out_unt
-
-class HGC_CPT(nn.Module):
-    def __init__(self, embedding_dim):
-        super(HGC_CPT, self).__init__()
-
-        self.proj_cpt = Projection(embedding_dim)
-
-        self.GCN_cc = GCNConvEmbedding(embedding_dim)
-        self.GCN_cac = GCNConvEmbedding(embedding_dim)
-        self.GCN_csc = GCNConvEmbedding(embedding_dim)
-
-        self.attention_cpt = MetaPathAttention(embedding_dim)
-
-    def forward(self, 
-                init : torch.Tensor, 
-                p_cc_edge_index : torch.Tensor, p_cc_edge_attr : torch.Tensor,
-                p_cac_edge_index : torch.Tensor, p_cac_edge_attr : torch.Tensor,
-                p_csc_edge_index : torch.Tensor, p_csc_edge_attr : torch.Tensor
-                ) -> torch.Tensor:
-
-        embeddings_cpt = self.proj_cpt(init)
-
-        out_cc  = self.GCN_cc(embeddings_cpt.clone(),
-                                p_cc_edge_index.clone(),
-                                p_cc_edge_attr.clone())
-        out_cac = self.GCN_cac(embeddings_cpt.clone(),
-                                p_cac_edge_index.clone(),
-                                p_cac_edge_attr.clone())
-        out_csc = self.GCN_csc(embeddings_cpt.clone(),
-                                p_csc_edge_index.clone(),
-                                p_csc_edge_attr.clone())
-        
-        combined_cpt = torch.stack([out_cc, out_cac, out_csc], dim=0)
-
-        fin_out_cpt = self.attention_cpt(combined_cpt)
-
-        return fin_out_cpt
+        return lrn_emb, unt_emb, cpt_emb
 
 if __name__ == '__main__':
     hgcdr = HGCDataReader()
-    uids, inits, p_matrixes = hgcdr.load_data_from_db()
+    hgcdr.loadDatafromSql()
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    model_hgc_lrn = HGC_LRN(32).to(device)
-    model_hgc_scn = HGC_UNT(32).to(device)
-    model_hgc_cpt = HGC_CPT(32).to(device)
-
-    learners_init, units_init, concepts_init = inits
-
-    (p_lsl_edge_index, p_lsl_edge_attr), \
-    (p_scs_edge_index, p_scs_edge_attr), \
-    (p_sls_edge_index, p_sls_edge_attr), \
-    (p_cc_edge_index, p_cc_edge_attr), \
-    (p_cac_edge_index, p_cac_edge_attr), \
-    (p_csc_edge_index, p_csc_edge_attr) = p_matrixes
-
-    lrn_emb = model_hgc_lrn(sub_p_lsl.x.to(device), 
-                            sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
-                            )
-    scn_emb = model_hgc_scn(units_init.to(device), 
-                            p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
-                            p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
-                            )
-    cpt_emb = model_hgc_cpt(concepts_init.to(device), 
-                            p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
-                            p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
-                            p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
-                            )
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = 'cpu'
     
-    print(scn_emb)
-    print(cpt_emb)
+    # 动态获取输入维度
+    lrn_input_dim = hgcdr.lrn_init.shape[1]
+    unt_input_dim = hgcdr.untqus_init.shape[1]
+    cpt_input_dim = hgcdr.cpt_init.shape[1]
+    
+    model = StaticEmbeddingModel(
+        embedding_dim=64,
+        lrn_input_dim=lrn_input_dim,
+        unt_input_dim=unt_input_dim,
+        cpt_input_dim=cpt_input_dim
+    ).to(device)
 
+    lrn_emb, unt_emb, cpt_emb = model(hgcdr, device)
 
+    print("Learner Embedding:", lrn_emb.shape)
+    print("Unit Embedding:", unt_emb.shape)
+    print("Concept Embedding:", cpt_emb.shape)
