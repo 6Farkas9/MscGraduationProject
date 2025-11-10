@@ -7,269 +7,351 @@ if deeplearning_root not in sys.path:
 import torch
 from datetime import datetime, timedelta
 from torch_geometric.data import Data
+from sentence_transformers import SentenceTransformer
 
-from Data.MySQLOperator import mysqldb
+from Data.HGCRepository import hgcrepo
 
 # DataReader的职责应该是从数据库中读取数据，构建出图
 # 返回的结果传给Dataset
 
 class HGCDataReader():
-    
-    def get_cpt_are(self):
-        return mysqldb.get_cpt_are()
 
-    def get_cpt_cpt(self):
-        return mysqldb.get_cpt_cpt()
-    
-    def get_areas_uid(self):
-        uids = mysqldb.get_areas_uid()
-        return {uid : uids.index(uid) for uid in uids}
-    
-    def get_learners_uid_with_scn_greater_4(self):
-        uids = mysqldb.get_learners_uid_with_scn_greater_4()
-        self.lrn_uids = {uid : idx for idx, uid in enumerate(uids)}
-        self.lrn_num = len(uids)
+    def __init__(self):
+        self.getLrnUid2idx()
+        self.getUntQusUid2idx()
+        self.getTpcUid2ids()
+        self.getCrsUid2idx()
+        self.getCptUid2idx()
+        self.getCptUid2Name()
 
-    def get_scenes_uid(self):
-        uids = mysqldb.get_scenes_uid()
-        self.scn_uids = {uid : idx for idx, uid in enumerate(uids)}
-        self.scn_num = len(uids)
+        self.lrn_untqus_count = hgcrepo.getLrnUntQusCount()
+        self.lrn_crs_count = hgcrepo.getLrnCrsCount()
+        self.lrn_tpc_count = hgcrepo.getLrnTpcCount()
 
-    def get_concepts_uid(self):
-        uids = mysqldb.get_concepts_uid()
-        self.cpt_uids = {uid : idx for idx, uid in enumerate(uids)}
-        self.cpt_num = len(uids)
+        self.untqus_cpt = hgcrepo.getUntQusCpt()
+        self.unt_crs = hgcrepo.getUntCrs()
+        self.unt_unt = hgcrepo.getUntUnt()
 
-    def get_lrn_scn_num_with_scn_greater_4(self):
-        return mysqldb.get_lrn_scn_num_with_scn_greater_4()
-    
-    def get_scn_cpt_dif(self):
-        return mysqldb.get_scn_cpt_dif()
-    
-    def get_cpt_uid_name(self):
-        return mysqldb.get_cpt_uid_name()
+        self.cpt_tpc = hgcrepo.getCptTpc()
+        self.cpt_cpt = hgcrepo.getCptCpt()
 
-    def get_P_lsl(self):
-        A = self.learners_init.clone()
-        A_T = A.t()
-        A = torch.matmul(A, A_T)
-        A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
-        A = A + A_I
-        line = torch.ones(A.size(0), 1, dtype = torch.float)
-        D = torch.diag(torch.matmul(A, line).squeeze())
-        D = torch.diag(1.0 / torch.sqrt(torch.diag(D)))
-        p = torch.matmul(torch.matmul(D, A), D)
-        row, col = p.nonzero(as_tuple = True)
-        weight = p[row, col]
-        # self.p_lsl = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
-        self.p_lsl = (torch.stack([row, col], dim=0), weight)
 
-    def get_P_cc(self):
-        A = torch.zeros(self.cpt_num, self.cpt_num, dtype = torch.float)
-        cpt_cpt_data = self.get_cpt_cpt()
-        for onedata in cpt_cpt_data:
-            cpt_id_pre = self.cpt_uids[onedata[0]]
-            cpt_id_aft = self.cpt_uids[onedata[1]]
-            A[cpt_id_pre][cpt_id_aft] = 1
-        A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
-        A = A + A_I
-        line = torch.ones(A.size(0), 1, dtype = torch.float)
-        D = torch.diag(torch.matmul(A, line).squeeze())
-        D = torch.diag(1.0 / torch.sqrt(torch.diag(D)))
-        p = torch.matmul(torch.matmul(D, A), D)
-        row, col = p.nonzero(as_tuple = True)
-        weight = p[row, col]
-        # self.p_cc = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
-        self.p_cc = (torch.stack([row, col], dim=0), weight)
-    
-    def get_P_cac(self):
-        are_uids = self.get_areas_uid()
-        A = torch.zeros(self.cpt_num, len(are_uids), dtype = torch.float)
-        cpt_are_data = self.get_cpt_are()
-        for onedata in cpt_are_data:
-            cpt_id = self.cpt_uids[onedata[0]]
-            are_id = are_uids[onedata[1]]
-            A[cpt_id][are_id] = 1
-        A_T = A.t()
-        A = torch.matmul(A, A_T)
-        A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
-        A = A + A_I
-        line = torch.ones(A.size(0), 1, dtype = torch.float)
-        D = torch.diag(torch.matmul(A, line).squeeze())
-        D = torch.diag(1.0 / torch.sqrt(torch.diag(D)))
-        p = torch.matmul(torch.matmul(D, A), D)
-        row, col = p.nonzero(as_tuple = True)
-        weight = p[row, col]
-        # self.p_cac = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
-        self.p_cac = (torch.stack([row, col], dim=0), weight)
-    
-    def get_P_csc(self):
-        A = self.scenes_init.clone().t()
-        A_T = A.t()
-        A = torch.matmul(A, A_T)
-        A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
-        A = A + A_I
-        line = torch.ones(A.size(0), 1, dtype = torch.float)
-        D = torch.diag(torch.matmul(A, line).squeeze())
-        D = torch.diag(1.0 / torch.sqrt(torch.diag(D)))
-        p = torch.matmul(torch.matmul(D, A), D)
-        row, col = p.nonzero(as_tuple = True)
-        weight = p[row, col]
-        # self.p_csc = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
-        self.p_csc = (torch.stack([row, col], dim=0), weight)
-    
-    def get_P_scs(self):
-        A = self.scenes_init.clone()
-        A_T = A.t()
-        A = torch.matmul(A, A_T)
-        A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
-        A = A + A_I
-        line = torch.ones(A.size(0), 1, dtype = torch.float)
-        D = torch.diag(torch.matmul(A, line).squeeze())
-        D = torch.diag(1.0 / torch.sqrt(torch.diag(D)))
-        p = torch.matmul(torch.matmul(D, A), D)
-        row, col = p.nonzero(as_tuple = True)
-        weight = p[row, col]
-        # self.p_scs = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
-        self.p_scs = (torch.stack([row, col], dim=0), weight)
-    
-    def get_P_sls(self):
-        A = self.learners_init.clone().t()
-        A_T = A.t()
-        A = torch.matmul(A, A_T)
-        A_I = torch.eye(A.size(0), A.size(1), dtype = torch.float)
-        A = A + A_I
-        line = torch.ones(A.size(0), 1, dtype = torch.float)
-        D = torch.diag(torch.matmul(A, line).squeeze())
-        D = torch.diag(1.0 / torch.sqrt(torch.diag(D)))
-        p = torch.matmul(torch.matmul(D, A), D)
-        row, col = p.nonzero(as_tuple = True)
-        weight = p[row, col]
-        # self.p_sls = Data(edge_index = torch.stack([row, col], dim=0), edge_attr = weight)
-        self.p_sls = (torch.stack([row, col], dim=0), weight)
-
-    def learner_init_embedding(self):
-        # 使用ls初始化
-        # 获取所有学习者uid - 数量
-        # 获取所有场景uid - 数量
-        # 构建ls矩阵
-        # 计算出学习者的初始嵌入表达
-        # 返回初始嵌入的结果
-        self.learners_init = torch.zeros(self.lrn_num, self.scn_num, dtype=torch.float)
-        lrn_scn_num = self.get_lrn_scn_num_with_scn_greater_4()
-        for onedata in lrn_scn_num:
-            lrn_pos = self.lrn_uids[onedata[0]]
-            scn_pos = self.scn_uids[onedata[1]]
-            times   = onedata[2]
-            self.learners_init[lrn_pos][scn_pos] += times
+    def computeMetaPathMatrix(self, A1, A2=None):
+        """
+        计算元路径邻接矩阵
         
-        self.get_P_lsl()
-        self.get_P_sls()
+        Args:
+            A1: 第一个邻接矩阵
+            A2: 第二个邻接矩阵（如果为None，则使用A1的转置）
+        
+        Returns:
+            A_meta: 元路径邻接矩阵
+        """
+        if A2 is None:
+            A2 = A1.t()
+        
+        A_meta = torch.matmul(A1, A2)
+        return A_meta
+    
+    def computeNormalizedAdjacencyMatrix(self, A, add_self_loop=True):
+        """
+        计算归一化邻接矩阵 P = D^(-1) * (A + I) * D^(-1)
+        
+        Args:
+            A: 原始邻接矩阵 (torch.Tensor)
+            add_self_loop: 是否添加自连接
+        
+        Returns:
+            edge_index: 边索引 [2, num_edges]
+            edge_weight: 边权重 [num_edges]
+        """
+        # 1. 添加自连接
+        if add_self_loop:
+            I = torch.eye(A.size(0), dtype=A.dtype, device=A.device)
+            A = A + I
+        
+        # 2. 计算度矩阵 D
+        row_sum = A.sum(dim=1)  # 每行的和
+        D_diag = torch.where(
+            row_sum != 0,
+            1.0 / torch.sqrt(row_sum.clamp(min=1e-6)),
+            torch.zeros_like(row_sum, dtype=A.dtype)
+        )
+        D_inv_sqrt = torch.diag(D_diag)
+        
+        # 3. 计算归一化邻接矩阵 P = D^(-1) * A * D^(-1)
+        P = torch.matmul(torch.matmul(D_inv_sqrt, A), D_inv_sqrt)
+        
+        # 4. 提取非零元素作为边
+        row, col = P.nonzero(as_tuple=True)
+        edge_index = torch.stack([row, col], dim=0)
+        edge_weight = P[row, col]
+        
+        return edge_index, edge_weight
 
-        # 计算度矩阵 D：每个学习者与不同场景的交互次数（非零元素的个数）
-        # 计算每个学习者与不同场景的交互次数（非零元素的个数）
-        D_diag = (self.learners_init > 0).sum(dim=1).float() 
+    def getLrnUid2idx(self):
+        uids = hgcrepo.getLrnUid()
+        self.lrn_uid = {uid : idx for idx, uid in enumerate(uids)}
+        self.lrn_num = len(self.lrn_uid)
 
-        # 计算度矩阵 D 的逆（每个对角元素取倒数）
+    def getUntQusUid2idx(self):
+        unt_uids = hgcrepo.getUntUid()
+        qus_uids = hgcrepo.getQusUid()
+
+        self.qus_start = len(unt_uids)
+
+        uids = unt_uids + qus_uids
+        self.untqus_uid = {uid : idx for idx, uid in enumerate(uids)}
+        self.untqus_num = len(self.untqus_uid)
+
+    def getTpcUid2ids(self):
+        uids = hgcrepo.getTpcUid()
+        self.tpc_uid = {uid : idx for idx, uid in enumerate(uids)}
+        self.tpc_num = len(self.tpc_uid)
+
+    def getCrsUid2idx(self):
+        uids = hgcrepo.getCrsUid()
+        self.crs_uid = {uid : idx for idx, uid in enumerate(uids)}
+        self.crs_num = len(self.crs_uid)
+
+    def getCptUid2idx(self):
+        uids = hgcrepo.getCptUid()
+        self.cpt_uid = {uid : idx for idx, uid in enumerate(uids)}
+        self.cpt_num = len(self.cpt_uid)
+
+    def getCptUid2Name(self):
+        uid_name = hgcrepo.getCptUidName()
+        self.cpt_uid2name = {uid : name for (uid, name) in uid_name}
+
+    def getP_lul(self):
+        A_lu = torch.zeros(self.lrn_num, self.untqus_num, dtype=torch.float)
+        lrn_untqus_count = self.lrn_untqus_count
+        for onedata in lrn_untqus_count:
+            lrn_uid, untqus_uid, count = onedata
+            lrn_idx = self.lrn_uid.get(lrn_uid)
+            untqus_idx = self.untqus_uid.get(untqus_uid)
+            
+            if lrn_idx is not None and untqus_idx is not None:
+                A_lu[lrn_idx, untqus_idx] = count
+        A_lul = self.computeMetaPathMatrix(A_lu)
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_lul, True)
+        self.p_lul = (edge_index, edge_weight)
+
+    def getP_lcl(self):
+        A_lc = torch.zeros(self.lrn_num, self.crs_num, dtype=torch.float)
+        lrn_crs_count = self.lrn_crs_count
+        for onedata in lrn_crs_count:
+            lrn_uid, crs_uid, count = onedata
+            lrn_idx = self.lrn_uid.get(lrn_uid)
+            crs_idx = self.crs_uid.get(crs_uid)
+            
+            if lrn_idx is not None and crs_idx is not None:
+                A_lc[lrn_idx, crs_idx] = count
+        A_lcl = self.computeMetaPathMatrix(A_lc)
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_lcl, True)
+        self.p_lcl = (edge_index, edge_weight)
+
+    def getP_ltl(self):
+        A_lt = torch.zeros(self.lrn_num, self.tpc_num, dtype=torch.float)
+        lrn_tpc_count = self.lrn_tpc_count
+        for onedata in lrn_tpc_count:
+            lrn_uid, tpc_uid, count = onedata
+            lrn_idx = self.lrn_uid.get(lrn_uid)
+            tpc_idx = self.tpc_uid.get(tpc_uid)
+            
+            if lrn_idx is not None and tpc_idx is not None:
+                A_lt[lrn_idx, tpc_idx] = count
+        A_ltl = self.computeMetaPathMatrix(A_lt)
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_ltl, True)
+        self.p_ltl = (edge_index, edge_weight)
+
+    def getInit(self, init):
+        D_diag = (init > 0).sum(dim=1).float()
+        
+        # 归一化
         D_inv_diag = torch.where(
             D_diag != 0,
-            1.0 / D_diag.clamp(min = 1e-6),
+            1.0 / D_diag.clamp(min=1e-6),
             torch.zeros_like(D_diag, dtype=torch.float)
         )
+        init = init * D_inv_diag.unsqueeze(1)
+
+    def getLearnerInit(self):
+        self.lrn_init = torch.zeros(self.lrn_num, self.untqus_num, dtype=torch.float)
+        # 获取交互数据
+        lrn_untqus_count = self.lrn_untqus_count
         
-        # D_inv = torch.diag(D_inv_diag)
-        # self.learners_init = torch.matmul(D_inv, self.learners_init)
-        self.learners_init = self.learners_init * D_inv_diag.unsqueeze(1)
-    
-    def concept_init_embedding(self):
-        # 比较特殊
-        # 这里没办法直接获取初始嵌入表达
-        # 需要使用word2vec计算
-        # 返回每个知识点的ascii码的tensor，不足128的填充0
-        self.concepts_init = torch.zeros(self.cpt_num, 128, dtype=torch.float)
-        cpt_uid_name = self.get_cpt_uid_name()
-        for onedata in cpt_uid_name:
-            cpt_pos = self.cpt_uids[onedata[0]]
-            for i in range(len(onedata[1])):
-                self.concepts_init[cpt_pos][i] = ord(onedata[1][i])
-    
-    def scene_init_embedding(self):
-        # 使用sc初始化
-        # 获取所有场景uid - 数量
-        # 获取所有知识点uid - 数量
-        # 构建sc矩阵
-        # 计算出场景的初始嵌入表达
-        # 返回初始嵌入的结果
-        self.scenes_init = torch.zeros(self.scn_num, self.cpt_num, dtype=torch.float)
-        scn_cpt_dif = self.get_scn_cpt_dif()
-        for onedata in scn_cpt_dif:
-            scn_pos = self.scn_uids[onedata[0]]
-            cpt_pos = self.cpt_uids[onedata[1]]
-            difficulty = onedata[2]
-            self.scenes_init[scn_pos][cpt_pos] += difficulty
+        for onedata in lrn_untqus_count:
+            lrn_uid, untqus_uid, _ = onedata
+            lrn_idx = self.lrn_uid.get(lrn_uid)
+            untqus_idx = self.untqus_uid.get(untqus_uid)
+            if lrn_idx is not None and untqus_idx is not None:
+                self.lrn_init[lrn_idx, untqus_idx] = 1.0
         
-        self.get_P_scs()
-        self.get_P_csc()
-
-        # 计算度矩阵 D：每个学习者与不同场景的交互次数（非零元素的个数）
-        # 计算每个学习者与不同场景的交互次数（非零元素的个数）
-        D_diag = (self.scenes_init > 0).sum(dim=1) 
-
-        # 计算度矩阵 D 的逆（每个对角元素取倒数）
-        D_inv_diag = torch.where(
-            D_diag != 0,
-            1.0 / D_diag,
-            torch.zeros_like(D_diag, dtype=torch.float)
-        )
+        self.getInit(self.lrn_init)
         
-        # D_inv = torch.diag(D_inv_diag)
-        # self.learners_init = torch.matmul(D_inv, self.scenes_init)
-        self.scenes_init = self.scenes_init * D_inv_diag.unsqueeze(1)
+        # return self.lrn_init
 
-    def load_data_from_db(self):
-        self.get_learners_uid_with_scn_greater_4()
-        self.get_scenes_uid()
-        self.get_concepts_uid()
-        # 学习者初始嵌入
-        # 知识点的初始tensor
-        # 场景的初始嵌入
-        # 以上三个单独返回
-        self.learner_init_embedding()
-        self.scene_init_embedding()
-        self.concept_init_embedding()
+    def getUnitInit(self):
+        self.untqus_init = torch.zeros(self.untqus_num, self.cpt_num, dtype=torch.float)
 
-        # l-s-l（两个学习者和同一个场景交互过）      2 - 2   
-        # c-c（知识点前修后继的关系）                        1
-        # c-a-c（两个知识点属于一个领域）                 0 - 0
-        # c-s-c（两个知识点属于同一个场景）              3 - 3
-        # s-c-s（两个场景涉及同一个知识点）              3 - 3
-        # s-l-s（两个场景被同一个学习者互动过）       2 - 2
-        # 以上的可以作为图的data返回
-        self.get_P_cc()
-        self.get_P_cac()
+        untqus_cpt = self.untqus_cpt
 
-        return  (self.lrn_uids, self.scn_uids, self.cpt_uids), \
-                (self.learners_init, self.scenes_init, self.concepts_init), \
-                (self.p_lsl, self.p_scs, self.p_sls, self.p_cc, self.p_cac, self.p_csc,)
+        for onedata in untqus_cpt:
+            untqus_uid, cpt_uid = onedata
+            untqus_idx = self.untqus_uid.get(untqus_uid)
+            cpt_idx = self.cpt_uid.get(cpt_uid)
+            if untqus_idx is not None and cpt_idx is not None:
+                self.untqus_init[untqus_idx, cpt_idx] = 1.0
+        
+        self.getInit(self.untqus_init)
+
+    def getP_ulu(self):
+        A_ul = torch.zeros(self.untqus_num, self.lrn_num, dtype=torch.float)
+        lrn_untqus_count = self.lrn_untqus_count
+        for onedata in lrn_untqus_count:
+            lrn_uid, untqus_uid, count = onedata
+            lrn_idx = self.lrn_uid.get(lrn_uid)
+            untqus_idx = self.untqus_uid.get(untqus_uid)
+            
+            if lrn_idx is not None and untqus_idx is not None:
+                A_ul[untqus_idx, lrn_idx] = count
+        A_ulu = self.computeMetaPathMatrix(A_ul)
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_ulu, True)
+        self.p_ulu = (edge_index, edge_weight)
+
+    def getP_ucrsu(self):
+        A_ucrs = torch.zeros(self.untqus_num, self.lrn_num, dtype=torch.float)
+        unt_crs = self.unt_crs
+        for onedata in unt_crs:
+            unt_uid, crs_uid = onedata
+            unt_idx = self.untqus_uid.get(unt_uid)
+            crs_idx = self.crs_uid.get(crs_uid)
+
+            if unt_idx is not None and crs_idx is not None:
+                A_ucrs[unt_idx, crs_idx] = 1.0
+        A_ucrsu = self.computeMetaPathMatrix(A_ucrs)
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_ucrsu, True)
+        self.p_ucrsu = (edge_index, edge_weight)
+
+    def getP_ucptu(self):
+        A_ucpt = torch.zeros(self.untqus_num, self.cpt_num, dtype=torch.float)
+        untqus_cpt = self.untqus_cpt
+        for onedata in untqus_cpt:
+            untqus_uid, cpt_uid = onedata
+            untqus_idx = self.untqus_uid.get(untqus_uid)
+            cpt_idx = self.cpt_uid.get(cpt_uid)
+
+            if untqus_idx is not None and cpt_idx is not None:
+                A_ucpt[untqus_idx, cpt_idx] = 1.0
+        A_ucptu = self.computeMetaPathMatrix(A_ucpt)
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_ucptu, True)
+        self.p_ucptu = (edge_index, edge_weight)
+
+    def getP_uu(self):
+        A_uu = torch.zeros(self.untqus_num, self.untqus_num, dtype=torch.float)
+        unt_unt = self.unt_unt
+        for onedata in unt_unt:
+            # print(onedata)
+            uid1, uid2 = onedata
+            uid1_idx = self.untqus_uid.get(uid1)
+            uid2_idx = self.untqus_uid.get(uid2)
+
+            if uid1_idx is not None and uid2_idx is not None:
+                A_uu[uid1_idx, uid2_idx] = 1.0
+        
+        for i in range(self.qus_start, self.untqus_num):
+            A_uu[i, i] = 1.0
+        
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_uu, False)
+        self.p_uu = (edge_index, edge_weight)
+
+    def getCptInit(self, model_name='all-MiniLM-L6-v2'):
+        model = SentenceTransformer(model_name)
     
+        # 直接按照idx顺序构建名称列表
+        cpt_names = [""] * self.cpt_num
+        for uid, idx in self.cpt_uid.items():
+            cpt_names[idx] = self.cpt_uid2name.get(uid)
+        
+        with torch.no_grad():
+            self.cpt_init = model.encode(cpt_names, convert_to_tensor=True, device='cpu')
     
+    def getP_ctc(self):
+        A_ct = torch.zeros(self.cpt_num, self.tpc_num, dtype=torch.float)
+        cpt_tpc = self.cpt_tpc
+        for onedata in cpt_tpc:
+            cpt_uid, tpc_uid = onedata
+            cpt_idx = self.lrn_uid.get(cpt_uid)
+            tpc_idx = self.untqus_uid.get(tpc_uid)
+            
+            if cpt_idx is not None and tpc_idx is not None:
+                A_ct[cpt_idx, tpc_idx] = 1.0
+        A_ctc = self.computeMetaPathMatrix(A_ct)
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_ctc, True)
+        self.p_ctc = (edge_index, edge_weight)
+
+    def getP_cc(self):
+        A_cc = torch.zeros(self.cpt_num, self.cpt_num, dtype=torch.float)
+        cpt_cpt = self.cpt_cpt
+        for onedata in cpt_cpt:
+            pre_uid, aft_uid = onedata
+            pre_uid = self.lrn_uid.get(pre_uid)
+            aft_uid = self.untqus_uid.get(aft_uid)
+            
+            if pre_uid is not None and aft_uid is not None:
+                A_cc[pre_uid, aft_uid] = 1.0
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_cc, True)
+        self.p_cc = (edge_index, edge_weight)
+
+    def getP_cuc(self):
+        A_cu = torch.zeros(self.cpt_num, self.untqus_num, dtype=torch.float)
+        untqus_cpt = self.untqus_cpt
+        for onedata in untqus_cpt:
+            untqus_uid, cpt_uid = onedata
+            untqus_idx = self.lrn_uid.get(untqus_uid)
+            cpt_idx = self.untqus_uid.get(cpt_uid)
+            
+            if cpt_idx is not None and untqus_idx is not None:
+                A_cu[cpt_idx, untqus_idx] = 1.0
+        A_cuc = self.computeMetaPathMatrix(A_cu)
+        edge_index, edge_weight = self.computeNormalizedAdjacencyMatrix(A_cuc, True)
+        self.p_cuc = (edge_index, edge_weight)
+
 if __name__ == '__main__':
-    datareader =  HGCDataReader()
-    # datareader.get_learners_uid()
-    # datareader.get_scenes_uid()
-    # datareader.get_concepts_uid()
-    # print(datareader.lrn_num, datareader.scn_num, datareader.cpt_num)
+    dr =  HGCDataReader()
 
-    # res = datareader.get_lrn_scn_num()
-    # print(type(res), res)
+    dr.getLearnerInit()
+    dr.getP_lul()
+    dr.getP_lcl()
+    dr.getP_ltl()
+    print(dr.lrn_init)
+    print(dr.p_lul)
+    print(dr.p_lcl)
+    print(dr.p_ltl)
 
-    ids, inits, ps =  datareader.load_data_from_db()
+    dr.getUnitInit()
+    dr.getP_ulu()
+    dr.getP_ucrsu()
+    dr.getP_ucptu()
+    dr.getP_uu()
+    print(dr.untqus_init)
+    print(dr.p_ulu)
+    print(dr.p_ucrsu)
+    print(dr.p_ucptu)
+    print(dr.p_uu)
+
+    dr.getCptInit()
+    dr.getP_ctc()
+    dr.getP_cc()
+    dr.getP_cuc()
+    print(dr.cpt_init)
+    print(dr.p_ctc)
+    print(dr.p_cc)
+    print(dr.p_cuc)
+
     
-    print(ps)
+    
 
-    # datareader.learner_init_embedding()
-
-    # print(datareader.learners_init.shape, datareader.learners_init.sum())
-    # print(datareader.learners_init[0][0])
 
     

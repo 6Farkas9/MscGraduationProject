@@ -24,7 +24,7 @@ class MetaPathAttention(nn.Module):
         """
         embeddings: 形状为 [num_paths, x, embedding_dim]
         - num_paths: 元路径的数量
-        - x: 节点数（如场景数量）
+        - x: 节点数（如学习单元数量）
         - embedding_dim: 每个节点的嵌入维度
         """
         # embeddings 是一个形状为 [num_paths, x, embedding_dim] 的张量
@@ -126,53 +126,53 @@ class HGC_LRN(nn.Module):
         super(HGC_LRN, self).__init__()
 
         self.proj_lrn = Projection(embedding_dim)
-        self.GCN_lsl = GCNConvEmbedding(embedding_dim)
+        self.GCN_lul = GCNConvEmbedding(embedding_dim)
 
     def forward(self,
                 init : torch.Tensor,
-                p_lsl_edge_index : torch.Tensor, p_lsl_edge_attr : torch.Tensor
+                p_lul_edge_index : torch.Tensor, p_lul_edge_attr : torch.Tensor
                 ) -> torch.Tensor:    
         
         embeddings_lrn = self.proj_lrn(init)
 
-        out_lsl = self.GCN_lsl(embeddings_lrn,
-                               p_lsl_edge_index,
-                               p_lsl_edge_attr)
+        out_lsl = self.GCN_lul(embeddings_lrn,
+                               p_lul_edge_index,
+                               p_lul_edge_attr)
 
         return out_lsl
     
-class HGC_SCN(nn.Module):
+class HGC_UNT(nn.Module):
     def __init__(self, embedding_dim):
-        super(HGC_SCN, self).__init__()
+        super(HGC_UNT, self).__init__()
 
-        self.proj_scn = Projection(embedding_dim)
+        self.proj_unt = Projection(embedding_dim)
 
-        self.GCN_scs = GCNConvEmbedding(embedding_dim)
-        self.GCN_sls = GCNConvEmbedding(embedding_dim)
+        self.GCN_ucu = GCNConvEmbedding(embedding_dim)
+        self.GCN_ulu = GCNConvEmbedding(embedding_dim)
 
         self.attention_scn = MetaPathAttention(embedding_dim)
 
     def forward(self, 
                 init : torch.Tensor,
-                p_scs_edge_index : torch.Tensor, p_scs_edge_attr : torch.Tensor,
-                p_sls_edge_index : torch.Tensor, p_sls_edge_attr : torch.Tensor
+                p_ucu_edge_index : torch.Tensor, p_ucu_edge_attr : torch.Tensor,
+                p_ulu_edge_index : torch.Tensor, p_ulu_edge_attr : torch.Tensor
                 ) -> torch.Tensor:
 
-        embeddings_scn = self.proj_scn(init)
+        embeddings_scn = self.proj_unt(init)
 
-        out_scs = self.GCN_scs(embeddings_scn.clone(),
-                                p_scs_edge_index.clone(),
-                                p_scs_edge_attr.clone())
+        out_ucu = self.GCN_ucu(embeddings_scn.clone(),
+                                p_ucu_edge_index.clone(),
+                                p_ucu_edge_attr.clone())
         
-        out_sls = self.GCN_sls(embeddings_scn.clone(),
-                                p_sls_edge_index.clone(),
-                                p_sls_edge_attr.clone())
+        out_ulu = self.GCN_ulu(embeddings_scn.clone(),
+                                p_ulu_edge_index.clone(),
+                                p_ulu_edge_attr.clone())
         
-        combined_scn = torch.stack([out_scs, out_sls], dim=0)
+        combined_scn = torch.stack([out_ucu, out_ulu], dim=0)
 
-        fin_out_scn = self.attention_scn(combined_scn)
+        fin_out_unt = self.attention_scn(combined_scn)
 
-        return fin_out_scn
+        return fin_out_unt
 
 class HGC_CPT(nn.Module):
     def __init__(self, embedding_dim):
@@ -214,5 +214,36 @@ class HGC_CPT(nn.Module):
 if __name__ == '__main__':
     hgcdr = HGCDataReader()
     uids, inits, p_matrixes = hgcdr.load_data_from_db()
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    model_hgc_lrn = HGC_LRN(32).to(device)
+    model_hgc_scn = HGC_UNT(32).to(device)
+    model_hgc_cpt = HGC_CPT(32).to(device)
+
+    learners_init, units_init, concepts_init = inits
+
+    (p_lsl_edge_index, p_lsl_edge_attr), \
+    (p_scs_edge_index, p_scs_edge_attr), \
+    (p_sls_edge_index, p_sls_edge_attr), \
+    (p_cc_edge_index, p_cc_edge_attr), \
+    (p_cac_edge_index, p_cac_edge_attr), \
+    (p_csc_edge_index, p_csc_edge_attr) = p_matrixes
+
+    lrn_emb = model_hgc_lrn(sub_p_lsl.x.to(device), 
+                            sub_p_lsl.edge_index.to(device), sub_p_lsl.edge_attr.to(device)
+                            )
+    scn_emb = model_hgc_scn(units_init.to(device), 
+                            p_scs_edge_index.to(device), p_scs_edge_attr.to(device),
+                            p_sls_edge_index.to(device), p_sls_edge_attr.to(device)
+                            )
+    cpt_emb = model_hgc_cpt(concepts_init.to(device), 
+                            p_cc_edge_index.to(device), p_cc_edge_attr.to(device),
+                            p_cac_edge_index.to(device), p_cac_edge_attr.to(device), 
+                            p_csc_edge_index.to(device), p_csc_edge_attr.to(device)
+                            )
+    
+    print(scn_emb)
+    print(cpt_emb)
 
 
