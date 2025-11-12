@@ -242,8 +242,21 @@ class HGCDataReader():
         self.p_uu = (edge_index, edge_weight)
 
     def getCptInit(self, model_name='all-MiniLM-L6-v2'):
-        model = SentenceTransformer(model_name)
-    
+        # 获取项目根目录
+        deeplearningroot = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # 构建模型保存路径：DeepLearning/Model/all-MiniLM-L6-v2
+        model_path = os.path.join(deeplearningroot, "Model", model_name)
+        
+        # 如果本地不存在，先下载
+        if not os.path.exists(model_path):
+            print(f"下载模型中到: {model_path}...")
+            model = SentenceTransformer(model_name)
+            model.save(model_path)
+            print(f"模型已保存到: {model_path}")
+        else:
+            print(f"从本地加载模型: {model_path}")
+            model = SentenceTransformer(model_path)
+        
         # 直接按照idx顺序构建名称列表
         cpt_names = [""] * self.cpt_num
         for uid, idx in self.cpt_uid.items():
