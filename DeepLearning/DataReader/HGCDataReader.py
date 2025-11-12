@@ -1,14 +1,11 @@
 import sys
-from pathlib import Path
-deeplearning_root = str(Path(__file__).parent.parent.parent)
-if deeplearning_root not in sys.path:
-    sys.path.insert(0, deeplearning_root)
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
-from datetime import datetime, timedelta
-from torch_geometric.data import Data
 from sentence_transformers import SentenceTransformer
 
+from DataReader.BasicDataReader import basicdr
 from Data.HGCRepository import hgcrepo
 
 # DataReader的职责应该是从数据库中读取数据，构建出图
@@ -17,11 +14,19 @@ from Data.HGCRepository import hgcrepo
 class HGCDataReader():
 
     def __init__(self):
-        self.getLrnUid2idx()
-        self.getUntQusUid2idx()
-        self.getTpcUid2ids()
-        self.getCrsUid2idx()
-        self.getCptUid2idx()
+
+        self.lrn_uid = basicdr.lrn_uid
+        self.lrn_num = basicdr.lrn_num
+        self.untqus_uid = basicdr.untqus_uid
+        self.untqus_num = basicdr.untqus_num
+        self.tpc_uid = basicdr.tpc_uid
+        self.tpc_num = basicdr.tpc_num
+        self.crs_uid = basicdr.crs_uid
+        self.crs_num = basicdr.crs_num
+        self.cpt_uid = basicdr.cpt_uid
+        self.cpt_num = basicdr.cpt_num
+        self.qus_start = basicdr.unt_num
+
         self.getCptUid2Name()
 
         self.lrn_untqus_count = hgcrepo.getLrnUntQusCount()
@@ -88,36 +93,6 @@ class HGCDataReader():
         edge_weight = P[row, col]
         
         return edge_index, edge_weight
-
-    def getLrnUid2idx(self):
-        uids = hgcrepo.getLrnUid()
-        self.lrn_uid = {uid : idx for idx, uid in enumerate(uids)}
-        self.lrn_num = len(self.lrn_uid)
-
-    def getUntQusUid2idx(self):
-        unt_uids = hgcrepo.getUntUid()
-        qus_uids = hgcrepo.getQusUid()
-
-        self.qus_start = len(unt_uids)
-
-        uids = unt_uids + qus_uids
-        self.untqus_uid = {uid : idx for idx, uid in enumerate(uids)}
-        self.untqus_num = len(self.untqus_uid)
-
-    def getTpcUid2ids(self):
-        uids = hgcrepo.getTpcUid()
-        self.tpc_uid = {uid : idx for idx, uid in enumerate(uids)}
-        self.tpc_num = len(self.tpc_uid)
-
-    def getCrsUid2idx(self):
-        uids = hgcrepo.getCrsUid()
-        self.crs_uid = {uid : idx for idx, uid in enumerate(uids)}
-        self.crs_num = len(self.crs_uid)
-
-    def getCptUid2idx(self):
-        uids = hgcrepo.getCptUid()
-        self.cpt_uid = {uid : idx for idx, uid in enumerate(uids)}
-        self.cpt_num = len(self.cpt_uid)
 
     def getCptUid2Name(self):
         uid_name = hgcrepo.getCptUidName()
@@ -338,9 +313,8 @@ class HGCDataReader():
 hgcdr = HGCDataReader()
 
 if __name__ == '__main__':
-    dr =  HGCDataReader()
 
-    dr.loadDatafromSql()
+    hgcdr.loadDatafromSql()
 
     # dr.getLearnerInit()
     # dr.getP_lul()

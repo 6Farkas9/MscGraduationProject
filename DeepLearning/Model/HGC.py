@@ -1,18 +1,13 @@
 import sys
-from pathlib import Path
-deeplearning_root = str(Path(__file__).parent.parent.parent)
-if deeplearning_root not in sys.path:
-    sys.path.insert(0, deeplearning_root)
-
-HGC_path = deeplearning_root + '\\HGC'
-sys.path.append(HGC_path)
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_scatter import scatter_add
 
-from Dataset.HGCDataReader import hgcdr
+from DataReader.HGCDataReader import hgcdr
 
 class MetaPathAttention(nn.Module):
     def __init__(self, embedding_dim):
@@ -72,7 +67,7 @@ class Projection(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.proj(x)
 
-class StaticEmbeddingModel(nn.Module):
+class HGC(nn.Module):
     def __init__(self, embedding_dim=64, lrn_input_dim=None, unt_input_dim=None, cpt_input_dim=None):
         super().__init__()
         self.embedding_dim = embedding_dim
@@ -146,10 +141,7 @@ class StaticEmbeddingModel(nn.Module):
         return lrn_emb, unt_emb, cpt_emb
 
 if __name__ == '__main__':
-    # hgcdr = HGCDataReader()
     hgcdr.loadDatafromSql()
-
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     device = 'cpu'
     
     # 动态获取输入维度
@@ -157,7 +149,7 @@ if __name__ == '__main__':
     unt_input_dim = hgcdr.untqus_init.shape[1]
     cpt_input_dim = hgcdr.cpt_init.shape[1]
     
-    model = StaticEmbeddingModel(
+    model = HGC(
         embedding_dim=64,
         lrn_input_dim=lrn_input_dim,
         unt_input_dim=unt_input_dim,
