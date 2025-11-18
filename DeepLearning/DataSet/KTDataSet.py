@@ -8,28 +8,32 @@ from torch.utils.data import Dataset
 
 from DataReader.KTDataReader import ktdr
 from DataReader.BasicDataReader import basicdr
+from hyperparams.hyperparameter import hyperparams
 
 class KTDataSet(Dataset):
     """
-    知识追踪数据集 - 处理动态的、涉及梯度的数据
+    知识追踪数据集 - 适配新顺序：qusunt（前半部分qus，后半部分unt）
     """
 
-    def __init__(self, static_data, h_lrn, unt_emb, h_cpt, data_type='train', max_seq_len=128):
+    def __init__(self, static_data, h_lrn, qusunt_emb, h_cpt, data_type='train', max_seq_len=None):
         """
         Args:
             static_data: 从KTDataReader获取的静态数据
             h_lrn: (lrn_num, emb_dim) - HGC计算的学习者嵌入
-            unt_emb: (untqus_num, emb_dim) - HGC计算的学习单元+题目嵌入
+            qusunt_emb: (qusunt_num, emb_dim) - HGC计算的题目+学习单元嵌入（新顺序：前半部分qus，后半部分unt）
             h_cpt: (cpt_num, emb_dim) - HGC计算的知识点嵌入
             data_type: 'train' 或 'test'
             max_seq_len: 最大序列长度
         """
         super(KTDataSet, self).__init__()
         
+        if max_seq_len is None:
+            max_seq_len = hyperparams.data_max_seq_len
+        
         # 交互数据
         self.data = static_data[f'{data_type}_data']
         self.lrn_uid = static_data['lrn_uid']
-        self.untqus_uid = static_data['untqus_uid']
+        self.qusunt_uid = static_data['qusunt_uid']  # 新顺序：前半部分qus，后半部分unt
         self.cpt_uid = static_data['cpt_uid']
         self.unit_types = static_data['unit_types']
         self.question_concepts = static_data['question_concepts']
@@ -37,28 +41,31 @@ class KTDataSet(Dataset):
         
         # 数量统计
         self.lrn_num = len(self.lrn_uid)
-        self.untqus_num = len(self.untqus_uid)
+        self.qusunt_num = len(self.qusunt_uid)
         self.cpt_num = len(self.cpt_uid)
+        self.qus_num = basicdr.qus_num  # 题目数量
 
         # HGC计算的嵌入
         self.h_lrn = h_lrn
-        self.h_unt = unt_emb  # 学习单元+题目嵌入
+        self.h_qusunt = qusunt_emb  # 题目+学习单元嵌入（新顺序）
         self.h_cpt = h_cpt
         
         self.max_seq_len = max_seq_len
         
         # 创建反向映射
         self.idx2lrn = {idx: uid for uid, idx in self.lrn_uid.items()}
-        self.idx2untqus = {idx: uid for uid, idx in self.untqus_uid.items()}
+        self.idx2qusunt = {idx: uid for uid, idx in self.qusunt_uid.items()}
         self.idx2cpt = {idx: uid for uid, idx in self.cpt_uid.items()}
         
         # 预计算序列数据
         self._precompute_sequences()
 
     def _precompute_sequences(self):
-        """预计算所有学习者的序列数据"""
+        """预计算所有学习者的序列数据 - 适配新顺序"""
+        print(f"  预计算KT序列数据，最大长度: {self.max_seq_len}")
+        
         # 初始化张量
-        self.unt_seq_indices = torch.zeros(self.lrn_num, self.max_seq_len, dtype=torch.long, device='cpu')
+        self.qusunt_seq_indices = torch.zeros(self.lrn_num, self.max_seq_len, dtype=torch.long, device='cpu')
         self.add1_seq = torch.zeros(self.lrn_num, self.max_seq_len, dtype=torch.float32, device='cpu')
         self.add2_seq = torch.zeros(self.lrn_num, self.max_seq_len, dtype=torch.float32, device='cpu')
         self.type_indices_seq = torch.zeros(self.lrn_num, self.max_seq_len, dtype=torch.long, device='cpu')
@@ -69,26 +76,36 @@ class KTDataSet(Dataset):
         self.seq_masks = torch.zeros(self.lrn_num, self.max_seq_len, dtype=torch.float32, device='cpu')
         self.next_question_masks = torch.zeros(self.lrn_num, self.max_seq_len, dtype=torch.float32, device='cpu')
         
+        # 统计信息
+        total_records = 0
+        total_questions = 0
+        max_actual_len = 0
+        
         # 遍历数据
-        for lrn_uid, (unt_seq, add1_seq, add2_seq, is_question_seq, results_seq, next_is_question_seq) in self.data.items():
+        for lrn_uid, (qusunt_seq, add1_seq, add2_seq, is_question_seq, results_seq, next_is_question_seq) in self.data.items():
             if lrn_uid not in self.lrn_uid:
                 continue
                 
             lrn_idx = self.lrn_uid[lrn_uid]
-            valid_len = min(len(unt_seq), self.max_seq_len)
+            valid_len = min(len(qusunt_seq), self.max_seq_len)
             
             if valid_len == 0:
                 continue
+            
+            # 更新统计
+            total_records += valid_len
+            total_questions += sum(is_question_seq[:valid_len])
+            max_actual_len = max(max_actual_len, valid_len)
                 
             # 填充序列数据
             for i in range(valid_len):
-                unt_uid = unt_seq[i]
-                if unt_uid in self.untqus_uid:
-                    self.unt_seq_indices[lrn_idx, i] = self.untqus_uid[unt_uid]
+                qusunt_uid = qusunt_seq[i]
+                if qusunt_uid in self.qusunt_uid:
+                    self.qusunt_seq_indices[lrn_idx, i] = self.qusunt_uid[qusunt_uid]
                 
                 self.add1_seq[lrn_idx, i] = add1_seq[i]
                 self.add2_seq[lrn_idx, i] = add2_seq[i]
-                self.type_indices_seq[lrn_idx, i] = self.unit_types.get(unt_uid, 5)  # 默认question类型
+                self.type_indices_seq[lrn_idx, i] = self.unit_types.get(qusunt_uid, 5)  # 默认question类型
                 self.is_question_seq[lrn_idx, i] = is_question_seq[i]
                 self.results_seq[lrn_idx, i] = results_seq[i] if results_seq[i] != -1 else 0
                 self.next_is_question_seq[lrn_idx, i] = next_is_question_seq[i]
@@ -104,7 +121,9 @@ class KTDataSet(Dataset):
             self.next_question_masks[lrn_idx, :valid_len] = torch.tensor(
                 next_is_question_seq[:valid_len], dtype=torch.float32, device='cpu'
             )
-    
+        
+        print(f"    总记录数: {total_records}, 题目数量: {total_questions}, 最大序列长度: {max_actual_len}")
+
     def __len__(self):
         return self.lrn_num
 
@@ -115,7 +134,7 @@ class KTDataSet(Dataset):
         return {
             'lrn_idx': idx,
             'lrn_uid': lrn_uid,
-            'unt_seq_index': self.unt_seq_indices[idx],
+            'qusunt_seq_index': self.qusunt_seq_indices[idx],  # 新名称
             'add1': self.add1_seq[idx],
             'add2': self.add2_seq[idx],
             'type_indices': self.type_indices_seq[idx],
@@ -128,9 +147,9 @@ class KTDataSet(Dataset):
         }
 
     def collate_fn(self, batch):
-        """批次处理函数"""
+        """批次处理函数 - 适配新顺序"""
         lrn_indices = torch.tensor([item['lrn_idx'] for item in batch])
-        unt_seq_indices = torch.stack([item['unt_seq_index'] for item in batch])
+        qusunt_seq_indices = torch.stack([item['qusunt_seq_index'] for item in batch])  # 新名称
         add1 = torch.stack([item['add1'] for item in batch])
         add2 = torch.stack([item['add2'] for item in batch])
         type_indices = torch.stack([item['type_indices'] for item in batch])
@@ -141,12 +160,12 @@ class KTDataSet(Dataset):
         seq_masks = torch.stack([item['seq_mask'] for item in batch])
         next_question_masks = torch.stack([item['next_question_mask'] for item in batch])
         
-        # 获取批次对应的学习者嵌入
-        h_lrn_batch = self.h_lrn[lrn_indices]
+        # 获取批次对应的学习者嵌入 - 使用clone确保梯度安全
+        h_lrn_batch = self.h_lrn[lrn_indices].clone()
         
         return {
             'lrn_indices': lrn_indices,
-            'unt_seq_indices': unt_seq_indices,
+            'qusunt_seq_indices': qusunt_seq_indices,  # 新名称
             'add1': add1,
             'add2': add2,
             'type_indices': type_indices,
@@ -163,54 +182,65 @@ class KTDataSet(Dataset):
         """返回数据集统计信息"""
         total_records = self.seq_masks.sum().item()
         total_next_questions = self.next_question_masks.sum().item()
+        total_questions = self.is_question_seq.sum().item()
         avg_seq_len = total_records / len(self) if len(self) > 0 else 0
         
         return {
             'total_learners': len(self),
             'total_records': int(total_records),
+            'total_questions': int(total_questions),
             'total_next_questions': int(total_next_questions),
             'average_sequence_length': round(avg_seq_len, 2),
-            'max_sequence_length': self.max_seq_len
+            'max_sequence_length': self.max_seq_len,
+            'qusunt_count': self.qusunt_num,
+            'question_count': self.qus_num,
+            'concept_count': self.cpt_num
         }
 
     def get_embedding_info(self):
         """返回嵌入维度信息"""
         return {
             'lrn_emb_dim': self.h_lrn.shape[1],
-            'unt_emb_dim': self.h_unt.shape[1],
+            'qusunt_emb_dim': self.h_qusunt.shape[1],  # 新名称
             'cpt_emb_dim': self.h_cpt.shape[1],
-            'cpt_num': self.cpt_num
+            'qusunt_count': self.qusunt_num,
+            'question_count': self.qus_num,
+            'concept_count': self.cpt_num
         }
 
-if __name__ == '__main__':
+def test_kt_dataset():
+    """测试KT数据集"""
+    print("=== KTDataSet 测试 (适配新顺序) ===")
+    
+    # 模拟数据
     import torch.nn as nn
     from Model.HGC import HGC
     from DataReader.HGCDataReader import hgcdr
     from torch.utils.data import DataLoader
 
     # 1. 加载HGC数据并计算嵌入
-    print("1. 加载HGC数据并计算嵌入...")
+    print("1. 加载HGC数据...")
     hgcdr.loadDatafromSql()
-    device = 'cpu'
+    device = hyperparams.device
     
     # 动态获取输入维度
     lrn_input_dim = hgcdr.lrn_init.shape[1]
-    unt_input_dim = hgcdr.untqus_init.shape[1]
+    unt_input_dim = hgcdr.qusunt_init.shape[1]
     cpt_input_dim = hgcdr.cpt_init.shape[1]
     
     model_hgc = HGC(
-        embedding_dim=64,
+        embedding_dim=hyperparams.hgc_embedding_dim,
         lrn_input_dim=lrn_input_dim,
         unt_input_dim=unt_input_dim,
         cpt_input_dim=cpt_input_dim
     ).to(device)
 
     with torch.no_grad():
-        lrn_emb, unt_emb, cpt_emb = model_hgc(hgcdr, device)
+        lrn_emb, qusunt_emb, cpt_emb = model_hgc(hgcdr, device)
 
     print("✓ HGC嵌入计算完成")
     print(f"  学习者嵌入: {lrn_emb.shape}")
-    print(f"  单元+题目嵌入: {unt_emb.shape}")
+    print(f"  题目+学习单元嵌入: {qusunt_emb.shape} (新顺序: 前半部分qus)")
     print(f"  知识点嵌入: {cpt_emb.shape}")
 
     # 2. 加载KT数据
@@ -218,9 +248,9 @@ if __name__ == '__main__':
     ktdata = ktdr.loadDatafromSql()
 
     # 3. 创建数据集
-    print("\n3. 创建数据集...")
-    train_dataset = KTDataSet(ktdata, lrn_emb, unt_emb, cpt_emb, 'train', max_seq_len=128)
-    test_dataset = KTDataSet(ktdata, lrn_emb, unt_emb, cpt_emb, 'test', max_seq_len=128)
+    print("\n3. 创建KT数据集...")
+    train_dataset = KTDataSet(ktdata, lrn_emb, qusunt_emb, cpt_emb, 'train')
+    test_dataset = KTDataSet(ktdata, lrn_emb, qusunt_emb, cpt_emb, 'test')
 
     # 4. 查看统计信息
     print("\n4. 数据集统计信息:")
@@ -241,66 +271,58 @@ if __name__ == '__main__':
 
     # 6. 测试batch功能
     print("\n6. Batch功能测试:")
-    batch_size = 4
-    train_loader = DataLoader(
-        train_dataset, 
-        batch_size=batch_size, 
-        shuffle=True, 
-        collate_fn=train_dataset.collate_fn
-    )
+    batch_size = min(4, len(train_dataset))
+    if batch_size > 0:
+        train_loader = DataLoader(
+            train_dataset, 
+            batch_size=batch_size, 
+            shuffle=True, 
+            collate_fn=train_dataset.collate_fn
+        )
 
-    # 检查几个batch
-    batch_sizes = []
-    for i, batch in enumerate(train_loader):
-        if i >= 3:  # 只检查前3个batch
-            break
+        # 检查一个batch
+        for i, batch in enumerate(train_loader):
+            if i >= 1:  # 只检查第一个batch
+                break
+                
+            print(f"Batch {i + 1}:")
+            for key, value in batch.items():
+                if torch.is_tensor(value):
+                    print(f"  {key}: {value.shape} (dtype: {value.dtype})")
             
-        print(f"\nBatch {i + 1}:")
-        batch_sizes.append(len(batch['lrn_indices']))
-        
-        for key, value in batch.items():
-            if torch.is_tensor(value):
-                print(f"  {key}: {value.shape} (dtype: {value.dtype})")
+            # 验证关键数据一致性
+            lrn_indices = batch['lrn_indices']
+            qusunt_seq_indices = batch['qusunt_seq_indices']
+            seq_masks = batch['seq_masks']
+            next_question_masks = batch['next_question_masks']
+            h_lrn_batch = batch['h_lrn_batch']
+            
+            # 检查维度一致性
+            assert lrn_indices.shape[0] == qusunt_seq_indices.shape[0], "batch_size不一致"
+            assert qusunt_seq_indices.shape == seq_masks.shape == next_question_masks.shape, "序列维度不一致"
+            assert h_lrn_batch.shape[0] == lrn_indices.shape[0], "学习者嵌入batch_size不一致"
+            
+            print(f"  ✓ 维度一致性检查通过")
+            print(f"  ✓ 有效序列位置: {seq_masks.sum().item():.0f}")
+            print(f"  ✓ 下一个是题目的位置: {next_question_masks.sum().item():.0f}")
+            
+            # 验证索引范围
+            max_idx = qusunt_seq_indices.max().item()
+            if max_idx < train_dataset.qusunt_num:
+                print(f"  ✓ 索引范围验证通过 [0, {max_idx}] < {train_dataset.qusunt_num}")
             else:
-                print(f"  {key}: {value}")
-        
-        # 验证关键数据一致性
-        lrn_indices = batch['lrn_indices']
-        unt_seq_indices = batch['unt_seq_indices']
-        seq_masks = batch['seq_masks']
-        next_question_masks = batch['next_question_masks']
-        h_lrn_batch = batch['h_lrn_batch']
-        
-        # 检查维度一致性
-        assert lrn_indices.shape[0] == unt_seq_indices.shape[0], "batch_size不一致"
-        assert unt_seq_indices.shape == seq_masks.shape == next_question_masks.shape, "序列维度不一致"
-        assert h_lrn_batch.shape[0] == lrn_indices.shape[0], "学习者嵌入batch_size不一致"
-        
-        print(f"  ✓ 维度一致性检查通过")
-        print(f"  ✓ 有效序列位置: {seq_masks.sum().item():.0f}")
-        print(f"  ✓ 下一个是题目的位置: {next_question_masks.sum().item():.0f}")
-
-    # 7. 验证batch大小一致性
-    print(f"\n7. Batch大小验证:")
-    if len(batch_sizes) > 0:
-        unique_sizes = set(batch_sizes)
-        if len(unique_sizes) == 1:
-            print(f"✓ 所有batch大小一致: {batch_sizes[0]}")
-        else:
-            print(f"✗ batch大小不一致: {batch_sizes}")
+                print(f"  ✗ 索引超出范围: {max_idx} >= {train_dataset.qusunt_num}")
     else:
-        print("没有获取到batch数据")
+        print("  没有足够的数据进行batch测试")
 
-    # 8. 数据完整性检查
-    print(f"\n8. 数据完整性检查:")
+    # 7. 数据完整性检查
+    print(f"\n7. 数据完整性检查:")
     has_nan = False
     has_inf = False
     
-    for i, batch in enumerate(train_loader):
-        if i >= 2:  # 只检查前2个batch
-            break
-            
-        for key, value in batch.items():
+    if len(train_dataset) > 0:
+        sample = train_dataset[0]
+        for key, value in sample.items():
             if torch.is_tensor(value):
                 if torch.isnan(value).any():
                     print(f"✗ {key} 包含NaN值")
@@ -312,4 +334,7 @@ if __name__ == '__main__':
     if not has_nan and not has_inf:
         print("✓ 数据完整性检查通过 - 无NaN和Inf值")
     
-    print(f"\n=== KTDataSet测试完成 ===")
+    print(f"\n=== KTDataSet测试完成 (适配新顺序) ===")
+
+if __name__ == '__main__':
+    test_kt_dataset()

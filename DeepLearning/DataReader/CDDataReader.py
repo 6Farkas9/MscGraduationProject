@@ -13,8 +13,8 @@ class CDDataReader():
         self.lrn_uid = basicdr.lrn_uid
         self.lrn_num = basicdr.lrn_num
 
-        self.untqus_uid = basicdr.untqus_uid
-        self.untqus_num = basicdr.untqus_num
+        self.qusunt_uid = basicdr.qusunt_uid
+        self.qusunt_num = basicdr.qusunt_num
 
         self.cpt_uid = basicdr.cpt_uid
         self.cpt_num = basicdr.cpt_num

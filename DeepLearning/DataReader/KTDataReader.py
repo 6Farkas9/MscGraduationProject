@@ -16,8 +16,8 @@ class KTDataReader():
         self.lrn_uid = basicdr.lrn_uid
         self.lrn_num = basicdr.lrn_num
         
-        self.untqus_uid = basicdr.untqus_uid
-        self.untqus_num = basicdr.untqus_num
+        self.qusunt_uid = basicdr.qusunt_uid
+        self.qusunt_num = basicdr.qusunt_num
         
         self.cpt_uid = basicdr.cpt_uid
         self.cpt_num = basicdr.cpt_num
@@ -37,7 +37,7 @@ class KTDataReader():
         # 处理交互数据：添加交互类型和结果标记
         self.interactions = []
         for lrn_uid, unt_uid, add1, add2, create_time in raw_interactions:
-            if lrn_uid not in self.lrn_uid or unt_uid not in self.untqus_uid:
+            if lrn_uid not in self.lrn_uid or unt_uid not in self.qusunt_uid:
                 continue
                 
             # 判断是否为题目交互（有结果）
@@ -53,7 +53,7 @@ class KTDataReader():
         self.unit_types = {}
         
         for unt_uid, unit_type in raw_unit_types.items():
-            if unt_uid in self.untqus_uid:
+            if unt_uid in self.qusunt_uid:
                 # 将类型字符串映射为数字
                 type_mapping = {
                     'video': 0, 'vr': 1, 'ar': 2, 
@@ -79,7 +79,7 @@ class KTDataReader():
         self.unit_concepts = {}
         
         for unt_uid, cpt_list in unt_cpts.items():
-            if unt_uid in self.untqus_uid:
+            if unt_uid in self.qusunt_uid:
                 valid_cpts = [cpt for cpt in cpt_list if cpt in self.cpt_uid]
                 if valid_cpts:
                     self.unit_concepts[unt_uid] = valid_cpts
@@ -152,7 +152,7 @@ class KTDataReader():
             
             # ID映射
             'lrn_uid': self.lrn_uid,
-            'untqus_uid': self.untqus_uid,
+            'qusunt_uid': self.qusunt_uid,
             'cpt_uid': self.cpt_uid,
         }
     
@@ -169,7 +169,7 @@ if __name__ == '__main__':
     
     print("数据统计信息:")
     print(f"学习者数量: {len(kt_data['lrn_uid'])}")
-    print(f"学习单元+题目数量: {len(kt_data['untqus_uid'])}")
+    print(f"学习单元+题目数量: {len(kt_data['qusunt_uid'])}")
     print(f"知识点数量: {len(kt_data['cpt_uid'])}")
     print(f"学习单元类型数量: {len(kt_data['unit_types'])}")
     print(f"题目-知识点映射数量: {len(kt_data['question_concepts'])}")
