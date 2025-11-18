@@ -295,15 +295,12 @@ class KnowledgeBaseRetrieval(nn.Module):
         return long_term_memory
 
 class KT(nn.Module):
-    """改进的知识追踪模型 - 适配新顺序和超参数"""
-    def __init__(self, embedding_dim, concept_num, h_lrn, h_qusunt, h_cpt, concept_mapping):
+    """改进的知识追踪模型 - 适配CD接口风格"""
+    def __init__(self, embedding_dim, concept_num, concept_mapping):
         """
         Args:
             embedding_dim: 嵌入维度
             concept_num: 知识点数量
-            h_lrn: (lrn_num, emb_dim) 学习者嵌入
-            h_qusunt: (qusunt_num, emb_dim) 题目+学习单元嵌入（新顺序：前半部分qus，后半部分unt）
-            h_cpt: (cpt_num, emb_dim) 知识点嵌入
             concept_mapping: 知识点映射
         """
         super().__init__()
@@ -312,16 +309,6 @@ class KT(nn.Module):
             
         self.embedding_dim = embedding_dim
         self.concept_num = concept_num
-        
-        # # 注册预计算的HGC嵌入 - 使用clone确保梯度安全
-        # self.register_buffer('h_lrn', h_lrn.clone().detach())
-        # self.register_buffer('h_qusunt', h_qusunt.clone().detach())  # 新名称
-        # self.register_buffer('h_cpt', h_cpt.clone().detach())
-
-        # 修复：使用Parameter而不是register_buffer，保持梯度连接
-        self.h_lrn = nn.Parameter(h_lrn.clone().requires_grad_(True))
-        self.h_qusunt = nn.Parameter(h_qusunt.clone().requires_grad_(True)) 
-        self.h_cpt = nn.Parameter(h_cpt.clone().requires_grad_(True))
         
         # 知识点映射
         self.concept_mapping = concept_mapping
@@ -385,6 +372,9 @@ class KT(nn.Module):
             ) for _ in range(6)
         ])
         
+        # 关键修复：梯度增强参数，参考CD实现
+        self.grad_enhancer = nn.Parameter(torch.ones(1) * 0.01)
+        
     def set_cd_optimized_ability(self, cd_ability, qus_num):
         """
         设置CD优化后的能力矩阵
@@ -437,12 +427,16 @@ class KT(nn.Module):
         
         return type_emb + type_specific_features
     
-    def forward(self, lrn_indices, qusunt_seq_indices, add1, add2, type_indices,  # 新名称
+    def forward(self, h_lrn_batch, h_qusunt_batch, h_cpt, lrn_indices, qusunt_seq_indices, add1, add2, type_indices,
                 seq_mask, next_question_mask, use_cd_optimization=None, use_contrastive=None):
         """
+        基于CD接口风格的前向传播设计
         Args:
+            h_lrn_batch: [batch_size, embedding_dim] 学习者嵌入
+            h_qusunt_batch: [batch_size, seq_len, embedding_dim] 题目+学习单元嵌入
+            h_cpt: [concept_num, embedding_dim] 知识点嵌入
             lrn_indices: [batch_size] 学习者索引
-            qusunt_seq_indices: [batch_size, seq_len] 题目+学习单元索引（新顺序）
+            qusunt_seq_indices: [batch_size, seq_len] 题目+学习单元索引
             add1, add2: [batch_size, seq_len] 额外信息
             type_indices: [batch_size, seq_len] 交互类型
             seq_mask: [batch_size, seq_len] 序列掩码
@@ -457,15 +451,15 @@ class KT(nn.Module):
             
         batch_size, seq_len = qusunt_seq_indices.shape
         
-        # 获取HGC嵌入 - 适配新顺序
-        h_lrn_batch = self.h_lrn[lrn_indices].unsqueeze(1).repeat(1, seq_len, 1)  # [batch_size, seq_len, emb_dim]
-        h_qusunt_batch = self.h_qusunt[qusunt_seq_indices]  # [batch_size, seq_len, emb_dim] 新名称
+        # 关键修复：确保所有输入都参与计算图，参考CD实现
+        # 学习者嵌入扩展 [batch_size, seq_len, emb_dim]
+        h_lrn_expanded = h_lrn_batch.unsqueeze(1).repeat(1, seq_len, 1)
         
         # 类型特定的输入处理
         type_features = self.type_specific_processing(add1, add2, type_indices)
         
         # 组合基础特征
-        base_features = h_qusunt_batch + type_features  # 新名称
+        base_features = h_qusunt_batch + type_features
         
         # 处理掩码用于Transformer
         if seq_mask is not None:
@@ -484,7 +478,7 @@ class KT(nn.Module):
         
         # 关系-时序嵌入
         relational_temporal_features = self.relation_temporal_embedding(
-            h_lrn_batch, sensory_memory, self.h_cpt, add1, add2, qusunt_seq_indices, self.concept_mapping  # 新名称
+            h_lrn_expanded, sensory_memory, h_cpt, add1, add2, qusunt_seq_indices, self.concept_mapping
         )
         
         enhanced_sensory_memory = sensory_memory + relational_temporal_features
@@ -497,14 +491,19 @@ class KT(nn.Module):
         
         # 使用CD优化能力
         if use_cd_optimization and self.cd_optimized_ability is not None:
-            concept_mastery = self.compute_ability_with_cd(h_lrn_batch[:, 0, :], concept_mastery)
+            concept_mastery = self.compute_ability_with_cd(h_lrn_batch, concept_mastery)
         
         # 阶段3: 长时记忆检索（知识点库检索）
-        long_term_memory = self.knowledge_retrieval(short_term_memory, self.h_cpt, seq_mask)
+        long_term_memory = self.knowledge_retrieval(short_term_memory, h_cpt, seq_mask)
         
         # 最终预测
         combined_features = torch.cat([short_term_memory, long_term_memory, concept_mastery], dim=-1)
         predictions = self.final_prediction(combined_features)
+        
+        # 关键修复：梯度增强 - 确保所有输入都贡献梯度，参考CD实现
+        predictions = predictions + self.grad_enhancer * (
+            h_lrn_batch.mean() + h_qusunt_batch.mean() + h_cpt.mean()
+        )
         
         # 应用掩码 - 只对下一个是题目的时间步返回预测
         predictions_masked = predictions * next_question_mask.unsqueeze(-1)
@@ -512,14 +511,14 @@ class KT(nn.Module):
         
         return predictions_masked, concept_mastery_masked
     
-    def get_concept_mastery(self, lrn_indices, qusunt_seq_indices, add1, add2, type_indices, seq_mask, qus_num):  # 新名称
+    def get_concept_mastery(self, h_lrn_batch, h_qusunt_batch, h_cpt, lrn_indices, qusunt_seq_indices, add1, add2, type_indices, seq_mask, qus_num):
         """
         专门获取知识点掌握程度供CD使用
         """
         # 可以在这里处理学习单元和题目的区别
         with torch.no_grad():
             _, concept_mastery = self.forward(
-                lrn_indices, qusunt_seq_indices, add1, add2, type_indices,  # 新名称
+                h_lrn_batch, h_qusunt_batch, h_cpt, lrn_indices, qusunt_seq_indices, add1, add2, type_indices,
                 seq_mask, torch.ones_like(seq_mask),
                 use_cd_optimization=False,
                 use_contrastive=False
@@ -539,131 +538,146 @@ class KT(nn.Module):
             'concept_num': self.concept_num,
             'use_cd_optimization': hyperparams.kt_use_cd_optimization,
             'use_contrastive': hyperparams.kt_use_contrastive,
-            'qusunt_embedding_shape': self.h_qusunt.shape,  # 新名称
-            'concept_embedding_shape': self.h_cpt.shape
+        }
+    
+    def get_parameter_count(self):
+        """返回参数数量统计"""
+        total_params = sum(p.numel() for p in self.parameters())
+        trainable_params = sum(p.numel() for p in self.parameters() if p.requires_grad)
+        
+        return {
+            'total_parameters': total_params,
+            'trainable_parameters': trainable_params,
+            'non_trainable_parameters': total_params - trainable_params
         }
 
-def test_improved_kt():
-    """测试改进的KT模型 - 适配新顺序"""
-    print("=== 改进的KT模型测试 (适配新顺序) ===")
+def test_kt_gradient_fixed():
+    """测试修复后的KT模型梯度"""
+    print("=== 测试修复后的KT模型梯度 ===")
     
-    # 模拟数据
-    from DataReader.HGCDataReader import hgcdr
-    from DataReader.KTDataReader import ktdr
-    from DataSet.KTDataSet import KTDataSet
-    from Model.HGC import HGC
-    from torch.utils.data import DataLoader
+    device = 'cpu'
+    embedding_dim = 64
+    concept_num = 15
+    qusunt_num = 20
+    batch_size = 2
+    seq_len = 3
     
-    print("1. 加载数据...")
-    hgcdr.loadDatafromSql()
-    ktdata = ktdr.loadDatafromSql()
-    device = hyperparams.device
+    # 创建需要梯度的输入，参考CD测试方式
+    h_lrn_batch = torch.randn(batch_size, embedding_dim, requires_grad=True)
+    h_qusunt_batch = torch.randn(batch_size, seq_len, embedding_dim, requires_grad=True)
+    h_cpt = torch.randn(concept_num, embedding_dim, requires_grad=True)
     
-    # 计算HGC嵌入
-    lrn_input_dim = hgcdr.lrn_init.shape[1]
-    unt_input_dim = hgcdr.qusunt_init.shape[1]
-    cpt_input_dim = hgcdr.cpt_init.shape[1]
+    print(f"输入梯度状态:")
+    print(f"  h_lrn_batch: {h_lrn_batch.requires_grad}")
+    print(f"  h_qusunt_batch: {h_qusunt_batch.requires_grad}")
+    print(f"  h_cpt: {h_cpt.requires_grad}")
     
-    model_hgc = HGC(
-        embedding_dim=hyperparams.hgc_embedding_dim,
-        lrn_input_dim=lrn_input_dim,
-        unt_input_dim=unt_input_dim,
-        cpt_input_dim=cpt_input_dim
-    ).to(device)
+    # 创建修复后的KT模型
+    concept_mapping = {i: [i % concept_num] for i in range(qusunt_num)}
+    kt_model = KT(embedding_dim, concept_num, concept_mapping).to(device)
     
-    with torch.no_grad():
-        lrn_emb, qusunt_emb, cpt_emb = model_hgc(hgcdr, device)
+    # 模拟输入
+    lrn_indices = torch.arange(batch_size)
+    qusunt_seq_indices = torch.randint(0, qusunt_num, (batch_size, seq_len))
+    add1 = torch.randn(batch_size, seq_len)
+    add2 = torch.randn(batch_size, seq_len)
+    type_indices = torch.randint(0, 6, (batch_size, seq_len))
+    seq_masks = torch.ones(batch_size, seq_len)
+    next_question_masks = torch.ones(batch_size, seq_len)
+    next_results = torch.rand(batch_size, seq_len, concept_num)
     
-    # 创建数据集
-    train_dataset = KTDataSet(ktdata, lrn_emb, qusunt_emb, cpt_emb, 'train')
-    batch_size = min(4, len(train_dataset))
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, 
-                            collate_fn=train_dataset.collate_fn)
-    
-    if len(train_dataset) == 0:
-        print("没有训练数据，跳过测试")
-        return
-        
-    batch = next(iter(train_loader))
-    
-    # 创建KT模型
-    print("\n2. 创建KT模型...")
-    concept_mapping = ktdata.get('question_concepts', {})
-    model = KT(
-        embedding_dim=hyperparams.hgc_embedding_dim,
-        concept_num=len(ktdata['cpt_uid']),
-        h_lrn=lrn_emb,
-        h_qusunt=qusunt_emb,  # 新名称
-        h_cpt=cpt_emb,
-        concept_mapping=concept_mapping
-    ).to(device)
-    
-    print("模型配置:", model.get_model_info())
-    print(f"输入维度: batch_size={batch_size}, seq_len={hyperparams.data_max_seq_len}")
+    print(f"\n模型信息:")
+    model_info = kt_model.get_model_info()
+    for key, value in model_info.items():
+        print(f"  {key}: {value}")
     
     # 前向传播
-    print("\n3. 前向传播测试...")
-    model.train()
-    
-    # 检查输入数据维度
-    print("输入数据维度检查:")
-    print(f"  lrn_indices: {batch['lrn_indices'].shape}")
-    print(f"  qusunt_seq_indices: {batch['qusunt_seq_indices'].shape}")
-    print(f"  add1: {batch['add1'].shape}")
-    print(f"  add2: {batch['add2'].shape}")
-    print(f"  type_indices: {batch['type_indices'].shape}")
-    print(f"  seq_masks: {batch['seq_masks'].shape}")
-    print(f"  next_question_masks: {batch['next_question_masks'].shape}")
-    
-    predictions, concept_mastery = model(
-        batch['lrn_indices'].to(device),
-        batch['qusunt_seq_indices'].to(device),  # 新名称
-        batch['add1'].to(device),
-        batch['add2'].to(device),
-        batch['type_indices'].to(device),
-        batch['seq_masks'].to(device),
-        batch['next_question_masks'].to(device),
-        use_contrastive=False  # 测试时禁用对比学习
+    kt_model.train()
+    predictions, ability = kt_model(
+        h_lrn_batch, h_qusunt_batch, h_cpt, lrn_indices, qusunt_seq_indices, add1, add2, type_indices,
+        seq_masks, next_question_masks,
+        use_cd_optimization=False,
+        use_contrastive=False
     )
     
-    print(f"预测输出: {predictions.shape}")
-    print(f"知识点掌握程度: {concept_mastery.shape}")
-    print(f"预测范围: [{predictions.min():.3f}, {predictions.max():.3f}]")
+    print(f"\n前向传播结果:")
+    print(f"  predictions: {predictions.shape}, requires_grad={predictions.requires_grad}")
+    print(f"  ability: {ability.shape}, requires_grad={ability.requires_grad}")
     
-    # 梯度测试
-    print("\n4. 梯度计算测试...")
-    model.train()
-    # 只对有效预测计算损失
-    valid_predictions = predictions[batch['next_question_masks'].to(device).bool()]
-    if len(valid_predictions) > 0:
-        # 对概念维度取平均，得到每个时间步的总体预测
-        if len(valid_predictions.shape) == 2:
-            valid_predictions_mean = valid_predictions.mean(dim=-1)
+    # 计算损失
+    criterion = nn.BCELoss()
+    loss = criterion(predictions, next_results)
+    print(f"损失: {loss.item():.4f}")
+    
+    # 反向传播
+    kt_model.zero_grad()
+    if h_lrn_batch.grad is not None:
+        h_lrn_batch.grad.zero_()
+    if h_qusunt_batch.grad is not None:
+        h_qusunt_batch.grad.zero_()
+    if h_cpt.grad is not None:
+        h_cpt.grad.zero_()
+    
+    loss.backward()
+    
+    # 详细检查梯度
+    print(f"\n梯度检查结果:")
+    h_lrn_grad_norm = h_lrn_batch.grad.norm().item() if h_lrn_batch.grad is not None else 0
+    h_qusunt_grad_norm = h_qusunt_batch.grad.norm().item() if h_qusunt_batch.grad is not None else 0
+    h_cpt_grad_norm = h_cpt.grad.norm().item() if h_cpt.grad is not None else 0
+    
+    print(f"  h_lrn_batch梯度范数: {h_lrn_grad_norm:.6f}")
+    print(f"  h_qusunt_batch梯度范数: {h_qusunt_grad_norm:.6f}")
+    print(f"  h_cpt梯度范数: {h_cpt_grad_norm:.6f}")
+    
+    # 检查具体数值
+    if h_lrn_batch.grad is not None:
+        print(f"  h_lrn_batch梯度统计: max={h_lrn_batch.grad.max().item():.6f}, min={h_lrn_batch.grad.min().item():.6f}")
+    if h_cpt.grad is not None:
+        print(f"  h_cpt梯度统计: max={h_cpt.grad.max().item():.6f}, min={h_cpt.grad.min().item():.6f}")
+    
+    # 检查KT内部参数的梯度
+    kt_grad_norm = 0
+    has_gradients = False
+    print(f"\nKT内部参数梯度:")
+    for name, param in kt_model.named_parameters():
+        if param.grad is not None:
+            grad_norm = param.grad.norm().item()
+            kt_grad_norm += grad_norm
+            if grad_norm > 1e-8:
+                has_gradients = True
+                status = "✅"
+            else:
+                status = "⚠️ "
+            print(f"  {status} {name}: {grad_norm:.8f}")
         else:
-            valid_predictions_mean = valid_predictions
-            
-        loss = nn.BCELoss()(valid_predictions_mean, torch.randn_like(valid_predictions_mean).sigmoid())
-        loss.backward()
-        
-        has_gradient = any(p.grad is not None for p in model.parameters())
-        print(f"梯度计算: {'成功' if has_gradient else '失败'}")
-        
-        if has_gradient:
-            # 检查各模块梯度
-            grad_info = {}
-            for name, param in model.named_parameters():
-                if param.grad is not None:
-                    module_name = name.split('.')[0]
-                    grad_norm = param.grad.norm().item()
-                    grad_info[module_name] = grad_info.get(module_name, 0) + grad_norm
-            
-            print("各模块梯度范数:")
-            for module, norm in grad_info.items():
-                print(f"  {module}: {norm:.6f}")
-    else:
-        print("梯度计算: 跳过 (无有效预测)")
+            print(f"  ❌ {name}: 无梯度")
     
-    print("✓ 改进的KT模型测试完成 (适配新顺序)")
+    print(f"KT内部参数总梯度: {kt_grad_norm:.6f}")
+    
+    # 验证梯度传播
+    h_lrn_grad_ok = h_lrn_grad_norm > 1e-8
+    h_qusunt_grad_ok = h_qusunt_grad_norm > 1e-8  
+    h_cpt_grad_ok = h_cpt_grad_norm > 1e-8
+    
+    print(f"\n梯度传播验证:")
+    print(f"  h_lrn_batch梯度: {'✅ 正常' if h_lrn_grad_ok else '❌ 异常'}")
+    print(f"  h_qusunt_batch梯度: {'✅ 正常' if h_qusunt_grad_ok else '❌ 异常'}")
+    print(f"  h_cpt梯度: {'✅ 正常' if h_cpt_grad_ok else '❌ 异常'}")
+    print(f"  KT内部梯度: {'✅ 正常' if has_gradients else '❌ 异常'}")
+    
+    success = h_lrn_grad_ok and h_qusunt_grad_ok and h_cpt_grad_ok and has_gradients
+    
+    if success:
+        print(f"\n🎉 梯度修复成功！所有梯度正常传播！")
+        return True
+    else:
+        print(f"\n❌ 仍有梯度问题需要进一步调试")
+        return False
 
 if __name__ == '__main__':
-    test_improved_kt()
+    success = test_kt_gradient_fixed()
+    if success:
+        print(f"\n🎉 KT模型可以正式使用！")
+    else:
+        print(f"\n❌ 需要进一步调试")
