@@ -1,2 +1,0 @@
-lastTrainingTime=2025-06-21 13:12:11
-modelVersion=v1.0.0

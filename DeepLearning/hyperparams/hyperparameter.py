@@ -35,7 +35,6 @@ class HyperParameters:
         #     self.device = torch.device('cpu')
         #     self.device_name = 'cpu'
         #     print("使用设备: CPU")
-        
         self.device = torch.device('cpu')
         self.device_name = 'cpu'
     
@@ -121,7 +120,15 @@ class HyperParameters:
     
     def _setup_training_params(self):
         """训练超参数"""
-        # 通用训练配置
+        # 训练轮次配置
+        self.train_total_epochs = 5  # 总训练轮次
+        self.train_warmup_epochs = 2  # 预热轮次
+        
+        # 批次配置
+        self.train_batch_size = 4     # 小批次训练
+        self.train_eval_batch_size = 8
+        
+        # 优化器配置
         self.train_learning_rate = 0.001
         self.train_weight_decay = 1e-5
         self.train_beta1 = 0.9
@@ -130,7 +137,6 @@ class HyperParameters:
         
         # 学习率调度
         self.train_lr_scheduler = 'cosine'
-        self.train_warmup_epochs = 5
         self.train_min_lr = 1e-6
         
         # 早停配置
@@ -140,6 +146,10 @@ class HyperParameters:
         # 梯度配置
         self.train_grad_clip = 1.0
         self.train_accumulation_steps = 1
+        
+        # 模型保存配置
+        self.train_save_dir = 'PT'
+        self.train_save_interval = 2  # 每隔多少轮保存一次
     
     def get_hgc_params(self):
         """获取HGC相关参数"""
@@ -202,18 +212,23 @@ class HyperParameters:
     def get_training_params(self):
         """获取训练相关参数"""
         return {
+            'total_epochs': self.train_total_epochs,
+            'warmup_epochs': self.train_warmup_epochs,
+            'batch_size': self.train_batch_size,
+            'eval_batch_size': self.train_eval_batch_size,
             'learning_rate': self.train_learning_rate,
             'weight_decay': self.train_weight_decay,
             'beta1': self.train_beta1,
             'beta2': self.train_beta2,
             'epsilon': self.train_epsilon,
             'lr_scheduler': self.train_lr_scheduler,
-            'warmup_epochs': self.train_warmup_epochs,
             'min_lr': self.train_min_lr,
             'patience': self.train_patience,
             'delta': self.train_delta,
             'grad_clip': self.train_grad_clip,
-            'accumulation_steps': self.train_accumulation_steps
+            'accumulation_steps': self.train_accumulation_steps,
+            'save_dir': self.train_save_dir,
+            'save_interval': self.train_save_interval
         }
     
     def summary(self):
@@ -222,10 +237,11 @@ class HyperParameters:
         print("超参数配置摘要")
         print("=" * 50)
         print(f"设备: {self.device_name}")
+        print(f"总训练轮次: {self.train_total_epochs}")
+        print(f"批次大小: {self.train_batch_size}")
         print(f"嵌入维度: {self.hgc_embedding_dim}")
-        print(f"最大序列长度: {self.data_max_seq_len}")
-        print(f"批次大小: {self.data_batch_size}")
         print(f"学习率: {self.train_learning_rate}")
+        print(f"模型保存目录: {self.train_save_dir}")
         print("=" * 50)
 
 # 创建全局实例
@@ -240,8 +256,3 @@ if __name__ == '__main__':
     
     # 打印配置摘要
     hyperparams.summary()
-    
-    # 测试参数获取
-    print("\nHGC参数:", hyperparams.get_hgc_params())
-    print("\nCD参数:", hyperparams.get_cd_params())
-    print("\nKT参数:", hyperparams.get_kt_params())
