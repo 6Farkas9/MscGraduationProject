@@ -1,6 +1,8 @@
-# hyperparams/hyperparameter.py
-import torch
+import sys
 import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import torch
 
 class HyperParameters:
     """
@@ -148,7 +150,12 @@ class HyperParameters:
         self.train_accumulation_steps = 1
         
         # 模型保存配置
-        self.train_save_dir = 'PT'
+        # 获取项目根目录
+        root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        # 获取PT文件夹路径
+        pt_folder_path = os.path.join(root_dir, 'PT')
+        self.train_save_dir = pt_folder_path
         self.train_save_interval = 2  # 每隔多少轮保存一次
     
     def get_hgc_params(self):
