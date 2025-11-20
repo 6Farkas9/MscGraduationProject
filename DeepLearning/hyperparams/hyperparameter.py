@@ -123,12 +123,15 @@ class HyperParameters:
     def _setup_training_params(self):
         """训练超参数"""
         # 训练轮次配置
-        self.train_total_epochs = 5  # 总训练轮次
-        self.train_warmup_epochs = 2  # 预热轮次
+        self.train_total_epochs = 3  # 总训练轮次
+        self.train_warmup_epochs = 1  # 预热轮次
+
+        # 训练batch数量
+        self.max_batch_size = 2
         
         # 批次配置
-        self.train_batch_size = 4     # 小批次训练
-        self.train_eval_batch_size = 8
+        self.train_batch_size = 2     # 小批次训练
+        self.train_eval_batch_size = 2
         
         # 优化器配置
         self.train_learning_rate = 0.001

@@ -295,7 +295,7 @@ class KnowledgeBaseRetrieval(nn.Module):
         return long_term_memory
 
 class KT(nn.Module):
-    """改进的知识追踪模型 - 适配CD接口风格"""
+    """改进的知识追踪模型 - 适配新的数据结构"""
     def __init__(self, embedding_dim, concept_num, concept_mapping):
         """
         Args:
@@ -428,9 +428,9 @@ class KT(nn.Module):
         return type_emb + type_specific_features
     
     def forward(self, h_lrn_batch, h_qusunt_batch, h_cpt, lrn_indices, qusunt_seq_indices, add1, add2, type_indices,
-                seq_mask, next_question_mask, use_cd_optimization=None, use_contrastive=None):
+                seq_mask, prediction_masks, use_cd_optimization=None, use_contrastive=None):
         """
-        基于CD接口风格的前向传播设计
+        基于新数据结构的前向传播设计
         Args:
             h_lrn_batch: [batch_size, embedding_dim] 学习者嵌入
             h_qusunt_batch: [batch_size, seq_len, embedding_dim] 题目+学习单元嵌入
@@ -440,7 +440,7 @@ class KT(nn.Module):
             add1, add2: [batch_size, seq_len] 额外信息
             type_indices: [batch_size, seq_len] 交互类型
             seq_mask: [batch_size, seq_len] 序列掩码
-            next_question_mask: [batch_size, seq_len] 下一个题目掩码
+            prediction_masks: [batch_size, seq_len] 预测掩码（新字段）
             use_cd_optimization: 是否使用CD优化
             use_contrastive: 是否使用对比学习
         """
@@ -505,8 +505,8 @@ class KT(nn.Module):
             h_lrn_batch.mean() + h_qusunt_batch.mean() + h_cpt.mean()
         )
         
-        # 应用掩码 - 只对下一个是题目的时间步返回预测
-        predictions_masked = predictions * next_question_mask.unsqueeze(-1)
+        # 应用掩码 - 只对有预测掩码的时间步返回预测
+        predictions_masked = predictions * prediction_masks.unsqueeze(-1)
         concept_mastery_masked = concept_mastery * seq_mask.unsqueeze(-1)
         
         return predictions_masked, concept_mastery_masked
@@ -519,7 +519,7 @@ class KT(nn.Module):
         with torch.no_grad():
             _, concept_mastery = self.forward(
                 h_lrn_batch, h_qusunt_batch, h_cpt, lrn_indices, qusunt_seq_indices, add1, add2, type_indices,
-                seq_mask, torch.ones_like(seq_mask),
+                seq_mask, torch.ones_like(seq_mask),  # 使用全1掩码获取所有位置的能力
                 use_cd_optimization=False,
                 use_contrastive=False
             )
@@ -576,14 +576,14 @@ def test_kt_gradient_fixed():
     concept_mapping = {i: [i % concept_num] for i in range(qusunt_num)}
     kt_model = KT(embedding_dim, concept_num, concept_mapping).to(device)
     
-    # 模拟输入
+    # 模拟输入 - 适配新数据结构
     lrn_indices = torch.arange(batch_size)
     qusunt_seq_indices = torch.randint(0, qusunt_num, (batch_size, seq_len))
     add1 = torch.randn(batch_size, seq_len)
     add2 = torch.randn(batch_size, seq_len)
     type_indices = torch.randint(0, 6, (batch_size, seq_len))
     seq_masks = torch.ones(batch_size, seq_len)
-    next_question_masks = torch.ones(batch_size, seq_len)
+    prediction_masks = torch.ones(batch_size, seq_len)  # 新的预测掩码
     next_results = torch.rand(batch_size, seq_len, concept_num)
     
     print(f"\n模型信息:")
@@ -595,7 +595,7 @@ def test_kt_gradient_fixed():
     kt_model.train()
     predictions, ability = kt_model(
         h_lrn_batch, h_qusunt_batch, h_cpt, lrn_indices, qusunt_seq_indices, add1, add2, type_indices,
-        seq_masks, next_question_masks,
+        seq_masks, prediction_masks,  # 使用新的prediction_masks参数
         use_cd_optimization=False,
         use_contrastive=False
     )

@@ -27,6 +27,27 @@ class CDDataReader():
     def getLrnQusData(self):
         self.lrn_qus_uids = cdrepo.getLrnQus()
 
+    def getCompleteData(self):
+        """获取完整的CD数据 - 不加筛选，不拆分训练测试集"""
+        interactions = self.lrn_qus_uids
+        
+        # 按学习者分组，保留所有数据
+        complete_data = defaultdict(lambda: [[], []])
+        
+        for lrn_uid, qus_uid, result in interactions:
+            if lrn_uid not in self.lrn_uid or qus_uid not in self.qus_uid:
+                continue
+            complete_data[lrn_uid][0].append(qus_uid)
+            complete_data[lrn_uid][1].append(result)
+        
+        # 统计信息
+        total_records = sum(len(data[0]) for data in complete_data.values())
+        total_learners = len(complete_data)
+        
+        print(f"完整CD数据统计: {total_learners}个学习者, {total_records}条记录")
+        
+        return complete_data
+
     def getTrainTestData(self, train_ratio=0.8):
         """划分训练集和测试集 - 按每个学习者划分，保持时间顺序"""
         interactions = self.lrn_qus_uids
@@ -103,4 +124,7 @@ if __name__ == '__main__':
     # print(test_data)
     cddata = cddr.loadDatafromSql()
     print(cddata)
-
+    
+    # 测试完整数据函数
+    complete_data = cddr.getCompleteData()
+    print(f"完整CD数据学习者数量: {len(complete_data)}")

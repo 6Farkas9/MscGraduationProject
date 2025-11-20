@@ -234,7 +234,7 @@ class ComprehensiveTester:
         print(f"   训练集: {train_stats['total_learners']}个学习者, {train_stats['total_records']}条记录")
         print(f"   测试集: {test_stats['total_learners']}个学习者, {test_stats['total_records']}条记录")
         
-        # 6. 初始化KT模型
+        # 6. 初始化KT模型 - 适配新接口
         print("6. 初始化KT模型...")
         embedding_dim = hyperparams.hgc_embedding_dim
         concept_num = self.train_dataset.cpt_num
@@ -248,10 +248,8 @@ class ComprehensiveTester:
         
         print(f"   KT模型配置:")
         kt_model_info = self.model_kt.get_model_info()
-        print(f"     嵌入维度: {kt_model_info['embedding_dim']}")
-        print(f"     知识点数: {kt_model_info['concept_num']}")
-        print(f"     使用CD优化: {kt_model_info['use_cd_optimization']}")
-        print(f"     使用对比学习: {kt_model_info['use_contrastive']}")
+        for key, value in kt_model_info.items():
+            print(f"     {key}: {value}")
         
         kt_param_count = self.model_kt.get_parameter_count()
         print(f"     总参数: {kt_param_count['total_parameters']:,}")
@@ -291,6 +289,43 @@ class ComprehensiveTester:
         embeddings = self.model_hgc(hgcdr, self.device, return_dict=False)
         return embeddings
     
+    def prepare_kt_inputs(self, batch, lrn_emb, qusunt_emb, cpt_emb):
+        """准备KT模型输入数据 - 修复维度问题"""
+        # 将数据移动到设备
+        lrn_indices = batch['lrn_indices'].to(self.device)
+        qusunt_seq_indices = batch['qusunt_seq_indices'].to(self.device)
+        add1 = batch['add1'].to(self.device)
+        add2 = batch['add2'].to(self.device)
+        type_indices = batch['type_indices'].to(self.device)
+        seq_masks = batch['seq_masks'].to(self.device)
+        prediction_masks = batch['prediction_masks'].to(self.device)
+        next_results = batch['next_results'].to(self.device)
+        
+        # 获取当前批次的学习者嵌入
+        current_lrn_emb = lrn_emb[lrn_indices]  # [batch_size, embedding_dim]
+        
+        # 关键修复：正确获取学习单元嵌入
+        batch_size, seq_len = qusunt_seq_indices.shape
+        embedding_dim = qusunt_emb.shape[1]
+        
+        # 重塑qusunt_seq_indices以便索引
+        qusunt_indices_flat = qusunt_seq_indices.view(-1)
+        current_qusunt_emb = qusunt_emb[qusunt_indices_flat].view(batch_size, seq_len, embedding_dim)
+        
+        return {
+            'lrn_indices': lrn_indices,
+            'qusunt_seq_indices': qusunt_seq_indices,
+            'add1': add1,
+            'add2': add2,
+            'type_indices': type_indices,
+            'seq_masks': seq_masks,
+            'prediction_masks': prediction_masks,
+            'next_results': next_results,
+            'current_lrn_emb': current_lrn_emb,
+            'current_qusunt_emb': current_qusunt_emb,
+            'cpt_emb': cpt_emb
+        }
+    
     def train_step(self, batch, batch_idx, epoch):
         """单步训练 - 每步都重新计算HGC嵌入（带梯度）"""
         try:
@@ -300,43 +335,32 @@ class ComprehensiveTester:
             # 关键修改：每步都重新计算带梯度的HGC嵌入
             lrn_emb, qusunt_emb, cpt_emb = self.compute_hgc_embeddings_with_grad()
             
-            # 将数据移动到设备
-            lrn_indices = batch['lrn_indices'].to(self.device)
-            qusunt_seq_indices = batch['qusunt_seq_indices'].to(self.device)
-            add1 = batch['add1'].to(self.device)
-            add2 = batch['add2'].to(self.device)
-            type_indices = batch['type_indices'].to(self.device)
-            seq_masks = batch['seq_masks'].to(self.device)
-            next_question_masks = batch['next_question_masks'].to(self.device)
-            next_results = batch['next_results'].to(self.device)
-            
-            # 获取当前批次的学习者和题目嵌入
-            current_lrn_emb = lrn_emb[lrn_indices]  # [batch_size, embedding_dim]
-            current_qusunt_emb = qusunt_emb[qusunt_seq_indices]  # [batch_size, seq_len, embedding_dim]
+            # 准备KT输入数据
+            kt_inputs = self.prepare_kt_inputs(batch, lrn_emb, qusunt_emb, cpt_emb)
             
             # 前向传播
             self.optimizer_hgc.zero_grad()
             self.optimizer_kt.zero_grad()
             
-            # KT前向传播
+            # KT前向传播 - 使用新接口
             predictions, concept_mastery = self.model_kt(
-                h_lrn_batch=current_lrn_emb,
-                h_qusunt_batch=current_qusunt_emb,
-                h_cpt=cpt_emb,
-                lrn_indices=lrn_indices,
-                qusunt_seq_indices=qusunt_seq_indices,
-                add1=add1,
-                add2=add2,
-                type_indices=type_indices,
-                seq_mask=seq_masks,
-                next_question_mask=next_question_masks,
+                h_lrn_batch=kt_inputs['current_lrn_emb'],
+                h_qusunt_batch=kt_inputs['current_qusunt_emb'],
+                h_cpt=kt_inputs['cpt_emb'],
+                lrn_indices=kt_inputs['lrn_indices'],
+                qusunt_seq_indices=kt_inputs['qusunt_seq_indices'],
+                add1=kt_inputs['add1'],
+                add2=kt_inputs['add2'],
+                type_indices=kt_inputs['type_indices'],
+                seq_mask=kt_inputs['seq_masks'],
+                prediction_masks=kt_inputs['prediction_masks'],
                 use_cd_optimization=False,
                 use_contrastive=False
             )
             
-            # 计算损失
-            valid_predictions = predictions * next_question_masks.unsqueeze(-1)
-            valid_targets = next_results.unsqueeze(-1) * next_question_masks.unsqueeze(-1)
+            # 计算损失 - 使用新的掩码和标签
+            valid_predictions = predictions * kt_inputs['prediction_masks'].unsqueeze(-1)
+            valid_targets = kt_inputs['next_results'].unsqueeze(-1) * kt_inputs['prediction_masks'].unsqueeze(-1)
             
             # 对概念维度取平均
             if len(valid_predictions.shape) == 3:
@@ -347,7 +371,7 @@ class ComprehensiveTester:
                 valid_targets_mean = valid_targets
             
             # 只计算有有效预测的位置
-            valid_mask = next_question_masks.bool()
+            valid_mask = kt_inputs['prediction_masks'].bool()
             if valid_mask.any():
                 loss = self.criterion(
                     valid_predictions_mean[valid_mask], 
@@ -364,7 +388,7 @@ class ComprehensiveTester:
             self.gradient_monitor.record_parameters(self.model_kt, "KT")
             
             # 梯度裁剪
-            torch.nn.utils.clip_grad_norm_(self.model_hgc.parameters(), max_norm=0.5)  # 更小的裁剪值
+            torch.nn.utils.clip_grad_norm_(self.model_hgc.parameters(), max_norm=0.5)
             torch.nn.utils.clip_grad_norm_(self.model_kt.parameters(), max_norm=0.5)
             
             # 优化步骤 - 关键：同时更新HGC和KT
@@ -455,35 +479,26 @@ class ComprehensiveTester:
                     break
                     
                 try:
-                    lrn_indices = batch['lrn_indices'].to(self.device)
-                    qusunt_seq_indices = batch['qusunt_seq_indices'].to(self.device)
-                    add1 = batch['add1'].to(self.device)
-                    add2 = batch['add2'].to(self.device)
-                    type_indices = batch['type_indices'].to(self.device)
-                    seq_masks = batch['seq_masks'].to(self.device)
-                    next_question_masks = batch['next_question_masks'].to(self.device)
-                    next_results = batch['next_results'].to(self.device)
-                    
-                    current_lrn_emb = lrn_emb[lrn_indices]
-                    current_qusunt_emb = qusunt_emb[qusunt_seq_indices]
+                    # 准备KT输入数据
+                    kt_inputs = self.prepare_kt_inputs(batch, lrn_emb, qusunt_emb, cpt_emb)
                     
                     predictions, concept_mastery = self.model_kt(
-                        h_lrn_batch=current_lrn_emb,
-                        h_qusunt_batch=current_qusunt_emb,
-                        h_cpt=cpt_emb,
-                        lrn_indices=lrn_indices,
-                        qusunt_seq_indices=qusunt_seq_indices,
-                        add1=add1,
-                        add2=add2,
-                        type_indices=type_indices,
-                        seq_mask=seq_masks,
-                        next_question_mask=next_question_masks,
+                        h_lrn_batch=kt_inputs['current_lrn_emb'],
+                        h_qusunt_batch=kt_inputs['current_qusunt_emb'],
+                        h_cpt=kt_inputs['cpt_emb'],
+                        lrn_indices=kt_inputs['lrn_indices'],
+                        qusunt_seq_indices=kt_inputs['qusunt_seq_indices'],
+                        add1=kt_inputs['add1'],
+                        add2=kt_inputs['add2'],
+                        type_indices=kt_inputs['type_indices'],
+                        seq_mask=kt_inputs['seq_masks'],
+                        prediction_masks=kt_inputs['prediction_masks'],
                         use_cd_optimization=False,
                         use_contrastive=False
                     )
                     
-                    valid_predictions = predictions * next_question_masks.unsqueeze(-1)
-                    valid_targets = next_results.unsqueeze(-1) * next_question_masks.unsqueeze(-1)
+                    valid_predictions = predictions * kt_inputs['prediction_masks'].unsqueeze(-1)
+                    valid_targets = kt_inputs['next_results'].unsqueeze(-1) * kt_inputs['prediction_masks'].unsqueeze(-1)
                     
                     if len(valid_predictions.shape) == 3:
                         valid_predictions_mean = valid_predictions.mean(dim=-1)
@@ -492,7 +507,7 @@ class ComprehensiveTester:
                         valid_predictions_mean = valid_predictions
                         valid_targets_mean = valid_targets
                     
-                    valid_mask = next_question_masks.bool()
+                    valid_mask = kt_inputs['prediction_masks'].bool()
                     if valid_mask.any():
                         loss = self.criterion(
                             valid_predictions_mean[valid_mask], 
