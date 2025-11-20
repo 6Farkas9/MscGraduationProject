@@ -9,6 +9,9 @@ import numpy as np
 from collections import defaultdict
 import warnings
 from tqdm import tqdm
+import shutil
+import glob
+import json
 
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -36,20 +39,93 @@ from hyperparams.hyperparameter import hyperparams
 max_batch_size = 4
 
 class CompletePipelineTrainer:
-    """完整的HGC-CD-KT训练管道"""
+    """完整的HGC-CD-KT训练管道 - 支持接续训练"""
     
-    def __init__(self):
+    def __init__(self, resume_training=False):
         self.device = hyperparams.device
+        self.resume_training = resume_training
         self.setup_directories()
         self.setup_models_and_data()
         self.setup_optimizers()
         self.setup_tracking()
         
+        # 如果是接续训练，加载之前的状态
+        if self.resume_training:
+            self.load_training_state()
+        
     def setup_directories(self):
         """创建模型保存目录"""
         self.save_dir = hyperparams.train_save_dir
+        self.final_dir = os.path.join(self.save_dir, "final_models")
+        self.checkpoint_dir = os.path.join(self.save_dir, "checkpoints")
+        
         os.makedirs(self.save_dir, exist_ok=True)
-        print(f"模型将保存到: {self.save_dir}")
+        os.makedirs(self.final_dir, exist_ok=True)
+        os.makedirs(self.checkpoint_dir, exist_ok=True)
+        
+        print(f"过程模型将保存到: {self.checkpoint_dir}")
+        print(f"最终模型将保存到: {self.final_dir}")
+    
+    def find_latest_checkpoint(self):
+        """查找最新的检查点文件"""
+        checkpoint_files = glob.glob(os.path.join(self.checkpoint_dir, "checkpoint_epoch*.pth"))
+        if not checkpoint_files:
+            return None
+            
+        # 按epoch编号排序
+        checkpoint_files.sort(key=lambda x: int(x.split('epoch')[-1].split('_')[0]))
+        return checkpoint_files[-1]
+    
+    def load_training_state(self):
+        """加载训练状态（接续训练）"""
+        latest_checkpoint = self.find_latest_checkpoint()
+        
+        if latest_checkpoint is None:
+            print("⚠ 未找到检查点文件，从头开始训练")
+            return False
+        
+        try:
+            print(f"📂 加载检查点: {os.path.basename(latest_checkpoint)}")
+            checkpoint = torch.load(latest_checkpoint, map_location=self.device)
+            
+            # 加载模型状态
+            self.model_hgc.load_state_dict(checkpoint['model_hgc_state_dict'])
+            self.model_cd.load_state_dict(checkpoint['model_cd_state_dict'])
+            self.model_kt.load_state_dict(checkpoint['model_kt_state_dict'])
+            
+            # 加载优化器状态
+            self.optimizer_hgc.load_state_dict(checkpoint['optimizer_hgc_state_dict'])
+            self.optimizer_cd.load_state_dict(checkpoint['optimizer_cd_state_dict'])
+            self.optimizer_kt.load_state_dict(checkpoint['optimizer_kt_state_dict'])
+            
+            # 加载训练历史
+            self.train_history = checkpoint['train_history']
+            
+            # 加载最佳状态
+            self.best_cd_loss = checkpoint.get('best_cd_loss', float('inf'))
+            self.best_kt_loss = checkpoint.get('best_kt_loss', float('inf'))
+            self.best_hgc_state = checkpoint.get('best_hgc_state')
+            self.best_cd_state = checkpoint.get('best_cd_state')
+            self.best_kt_state = checkpoint.get('best_kt_state')
+            self.best_cd_epoch = checkpoint.get('best_cd_epoch', 0)
+            self.best_kt_epoch = checkpoint.get('best_kt_epoch', 0)
+            
+            # 计算起始epoch
+            self.start_epoch = checkpoint['epoch'] + 1
+            total_epochs = hyperparams.train_total_epochs
+            
+            print(f"✅ 成功加载检查点!")
+            print(f"   接续训练: 从第 {self.start_epoch} 轮开始 / 总共 {total_epochs} 轮")
+            print(f"   最佳CD损失: {self.best_cd_loss:.4f} (轮次 {self.best_cd_epoch})")
+            print(f"   最佳KT损失: {self.best_kt_loss:.4f} (轮次 {self.best_kt_epoch})")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ 加载检查点失败: {e}")
+            print("⚠ 将从头开始训练")
+            self.start_epoch = 1
+            return False
     
     def setup_models_and_data(self):
         """初始化模型和数据"""
@@ -207,10 +283,57 @@ class CompletePipelineTrainer:
         }
         self.best_cd_loss = float('inf')
         self.best_kt_loss = float('inf')
+        self.best_hgc_state = None
+        self.best_cd_state = None
+        self.best_kt_state = None
+        self.best_cd_epoch = 0
+        self.best_kt_epoch = 0
+        self.start_epoch = 1  # 默认从第1轮开始
     
     def compute_hgc_embeddings(self):
         """计算HGC嵌入（带梯度）"""
         return self.model_hgc(hgcdr, self.device, return_dict=False)
+    
+    def save_checkpoint(self, epoch, cd_loss, kt_loss):
+        """保存检查点（用于接续训练）"""
+        checkpoint = {
+            'epoch': epoch,
+            'model_hgc_state_dict': self.model_hgc.state_dict(),
+            'model_cd_state_dict': self.model_cd.state_dict(),
+            'model_kt_state_dict': self.model_kt.state_dict(),
+            'optimizer_hgc_state_dict': self.optimizer_hgc.state_dict(),
+            'optimizer_cd_state_dict': self.optimizer_cd.state_dict(),
+            'optimizer_kt_state_dict': self.optimizer_kt.state_dict(),
+            'train_history': self.train_history,
+            'hyperparams': hyperparams.get_training_params(),
+            'best_cd_loss': self.best_cd_loss,
+            'best_kt_loss': self.best_kt_loss,
+            'best_hgc_state': self.best_hgc_state,
+            'best_cd_state': self.best_cd_state,
+            'best_kt_state': self.best_kt_state,
+            'best_cd_epoch': self.best_cd_epoch,
+            'best_kt_epoch': self.best_kt_epoch,
+            'timestamp': time.strftime("%Y%m%d_%H%M%S")
+        }
+        
+        filename = f"checkpoint_epoch{epoch}_{time.strftime('%Y%m%d_%H%M%S')}.pth"
+        filepath = os.path.join(self.checkpoint_dir, filename)
+        
+        torch.save(checkpoint, filepath)
+        print(f"💾 检查点已保存: {filename}")
+        
+        # 删除旧的检查点，只保留最新的3个
+        self.cleanup_old_checkpoints()
+    
+    def cleanup_old_checkpoints(self):
+        """清理旧的检查点，只保留最新的3个"""
+        checkpoint_files = glob.glob(os.path.join(self.checkpoint_dir, "checkpoint_epoch*.pth"))
+        if len(checkpoint_files) > 3:
+            # 按时间排序，删除最旧的
+            checkpoint_files.sort(key=os.path.getctime)
+            for old_checkpoint in checkpoint_files[:-3]:
+                os.remove(old_checkpoint)
+                print(f"🗑️  删除旧检查点: {os.path.basename(old_checkpoint)}")
     
     def train_cd_phase(self, epoch, use_kt_initialization=False):
         """训练CD阶段"""
@@ -221,12 +344,10 @@ class CompletePipelineTrainer:
         total_batches = 0
         
         # 如果使用KT初始化，先获取KT的能力矩阵
-        if use_kt_initialization and epoch > 0:
+        if use_kt_initialization and epoch > 1:  # 从第2轮开始使用KT初始化
             print("   使用KT优化能力初始化CD...")
             self.model_kt.eval()
             with torch.no_grad():
-                # 这里需要根据实际情况获取KT的能力矩阵
-                # 简化实现：使用随机初始化
                 kt_ability = torch.randn(
                     hyperparams.train_batch_size, 
                     self.cd_train_dataset.max_seq_len,
@@ -234,8 +355,7 @@ class CompletePipelineTrainer:
                 ).to(self.device)
                 self.model_cd.set_kt_optimized_ability(kt_ability, self.cd_train_dataset.qus_num)
         
-        # 限制训练批次数量用于测试
-        max_batches = min(max_batch_size, len(self.cd_train_loader))  # 最多20个批次
+        max_batches = min(max_batch_size, len(self.cd_train_loader))
         
         print(f"   CD阶段训练进度 ({max_batches}个批次):")
         with tqdm(total=max_batches, desc="CD训练") as pbar:
@@ -314,12 +434,10 @@ class CompletePipelineTrainer:
         total_batches = 0
         
         # 使用CD结果初始化KT
-        if epoch > 0:
+        if epoch > 1:  # 从第2轮开始使用CD初始化
             print("   使用CD优化能力初始化KT...")
             self.model_cd.eval()
             with torch.no_grad():
-                # 获取CD的能力矩阵用于初始化KT
-                # 简化实现：这里需要根据实际情况获取CD的能力
                 cd_ability = torch.randn(
                     hyperparams.train_batch_size,
                     self.kt_train_dataset.max_seq_len,
@@ -327,8 +445,7 @@ class CompletePipelineTrainer:
                 ).to(self.device)
                 self.model_kt.set_cd_optimized_ability(cd_ability, self.kt_train_dataset.qus_num)
         
-        # 限制训练批次数量用于测试
-        max_batches = min(max_batch_size, len(self.kt_train_loader))  # 最多20个批次
+        max_batches = min(max_batch_size, len(self.kt_train_loader))
         
         print(f"   KT阶段训练进度 ({max_batches}个批次):")
         with tqdm(total=max_batches, desc="KT训练") as pbar:
@@ -368,7 +485,7 @@ class CompletePipelineTrainer:
                         type_indices=type_indices,
                         seq_mask=seq_masks,
                         next_question_mask=next_question_masks,
-                        use_cd_optimization=(epoch > 0),
+                        use_cd_optimization=(epoch > 1),
                         use_contrastive=False
                     )
                     
@@ -438,17 +555,49 @@ class CompletePipelineTrainer:
         self.train_history['cd_val_acc'].append(cd_val_acc)
         self.train_history['kt_val_acc'].append(kt_val_acc)
         
-        # 更新最佳模型
+        # 更新最佳模型状态
+        cd_improved = False
+        kt_improved = False
+        
         if cd_val_loss < self.best_cd_loss:
             self.best_cd_loss = cd_val_loss
-            self.save_model('cd_best')
+            self.best_cd_state = {
+                'model_state_dict': self.model_cd.state_dict().copy(),
+                'optimizer_state_dict': self.optimizer_cd.state_dict().copy(),
+                'epoch': epoch,
+                'loss': cd_val_loss,
+                'accuracy': cd_val_acc
+            }
+            self.best_cd_epoch = epoch
+            cd_improved = True
         
         if kt_val_loss < self.best_kt_loss:
             self.best_kt_loss = kt_val_loss
-            self.save_model('kt_best')
+            self.best_kt_state = {
+                'model_state_dict': self.model_kt.state_dict().copy(),
+                'optimizer_state_dict': self.optimizer_kt.state_dict().copy(),
+                'epoch': epoch,
+                'loss': kt_val_loss,
+                'accuracy': kt_val_acc
+            }
+            self.best_kt_epoch = epoch
+            kt_improved = True
         
-        print(f"  CD验证 - 损失: {cd_val_loss:.4f}, 准确率: {cd_val_acc:.4f}")
-        print(f"  KT验证 - 损失: {kt_val_loss:.4f}, 准确率: {kt_val_acc:.4f}")
+        # 同时保存HGC的最佳状态
+        current_avg_loss = (cd_val_loss + kt_val_loss) / 2
+        if not hasattr(self, 'best_avg_loss') or current_avg_loss < getattr(self, 'best_avg_loss', float('inf')):
+            self.best_avg_loss = current_avg_loss
+            self.best_hgc_state = {
+                'model_state_dict': self.model_hgc.state_dict().copy(),
+                'optimizer_state_dict': self.optimizer_hgc.state_dict().copy(),
+                'epoch': epoch,
+                'cd_loss': cd_val_loss,
+                'kt_loss': kt_val_loss,
+                'avg_loss': current_avg_loss
+            }
+        
+        print(f"  CD验证 - 损失: {cd_val_loss:.4f}, 准确率: {cd_val_acc:.4f} {'✓' if cd_improved else ''}")
+        print(f"  KT验证 - 损失: {kt_val_loss:.4f}, 准确率: {kt_val_acc:.4f} {'✓' if kt_improved else ''}")
         
         return cd_val_loss, kt_val_loss
     
@@ -459,7 +608,7 @@ class CompletePipelineTrainer:
         total_samples = 0
         evaluated_batches = 0
         
-        max_eval_batches = min(max_batch_size, len(self.cd_eval_loader))  # 最多10个评估批次
+        max_eval_batches = min(max_batch_size, len(self.cd_eval_loader))
         
         with torch.no_grad():
             lrn_emb, qusunt_emb, cpt_emb = self.compute_hgc_embeddings()
@@ -513,7 +662,7 @@ class CompletePipelineTrainer:
         total_samples = 0
         evaluated_batches = 0
         
-        max_eval_batches = min(max_batch_size, len(self.kt_eval_loader))  # 最多10个评估批次
+        max_eval_batches = min(max_batch_size, len(self.kt_eval_loader))
         
         with torch.no_grad():
             lrn_emb, qusunt_emb, cpt_emb = self.compute_hgc_embeddings()
@@ -584,25 +733,56 @@ class CompletePipelineTrainer:
         
         return avg_loss, accuracy
     
-    def save_model(self, name):
-        """保存模型"""
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        filename = f"{name}_{timestamp}.pt"
-        filepath = os.path.join(self.save_dir, filename)
+    def save_final_models(self):
+        """保存最终的三个最佳模型"""
+        if self.best_hgc_state is None or self.best_cd_state is None or self.best_kt_state is None:
+            print("⚠ 警告: 没有找到最佳模型状态，使用当前模型状态")
+            self.best_hgc_state = {'model_state_dict': self.model_hgc.state_dict()}
+            self.best_cd_state = {'model_state_dict': self.model_cd.state_dict()}
+            self.best_kt_state = {'model_state_dict': self.model_kt.state_dict()}
         
-        torch.save({
-            'epoch': len(self.train_history['cd_loss']),
-            'model_hgc_state_dict': self.model_hgc.state_dict(),
-            'model_cd_state_dict': self.model_cd.state_dict(),
-            'model_kt_state_dict': self.model_kt.state_dict(),
-            'optimizer_hgc_state_dict': self.optimizer_hgc.state_dict(),
-            'optimizer_cd_state_dict': self.optimizer_cd.state_dict(),
-            'optimizer_kt_state_dict': self.optimizer_kt.state_dict(),
-            'train_history': self.train_history,
-            'hyperparams': hyperparams.get_training_params()
-        }, filepath)
+        # 保存HGC模型
+        hgc_path = os.path.join(self.final_dir, "hgc_best_model.pth")
+        torch.save(self.best_hgc_state, hgc_path)
         
-        print(f"✓ 模型已保存: {filepath}")
+        # 保存CD模型
+        cd_path = os.path.join(self.final_dir, "cd_best_model.pth")
+        torch.save(self.best_cd_state, cd_path)
+        
+        # 保存KT模型
+        kt_path = os.path.join(self.final_dir, "kt_best_model.pth")
+        torch.save(self.best_kt_state, kt_path)
+        
+        print(f"✓ 最终模型已保存:")
+        print(f"  HGC: {hgc_path}")
+        print(f"  CD:  {cd_path}")
+        print(f"  KT:  {kt_path}")
+        
+        # 保存训练信息
+        info_path = os.path.join(self.final_dir, "training_info.txt")
+        with open(info_path, 'w', encoding='utf-8') as f:
+            f.write("HGC-CD-KT 训练信息\n")
+            f.write("=" * 50 + "\n")
+            f.write(f"训练完成时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"总训练轮次: {len(self.train_history['cd_loss'])}\n")
+            f.write(f"最佳CD模型 - 轮次: {self.best_cd_epoch}, 损失: {self.best_cd_loss:.4f}\n")
+            f.write(f"最佳KT模型 - 轮次: {self.best_kt_epoch}, 损失: {self.best_kt_loss:.4f}\n")
+            f.write(f"接续训练: {'是' if self.resume_training else '否'}\n")
+        
+        return hgc_path, cd_path, kt_path
+    
+    def cleanup_all_checkpoints(self):
+        """清理所有检查点文件"""
+        print("清理所有检查点文件...")
+        try:
+            checkpoint_files = glob.glob(os.path.join(self.checkpoint_dir, "*.pth"))
+            for checkpoint_file in checkpoint_files:
+                os.remove(checkpoint_file)
+                print(f"  删除: {os.path.basename(checkpoint_file)}")
+            
+            print("✓ 所有检查点文件已清理")
+        except Exception as e:
+            print(f"⚠ 清理检查点文件时出错: {e}")
     
     def train(self):
         """完整训练流程"""
@@ -610,10 +790,16 @@ class CompletePipelineTrainer:
         hyperparams.summary()
         
         start_time = time.time()
+        total_epochs = hyperparams.train_total_epochs
         
-        for epoch in range(1, hyperparams.train_total_epochs + 1):
+        print(f"训练配置:")
+        print(f"  - 总轮次: {total_epochs}")
+        print(f"  - 接续训练: {'是' if self.resume_training else '否'}")
+        print(f"  - 起始轮次: {self.start_epoch}")
+        
+        for epoch in range(self.start_epoch, total_epochs + 1):
             print(f"\n{'='*60}")
-            print(f"轮次 {epoch}/{hyperparams.train_total_epochs}")
+            print(f"轮次 {epoch}/{total_epochs}")
             print(f"{'='*60}")
             
             epoch_start = time.time()
@@ -635,24 +821,28 @@ class CompletePipelineTrainer:
             print(f"  KT训练损失: {kt_loss:.4f}, 验证损失: {kt_val_loss:.4f}")
             print(f"  本轮时间: {epoch_time:.2f}秒")
             
-            # 定期保存模型
-            if epoch % hyperparams.train_save_interval == 0:
-                self.save_model(f'epoch_{epoch}')
+            # 保存检查点（每轮都保存，用于接续训练）
+            self.save_checkpoint(epoch, cd_val_loss, kt_val_loss)
         
         total_time = time.time() - start_time
         
-        # 最终保存
-        self.save_model('final')
+        # 保存最终模型
+        print(f"\n{'='*60}")
+        print("保存最终模型...")
+        hgc_path, cd_path, kt_path = self.save_final_models()
+        
+        # 清理检查点文件
+        self.cleanup_all_checkpoints()
         
         # 训练总结
         print(f"\n{'='*60}")
         print("训练完成!")
         print(f"{'='*60}")
         print(f"总训练时间: {total_time:.2f}秒")
-        print(f"总训练轮次: {hyperparams.train_total_epochs}")
-        print(f"最佳CD验证损失: {self.best_cd_loss:.4f}")
-        print(f"最佳KT验证损失: {self.best_kt_loss:.4f}")
-        print(f"模型保存在: {self.save_dir}")
+        print(f"总训练轮次: {total_epochs}")
+        print(f"最佳CD验证损失: {self.best_cd_loss:.4f} (轮次 {self.best_cd_epoch})")
+        print(f"最佳KT验证损失: {self.best_kt_loss:.4f} (轮次 {self.best_kt_epoch})")
+        print(f"最终模型保存在: {self.final_dir}")
         
         return self.train_history
 
@@ -660,12 +850,20 @@ def main():
     """主函数"""
     print("HGC-CD-KT 完整训练管道")
     print("训练流程: 静态数据 → HGC → CD → KT → 交替优化")
+    print("保存策略: 智能检查点 + 接续训练 + 最终三个最佳模型")
+    
+    # 询问是否接续训练
+    resume = input("是否接续训练? (y/N): ").strip().lower() == 'y'
     
     try:
-        trainer = CompletePipelineTrainer()
+        trainer = CompletePipelineTrainer(resume_training=resume)
         history = trainer.train()
         
         print("\n🎉 训练完成!")
+        print("📁 最终模型文件:")
+        print("   - hgc_best_model.pth")
+        print("   - cd_best_model.pth") 
+        print("   - kt_best_model.pth")
         return True
         
     except Exception as e:
