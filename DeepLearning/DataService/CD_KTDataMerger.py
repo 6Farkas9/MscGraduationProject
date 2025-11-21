@@ -103,6 +103,8 @@ class CD_KTDataMerger:
         
         self._complete_data_merged = True
         print("✓ CD和KT完整数据合并完成")
+
+        return self.cddr.complete_data, self.ktdr.complete_data
     
     def _update_cd_train_test_data(self, common_learners):
         """更新CD训练测试数据，只保留共同学习者"""

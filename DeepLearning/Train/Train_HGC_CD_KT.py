@@ -1,8 +1,6 @@
 # Train_HGC_CD_KT.py
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -26,6 +24,9 @@ from DataReader.HGCDataReader import hgcdr
 from DataReader.CDDataReader import cddr
 from DataReader.KTDataReader import ktdr
 
+# 导入数据合并器
+from DataService.CD_KTDataMerger import cd_kt_merger
+
 # 导入数据集
 from DataSet.CDDataSet import CDDataset
 from DataSet.KTDataSet import KTDataSet
@@ -38,7 +39,7 @@ from Model.KT import KT
 # 导入超参数
 from hyperparams.hyperparameter import hyperparams
 
-# max_batch_size = 4
+# self.max_batch_size = 4
 
 class CompletePipelineTrainer:
     """完整的HGC-CD-KT训练管道 - 支持接续训练，适配新数据结构"""
@@ -46,7 +47,6 @@ class CompletePipelineTrainer:
     def __init__(self, resume_training=False):
         self.device = hyperparams.device
         self.resume_training = resume_training
-        self.max_batch_size = hyperparams.max_batch_size
         self.setup_directories()
         self.setup_models_and_data()
         self.setup_optimizers()
@@ -55,6 +55,8 @@ class CompletePipelineTrainer:
         # 如果是接续训练，加载之前的状态
         if self.resume_training:
             self.load_training_state()
+
+        self.max_batch_size = hyperparams.max_batch_size
         
     def setup_directories(self):
         """创建模型保存目录"""
@@ -132,7 +134,7 @@ class CompletePipelineTrainer:
     
     def setup_models_and_data(self):
         """初始化模型和数据 - 适配新数据结构"""
-        print("=== 初始化模型和数据 (适配新KT数据结构) ===")
+        print("=== 初始化模型和数据 (新数据结构) ===")
         
         # 1. 加载静态数据
         print("1. 加载静态数据...")
@@ -158,16 +160,32 @@ class CompletePipelineTrainer:
         print("3. 初始化CD模型和数据...")
         cd_data = cddr.loadDatafromSql()
         
-        # 计算初始HGC嵌入用于CD数据集
-        print("   计算初始HGC嵌入...")
+        # 4. 加载KT数据并创建数据集 - 适配新数据结构
+        print("4. 初始化KT模型和数据 (新数据结构)...")
+        kt_data = ktdr.loadDatafromSql()
+        
+        # 5. 数据合并和筛选
+        print("5. 合并和筛选CD-KT数据...")
+        cd_kt_merger.merge_and_filter_train_test()
+        
+        # 获取合并统计
+        stats = cd_kt_merger.get_merged_statistics()
+        if stats and 'train_test' in stats:
+            print("   合并后统计:")
+            for key, value in stats['train_test'].items():
+                if 'kt' in key and ('valid' in key or 'coverage' in key):
+                    print(f"     {key}: {value}")
+        
+        # 6. 计算初始HGC嵌入用于数据集创建
+        print("6. 计算初始HGC嵌入...")
         self.model_hgc.eval()
         with torch.no_grad():
             initial_lrn_emb, initial_qusunt_emb, initial_cpt_emb = self.model_hgc(
                 hgcdr, self.device, return_dict=False
             )
         
-        # 创建CD数据集
-        print("   创建CD数据集...")
+        # 7. 创建CD数据集
+        print("7. 创建CD数据集...")
         self.cd_train_dataset = CDDataset(cd_data, initial_lrn_emb, initial_qusunt_emb, initial_cpt_emb, 'train')
         self.cd_eval_dataset = CDDataset(cd_data, initial_lrn_emb, initial_qusunt_emb, initial_cpt_emb, 'test')
         
@@ -180,12 +198,8 @@ class CompletePipelineTrainer:
             concept_num=concept_num
         ).to(self.device)
         
-        # 4. 加载KT数据并创建数据集 - 适配新数据结构
-        print("4. 初始化KT模型和数据 (新数据结构)...")
-        kt_data = ktdr.loadDatafromSql()
-        
-        # 创建KT数据集 - 使用新数据结构
-        print("   创建KT数据集 (新数据结构)...")
+        # 8. 创建KT数据集 - 适配新数据结构
+        print("8. 创建KT数据集 (新数据结构)...")
         self.kt_train_dataset = KTDataSet(kt_data, initial_lrn_emb, initial_qusunt_emb, initial_cpt_emb, 'train')
         self.kt_eval_dataset = KTDataSet(kt_data, initial_lrn_emb, initial_qusunt_emb, initial_cpt_emb, 'test')
         
@@ -198,15 +212,15 @@ class CompletePipelineTrainer:
             concept_mapping=concept_mapping
         ).to(self.device)
         
-        # 5. 创建数据加载器
-        print("5. 创建数据加载器...")
+        # 9. 创建数据加载器
+        print("9. 创建数据加载器...")
         self.cd_train_loader = torch.utils.data.DataLoader(
             self.cd_train_dataset,
             batch_size=hyperparams.train_batch_size,
             shuffle=False,
             collate_fn=self.cd_train_dataset.collate_fn,
             num_workers=0,  # 避免多进程问题
-            pin_memory=True  # 加速数据加载
+            pin_memory=True  # 加速数据转移
         )
         
         self.cd_eval_loader = torch.utils.data.DataLoader(
@@ -255,7 +269,7 @@ class CompletePipelineTrainer:
     
     def setup_optimizers(self):
         """设置优化器"""
-        print("6. 设置优化器...")
+        print("10. 设置优化器...")
         
         # HGC优化器
         self.optimizer_hgc = optim.Adam(
@@ -481,10 +495,11 @@ class CompletePipelineTrainer:
                     
                     current_lrn_emb = lrn_emb[lrn_indices]
                     
-                    # 优化：批量获取学习单元嵌入
+                    # 优化：正确获取学习单元嵌入
                     batch_size, seq_len = qusunt_seq_indices.shape
+                    embedding_dim = qusunt_emb.shape[1]
                     qusunt_indices_flat = qusunt_seq_indices.view(-1)
-                    current_qusunt_emb = qusunt_emb[qusunt_indices_flat].view(batch_size, seq_len, -1)
+                    current_qusunt_emb = qusunt_emb[qusunt_indices_flat].view(batch_size, seq_len, embedding_dim)
                     
                     # 步骤3: KT前向传播 - 使用新接口
                     self.optimizer_hgc.zero_grad()
@@ -509,7 +524,7 @@ class CompletePipelineTrainer:
                     valid_predictions = predictions * prediction_masks.unsqueeze(-1)
                     valid_targets = next_results.unsqueeze(-1) * prediction_masks.unsqueeze(-1)
                     
-                    # 优化：使用更高效的计算方式
+                    # 优化：更高效的计算方式
                     if len(valid_predictions.shape) == 3:
                         valid_predictions_mean = valid_predictions.mean(dim=-1)
                         valid_targets_mean = valid_targets.mean(dim=-1)
@@ -517,7 +532,7 @@ class CompletePipelineTrainer:
                         valid_predictions_mean = valid_predictions
                         valid_targets_mean = valid_targets
                     
-                    valid_mask = prediction_masks.bool()  # 使用新的预测掩码
+                    valid_mask = prediction_masks.bool()
                     if valid_mask.any():
                         # 只计算有效位置的损失
                         kt_loss = self.criterion(
@@ -559,7 +574,7 @@ class CompletePipelineTrainer:
         return avg_loss
     
     def evaluate_models(self, epoch):
-        """评估模型 - 适配新数据结构"""
+        """评估模型"""
         print("   模型评估中...")
         self.model_hgc.eval()
         self.model_cd.eval()
@@ -701,10 +716,11 @@ class CompletePipelineTrainer:
                     
                     current_lrn_emb = lrn_emb[lrn_indices]
                     
-                    # 优化：批量获取学习单元嵌入
+                    # 优化：正确获取学习单元嵌入
                     batch_size, seq_len = qusunt_seq_indices.shape
+                    embedding_dim = qusunt_emb.shape[1]
                     qusunt_indices_flat = qusunt_seq_indices.view(-1)
-                    current_qusunt_emb = qusunt_emb[qusunt_indices_flat].view(batch_size, seq_len, -1)
+                    current_qusunt_emb = qusunt_emb[qusunt_indices_flat].view(batch_size, seq_len, embedding_dim)
                     
                     predictions, concept_mastery = self.model_kt(
                         h_lrn_batch=current_lrn_emb,
@@ -731,7 +747,7 @@ class CompletePipelineTrainer:
                         valid_predictions_mean = valid_predictions
                         valid_targets_mean = valid_targets
                     
-                    valid_mask = prediction_masks.bool()  # 使用新的预测掩码
+                    valid_mask = prediction_masks.bool()
                     if valid_mask.any():
                         loss = self.criterion(
                             valid_predictions_mean[valid_mask], 
@@ -783,14 +799,14 @@ class CompletePipelineTrainer:
         # 保存训练信息
         info_path = os.path.join(self.final_dir, "training_info.txt")
         with open(info_path, 'w', encoding='utf-8') as f:
-            f.write("HGC-CD-KT 训练信息 (适配新KT数据结构)\n")
+            f.write("HGC-CD-KT 训练信息 (新数据结构)\n")
             f.write("=" * 50 + "\n")
             f.write(f"训练完成时间: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
             f.write(f"总训练轮次: {len(self.train_history['cd_loss'])}\n")
             f.write(f"最佳CD模型 - 轮次: {self.best_cd_epoch}, 损失: {self.best_cd_loss:.4f}\n")
             f.write(f"最佳KT模型 - 轮次: {self.best_kt_epoch}, 损失: {self.best_kt_loss:.4f}\n")
-            f.write(f"KT数据结构: 7元素 [unt_uids, add1s, add2s, is_questions, results, prediction_masks, next_results]\n")
             f.write(f"接续训练: {'是' if self.resume_training else '否'}\n")
+            f.write(f"KT数据结构: 7元素格式 (包含prediction_masks和next_results)\n")
         
         return hgc_path, cd_path, kt_path
     
@@ -809,7 +825,7 @@ class CompletePipelineTrainer:
     
     def train(self):
         """完整训练流程"""
-        print("=== 开始完整训练流程 (适配新KT数据结构) ===")
+        print("=== 开始完整训练流程 (新数据结构) ===")
         hyperparams.summary()
         
         start_time = time.time()
@@ -819,7 +835,7 @@ class CompletePipelineTrainer:
         print(f"  - 总轮次: {total_epochs}")
         print(f"  - 接续训练: {'是' if self.resume_training else '否'}")
         print(f"  - 起始轮次: {self.start_epoch}")
-        print(f"  - KT数据结构: 7元素 [unt_uids, add1s, add2s, is_questions, results, prediction_masks, next_results]")
+        print(f"  - KT数据结构: 7元素格式")
         
         for epoch in range(self.start_epoch, total_epochs + 1):
             print(f"\n{'='*60}")
@@ -872,7 +888,7 @@ class CompletePipelineTrainer:
 
 def main():
     """主函数"""
-    print("HGC-CD-KT 完整训练管道 (适配新KT数据结构)")
+    print("HGC-CD-KT 完整训练管道 (适配新数据结构)")
     print("训练流程: 静态数据 → HGC → CD → KT → 交替优化")
     print("KT数据结构: [unt_uids, add1s, add2s, is_questions, results, prediction_masks, next_results]")
     print("保存策略: 智能检查点 + 接续训练 + 最终三个最佳模型")
