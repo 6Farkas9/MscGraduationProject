@@ -21,7 +21,7 @@ class DatabaseConfig:
         self.mongodb_config = {
             'host': 'localhost',
             'port': 27017,
-            'database': 'mls',
+            'database': 'MLS',
             'username': None,
             'password': None,
             'auth_source': 'admin'

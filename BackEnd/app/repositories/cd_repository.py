@@ -61,22 +61,6 @@ class CDRepository(BaseRepository):
             logger.error(f"批量获取题目交互记录失败: {e}")
             return {}
     
-    def build_optimized_question_mapping(self, question_uids: List[str]) -> Dict[str, int]:
-        """构建题目UID到索引的映射"""
-        return {uid: idx for idx, uid in enumerate(question_uids)}
-    
-    def build_optimized_learner_mapping(self, target_learner_uid: str, learner_uids: List[str]) -> Dict[str, int]:
-        """构建优化的学习者UID映射：目标学习者放在索引0"""
-        # 确保目标学习者在第一位
-        all_learners = [target_learner_uid]
-        
-        # 添加其他学习者（排除重复）
-        for learner in learner_uids:
-            if learner != target_learner_uid and learner not in all_learners:
-                all_learners.append(learner)
-        
-        return {uid: idx for idx, uid in enumerate(all_learners)}
-    
     def format_interaction_records(self, interactions: List[Dict[str, Any]]) -> List[Tuple[str, str, int, str]]:
         """格式化交互记录为(学习者UID, 题目UID, 是否正确, 时间戳)元组列表"""
         formatted_records = []
@@ -90,7 +74,6 @@ class CDRepository(BaseRepository):
             formatted_records.append(record)
         return formatted_records
     
-    # 实现抽象方法
     def get_data_for_single_learner(self, learner_uid: str) -> Dict[str, Any]:
         """为单个学习者获取CD模型数据"""
         return self.get_cd_data_for_learner(learner_uid)
@@ -106,22 +89,14 @@ class CDRepository(BaseRepository):
                 try:
                     interactions = batch_interactions.get(learner_uid, [])
                     
-                    # 只使用实际涉及的题目构建映射
+                    # 只使用实际涉及的题目
                     involved_questions = self.get_questions_from_interactions(interactions)
-                    question_uid_mapping = self.build_optimized_question_mapping(involved_questions)
-                    
-                    # 构建学习者映射（目标学习者在索引0）
-                    involved_learners = list(set(interaction['lrn_uid'] for interaction in interactions))
-                    learner_uid_mapping = self.build_optimized_learner_mapping(learner_uid, involved_learners)
-                    
                     formatted_interactions = self.format_interaction_records(interactions)
                     
                     results[learner_uid] = {
                         'target_learner_uid': learner_uid,
                         'question_interactions': formatted_interactions,
                         'involved_questions': involved_questions,
-                        'question_uid_mapping': question_uid_mapping,
-                        'learner_uid_mapping': learner_uid_mapping,
                         'interaction_count': len(interactions)
                     }
                     
@@ -144,27 +119,18 @@ class CDRepository(BaseRepository):
             interactions = self.get_learner_question_interactions(learner_uid)
             logger.info(f"学习者 {learner_uid} 题目交互记录数: {len(interactions)}")
             
-            # 2. 只使用实际涉及的题目构建映射
+            # 2. 只使用实际涉及的题目
             involved_questions = self.get_questions_from_interactions(interactions)
             
-            # 3. 构建优化的映射
-            question_uid_mapping = self.build_optimized_question_mapping(involved_questions)
-            
-            # 4. 构建学习者映射（目标学习者在索引0）
-            involved_learners = list(set(interaction['lrn_uid'] for interaction in interactions))
-            learner_uid_mapping = self.build_optimized_learner_mapping(learner_uid, involved_learners)
-            
-            # 5. 格式化交互记录
+            # 3. 格式化交互记录
             formatted_interactions = self.format_interaction_records(interactions)
             
-            logger.info(f"涉及题目数: {len(involved_questions)}, 涉及学习者数: {len(involved_learners)}")
+            logger.info(f"涉及题目数: {len(involved_questions)}")
             
             return {
                 'target_learner_uid': learner_uid,
                 'question_interactions': formatted_interactions,
                 'involved_questions': involved_questions,
-                'question_uid_mapping': question_uid_mapping,
-                'learner_uid_mapping': learner_uid_mapping,
                 'interaction_count': len(interactions)
             }
             

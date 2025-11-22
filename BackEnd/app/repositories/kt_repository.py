@@ -75,22 +75,6 @@ class KTRepository(BaseRepository):
             logger.error(f"批量获取学习单元交互记录失败: {e}")
             return {}
     
-    def build_optimized_unit_mapping(self, unit_uids: List[str]) -> Dict[str, int]:
-        """构建学习单元UID到索引的映射"""
-        return {uid: idx for idx, uid in enumerate(unit_uids)}
-    
-    def build_optimized_learner_mapping(self, target_learner_uid: str, learner_uids: List[str]) -> Dict[str, int]:
-        """构建优化的学习者UID映射：目标学习者放在索引0"""
-        # 确保目标学习者在第一位
-        all_learners = [target_learner_uid]
-        
-        # 添加其他学习者（排除重复）
-        for learner in learner_uids:
-            if learner != target_learner_uid and learner not in all_learners:
-                all_learners.append(learner)
-        
-        return {uid: idx for idx, uid in enumerate(all_learners)}
-    
     def format_unit_interaction_records(self, interactions: List[Dict[str, Any]]) -> List[Tuple[str, str, float, float, str]]:
         """格式化交互记录为(学习者UID, 单元UID, 附加信息1, 附加信息2, 时间戳)元组列表"""
         formatted_records = []
@@ -105,7 +89,6 @@ class KTRepository(BaseRepository):
             formatted_records.append(record)
         return formatted_records
     
-    # 实现抽象方法
     def get_data_for_single_learner(self, learner_uid: str) -> Dict[str, Any]:
         """为单个学习者获取KT模型数据"""
         return self.get_kt_data_for_learner(learner_uid)
@@ -121,16 +104,11 @@ class KTRepository(BaseRepository):
                 try:
                     interactions = batch_interactions.get(learner_uid, [])
                     
-                    # 只使用实际涉及的学习单元构建映射
+                    # 只使用实际涉及的学习单元
                     involved_units = self.get_units_from_interactions(interactions)
-                    unit_uid_mapping = self.build_optimized_unit_mapping(involved_units)
                     
                     # 批量获取单元类型
                     unit_types_mapping = self.get_unit_types_from_uids(involved_units)
-                    
-                    # 构建学习者映射（目标学习者在索引0）
-                    involved_learners = list(set(interaction['lrn_uid'] for interaction in interactions))
-                    learner_uid_mapping = self.build_optimized_learner_mapping(learner_uid, involved_learners)
                     
                     formatted_interactions = self.format_unit_interaction_records(interactions)
                     
@@ -138,9 +116,7 @@ class KTRepository(BaseRepository):
                         'target_learner_uid': learner_uid,
                         'unit_interactions': formatted_interactions,
                         'involved_units': involved_units,
-                        'unit_uid_mapping': unit_uid_mapping,
                         'unit_types_mapping': unit_types_mapping,
-                        'learner_uid_mapping': learner_uid_mapping,
                         'interaction_count': len(interactions)
                     }
                     
@@ -163,31 +139,22 @@ class KTRepository(BaseRepository):
             interactions = self.get_learner_unit_interactions(learner_uid)
             logger.info(f"学习者 {learner_uid} 学习单元交互记录数: {len(interactions)}")
             
-            # 2. 只使用实际涉及的学习单元构建映射
+            # 2. 只使用实际涉及的学习单元
             involved_units = self.get_units_from_interactions(interactions)
             
             # 3. 批量获取单元类型
             unit_types_mapping = self.get_unit_types_from_uids(involved_units)
             
-            # 4. 构建优化的映射
-            unit_uid_mapping = self.build_optimized_unit_mapping(involved_units)
-            
-            # 5. 构建学习者映射（目标学习者在索引0）
-            involved_learners = list(set(interaction['lrn_uid'] for interaction in interactions))
-            learner_uid_mapping = self.build_optimized_learner_mapping(learner_uid, involved_learners)
-            
-            # 6. 格式化交互记录
+            # 4. 格式化交互记录
             formatted_interactions = self.format_unit_interaction_records(interactions)
             
-            logger.info(f"涉及学习单元数: {len(involved_units)}, 涉及学习者数: {len(involved_learners)}")
+            logger.info(f"涉及学习单元数: {len(involved_units)}")
             
             return {
                 'target_learner_uid': learner_uid,
                 'unit_interactions': formatted_interactions,
                 'involved_units': involved_units,
-                'unit_uid_mapping': unit_uid_mapping,
                 'unit_types_mapping': unit_types_mapping,
-                'learner_uid_mapping': learner_uid_mapping,
                 'interaction_count': len(interactions)
             }
             
