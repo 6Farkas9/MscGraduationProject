@@ -56,119 +56,42 @@ class GCNConvEmbedding(nn.Module):
             h_current = F.leaky_relu(h_current, negative_slope=self.activation_slope)
         return h_current
 
-class AdaptiveProjection(nn.Module):
-    """自适应投影层 - 处理任意输入维度，输出固定维度"""
-    def __init__(self, output_dim=None, input_type='learner'):
+class Projection(nn.Module):
+    def __init__(self, input_dim, embedding_dim=None):
         super().__init__()
-        if output_dim is None:
-            output_dim = hyperparams.hgc_embedding_dim
+        if embedding_dim is None:
+            embedding_dim = hyperparams.hgc_embedding_dim
             
-        self.input_type = input_type
-        self.output_dim = output_dim
-        self.hidden_dim = hyperparams.hgc_proj_hidden_dim
+        hidden_dim = hyperparams.hgc_proj_hidden_dim
         dropout_rate = hyperparams.hgc_dropout_rate
         
-        # 根据实体类型设置不同的聚合策略
-        if input_type == 'learner':
-            # 学习者：使用均值池化聚合课程特征
-            self.feature_processor = nn.Sequential(
-                nn.Linear(1, 16),  # 每个课程特征单独处理
-                nn.LeakyReLU(hyperparams.hgc_activation_slope),
-                nn.Dropout(dropout_rate)
-            )
-            aggregated_dim = 16
-            
-        elif input_type == 'unit':
-            # 学习单元：直接使用自适应池化
-            aggregated_dim = 64
-            
-        elif input_type == 'concept':
-            # 知识点：Word2Vec特征，使用线性变换
-            aggregated_dim = 128
-            
-        else:
-            aggregated_dim = 64
-        
-        # 固定维度投影
         self.proj = nn.Sequential(
-            nn.Linear(aggregated_dim, self.hidden_dim),
+            nn.Linear(input_dim, hidden_dim),
             nn.LeakyReLU(hyperparams.hgc_activation_slope),
             nn.Dropout(dropout_rate),
-            nn.Linear(self.hidden_dim, output_dim)
+            nn.Linear(hidden_dim, embedding_dim)
         )
         self._init_weights()
-    
+
     def _init_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Linear):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='leaky_relu')
                 nn.init.constant_(m.bias, 0.1)
-    
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        batch_size = x.shape[0]
-        
-        if self.input_type == 'learner':
-            # 学习者特征: [batch_size, num_courses] -> [batch_size, num_courses, 1]
-            x_expanded = x.unsqueeze(-1)  # [batch, num_courses, 1]
-            
-            # 对每个课程特征进行嵌入
-            course_embeddings = self.feature_processor(x_expanded)  # [batch, num_courses, 16]
-            
-            # 均值池化聚合所有课程特征
-            aggregated = course_embeddings.mean(dim=1)  # [batch, 16]
-            
-        elif self.input_type == 'unit':
-            # 学习单元特征: 自适应处理到固定维度
-            current_dim = x.shape[1]
-            if current_dim > 64:
-                # 如果维度太大，使用自适应池化
-                aggregated = F.adaptive_avg_pool1d(x.unsqueeze(1), 64).squeeze(1)  # [batch, 64]
-            elif current_dim < 64:
-                # 如果维度太小，填充零
-                padding = torch.zeros(batch_size, 64 - current_dim, device=x.device)
-                aggregated = torch.cat([x, padding], dim=1)  # [batch, 64]
-            else:
-                aggregated = x  # [batch, 64]
-                
-        elif self.input_type == 'concept':
-            # 知识点特征: Word2Vec向量，使用线性变换
-            current_dim = x.shape[1]
-            if current_dim > 128:
-                # 截断到128维
-                aggregated = x[:, :128]  # [batch, 128]
-            elif current_dim < 128:
-                # 填充到128维
-                padding = torch.zeros(batch_size, 128 - current_dim, device=x.device)
-                aggregated = torch.cat([x, padding], dim=1)  # [batch, 128]
-            else:
-                aggregated = x  # [batch, 128]
-        
-        else:
-            # 默认处理
-            current_dim = x.shape[1]
-            target_dim = 64
-            if current_dim > target_dim:
-                aggregated = x[:, :target_dim]
-            elif current_dim < target_dim:
-                padding = torch.zeros(batch_size, target_dim - current_dim, device=x.device)
-                aggregated = torch.cat([x, padding], dim=1)
-            else:
-                aggregated = x
-        
-        # 最终投影到目标维度
-        return self.proj(aggregated)
+        return self.proj(x)
 
 class LearnerEncoder(nn.Module):
-    """学习者编码器 - 输入维度与课程数量无关"""
-    def __init__(self, embedding_dim=None):
+    """学习者编码器 - 可独立使用"""
+    def __init__(self, embedding_dim=None, lrn_input_dim=None):
         super().__init__()
         
         if embedding_dim is None:
             embedding_dim = hyperparams.hgc_embedding_dim
             
         self.embedding_dim = embedding_dim
-        # 使用自适应投影，不依赖具体课程数量
-        self.lrn_proj = AdaptiveProjection(embedding_dim, input_type='learner')
+        self.lrn_proj = Projection(input_dim=lrn_input_dim, embedding_dim=embedding_dim)
         self.lrn_gcn_lul = GCNConvEmbedding(embedding_dim)
         self.lrn_gcn_lcl = GCNConvEmbedding(embedding_dim)
         self.lrn_gcn_ltl = GCNConvEmbedding(embedding_dim)
@@ -179,15 +102,15 @@ class LearnerEncoder(nn.Module):
                 p_lul: tuple, p_lcl: tuple, p_ltl: tuple,
                 device=None) -> torch.Tensor:
         """
-        计算学习者嵌入 - 支持任意维度的lrn_init输入
+        独立计算学习者嵌入
         """
         if device is None:
             device = next(self.parameters()).device
             
-        # 输入可以是任意维度，自适应投影会处理
+        # 修复：确保输入张量可以参与梯度计算
         lrn_init = lrn_init.clone().detach().requires_grad_(True)
         
-        # 学习者嵌入计算
+        # 学习者嵌入
         lrn_init_proj = self.lrn_proj(lrn_init.to(device))
         lrn_lul = self.lrn_gcn_lul(lrn_init_proj, 
                                   p_lul[0].to(device).clone(), 
@@ -204,16 +127,15 @@ class LearnerEncoder(nn.Module):
         return lrn_emb
 
 class UnitEncoder(nn.Module):
-    """学习单元编码器 - 输入维度与知识点数量无关"""
-    def __init__(self, embedding_dim=None):
+    """学习单元编码器 - 可独立使用"""
+    def __init__(self, embedding_dim=None, unt_input_dim=None):
         super().__init__()
         
         if embedding_dim is None:
             embedding_dim = hyperparams.hgc_embedding_dim
             
         self.embedding_dim = embedding_dim
-        # 使用自适应投影，不依赖具体知识点数量
-        self.unt_proj = AdaptiveProjection(embedding_dim, input_type='unit')
+        self.unt_proj = Projection(input_dim=unt_input_dim, embedding_dim=embedding_dim)
         self.unt_gcn_ulu = GCNConvEmbedding(embedding_dim)
         self.unt_gcn_ucrsu = GCNConvEmbedding(embedding_dim)
         self.unt_gcn_ucptu = GCNConvEmbedding(embedding_dim)
@@ -224,15 +146,15 @@ class UnitEncoder(nn.Module):
                 p_ulu: tuple, p_ucrsu: tuple, p_ucptu: tuple,
                 device=None) -> torch.Tensor:
         """
-        计算学习单元嵌入 - 支持任意维度的unt_init输入
+        独立计算学习单元嵌入
         """
         if device is None:
             device = next(self.parameters()).device
             
-        # 输入可以是任意维度，自适应投影会处理
+        # 修复：确保输入张量可以参与梯度计算
         unt_init = unt_init.clone().detach().requires_grad_(True)
         
-        # 学习单元嵌入计算
+        # 学习单元嵌入
         unt_init_proj = self.unt_proj(unt_init.to(device))
         unt_ulu = self.unt_gcn_ulu(unt_init_proj, 
                                   p_ulu[0].to(device).clone(), 
@@ -250,16 +172,15 @@ class UnitEncoder(nn.Module):
         return unt_emb
 
 class ConceptEncoder(nn.Module):
-    """知识点编码器 - 输入维度与Word2Vec维度无关"""
-    def __init__(self, embedding_dim=None):
+    """知识点编码器 - 可独立使用"""
+    def __init__(self, embedding_dim=None, cpt_input_dim=None):
         super().__init__()
         
         if embedding_dim is None:
             embedding_dim = hyperparams.hgc_embedding_dim
             
         self.embedding_dim = embedding_dim
-        # 使用自适应投影，不依赖具体Word2Vec维度
-        self.cpt_proj = AdaptiveProjection(embedding_dim, input_type='concept')
+        self.cpt_proj = Projection(input_dim=cpt_input_dim, embedding_dim=embedding_dim)
         self.cpt_gcn_cc = GCNConvEmbedding(embedding_dim)
         self.cpt_gcn_cuc = GCNConvEmbedding(embedding_dim)
         self.cpt_gcn_ctc = GCNConvEmbedding(embedding_dim)
@@ -270,15 +191,15 @@ class ConceptEncoder(nn.Module):
                 p_cc: tuple, p_cuc: tuple, p_ctc: tuple,
                 device=None) -> torch.Tensor:
         """
-        计算知识点嵌入 - 支持任意维度的cpt_init输入（如不同维度的Word2Vec）
+        独立计算知识点嵌入
         """
         if device is None:
             device = next(self.parameters()).device
             
-        # 输入可以是任意维度，自适应投影会处理
+        # 修复：确保输入张量可以参与梯度计算（关键修复）
         cpt_init = cpt_init.clone().detach().requires_grad_(True)
         
-        # 知识点嵌入计算
+        # 知识点嵌入
         cpt_init_proj = self.cpt_proj(cpt_init.to(device))
         cpt_cc = self.cpt_gcn_cc(cpt_init_proj, 
                                 p_cc[0].to(device).clone(), 
@@ -295,8 +216,8 @@ class ConceptEncoder(nn.Module):
         return cpt_emb
 
 class HGC(nn.Module):
-    """统一的HGC模型 - 支持任意输入维度的局部图推理"""
-    def __init__(self, embedding_dim=None):
+    """统一的HGC模型 - 保持原有接口，内部使用拆分后的编码器"""
+    def __init__(self, embedding_dim=None, lrn_input_dim=None, unt_input_dim=None, cpt_input_dim=None):
         super().__init__()
         
         # 使用超参数配置
@@ -306,35 +227,45 @@ class HGC(nn.Module):
         self.embedding_dim = embedding_dim
         self.attention_heads = hyperparams.hgc_attention_heads
 
-        # 使用自适应投影的编码器
-        self.learner_encoder = LearnerEncoder(embedding_dim)
-        self.unit_encoder = UnitEncoder(embedding_dim)
-        self.concept_encoder = ConceptEncoder(embedding_dim)
+        # 使用拆分后的编码器
+        self.learner_encoder = LearnerEncoder(embedding_dim, lrn_input_dim)
+        self.unit_encoder = UnitEncoder(embedding_dim, unt_input_dim)
+        self.concept_encoder = ConceptEncoder(embedding_dim, cpt_input_dim)
 
-    def forward(self, input_data: dict, device=None, return_dict=True):
+    def forward(self, hgcdr=None, device=None, return_dict=False, 
+                input_data=None):
         """
-        统一的前向传播接口
-        输入: input_data字典，包含所有必要的初始特征和元路径
+        统一的前向传播接口 - 支持两种输入方式
         """
         if device is None:
             device = next(self.parameters()).device
+            
+        # 确定输入数据来源
+        if input_data is not None:
+            # 使用新的输入数据格式
+            data = input_data
+        elif hgcdr is not None:
+            # 使用传统的hgcdr格式
+            data = self._hgcdr_to_input_data(hgcdr)
+        else:
+            raise ValueError("必须提供hgcdr或input_data之一")
         
         # 分别计算三种实体的嵌入
         lrn_emb = self.learner_encoder(
-            input_data['lrn_init'], 
-            input_data['p_lul'], input_data['p_lcl'], input_data['p_ltl'],
+            data['lrn_init'], 
+            data['p_lul'], data['p_lcl'], data['p_ltl'],
             device
         )
         
         unt_emb = self.unit_encoder(
-            input_data['unt_init'],
-            input_data['p_ulu'], input_data['p_ucrsu'], input_data['p_ucptu'],
+            data['unt_init'],
+            data['p_ulu'], data['p_ucrsu'], data['p_ucptu'],
             device
         )
         
         cpt_emb = self.concept_encoder(
-            input_data['cpt_init'],
-            input_data['p_cc'], input_data['p_cuc'], input_data['p_ctc'],
+            data['cpt_init'],
+            data['p_cc'], data['p_cuc'], data['p_ctc'],
             device
         )
 
@@ -347,17 +278,34 @@ class HGC(nn.Module):
         else:
             return lrn_emb, unt_emb, cpt_emb
 
+    def _hgcdr_to_input_data(self, hgcdr):
+        """将hgcdr转换为新的输入数据格式"""
+        return {
+            'lrn_init': hgcdr.lrn_init,
+            'unt_init': hgcdr.qusunt_init,
+            'cpt_init': hgcdr.cpt_init,
+            'p_lul': (hgcdr.p_lul[0], hgcdr.p_lul[1]),
+            'p_lcl': (hgcdr.p_lcl[0], hgcdr.p_lcl[1]),
+            'p_ltl': (hgcdr.p_ltl[0], hgcdr.p_ltl[1]),
+            'p_ulu': (hgcdr.p_ulu[0], hgcdr.p_ulu[1]),
+            'p_ucrsu': (hgcdr.p_ucrsu[0], hgcdr.p_ucrsu[1]),
+            'p_ucptu': (hgcdr.p_ucptu[0], hgcdr.p_ucptu[1]),
+            'p_cc': (hgcdr.p_cc[0], hgcdr.p_cc[1]),
+            'p_cuc': (hgcdr.p_cuc[0], hgcdr.p_cuc[1]),
+            'p_ctc': (hgcdr.p_ctc[0], hgcdr.p_ctc[1])
+        }
+
     # 新增：分别调用各个编码器的方法
     def compute_learner_embeddings(self, lrn_init, p_lul, p_lcl, p_ltl, device=None):
-        """仅计算学习者嵌入 - 支持任意维度的lrn_init"""
+        """仅计算学习者嵌入"""
         return self.learner_encoder(lrn_init, p_lul, p_lcl, p_ltl, device)
     
     def compute_unit_embeddings(self, unt_init, p_ulu, p_ucrsu, p_ucptu, device=None):
-        """仅计算学习单元嵌入 - 支持任意维度的unt_init"""
+        """仅计算学习单元嵌入"""
         return self.unit_encoder(unt_init, p_ulu, p_ucrsu, p_ucptu, device)
     
     def compute_concept_embeddings(self, cpt_init, p_cc, p_cuc, p_ctc, device=None):
-        """仅计算知识点嵌入 - 支持任意维度的cpt_init"""
+        """仅计算知识点嵌入"""
         return self.concept_encoder(cpt_init, p_cc, p_cuc, p_ctc, device)
 
     def get_embedding_info(self):
@@ -367,13 +315,11 @@ class HGC(nn.Module):
             'attention_heads': self.attention_heads,
             'gcn_layers': hyperparams.hgc_gcn_layers,
             'activation_slope': hyperparams.hgc_activation_slope,
-            'proj_hidden_dim': hyperparams.hgc_proj_hidden_dim,
             'used_metapaths': {
                 'learner': ['LUL', 'LCL', 'LTL'],
                 'unit': ['ULU', 'UCRSU', 'UCPTU'],
                 'concept': ['CC', 'CUC', 'CTC']
-            },
-            'projection_type': 'adaptive_fixed_dimension'
+            }
         }
 
     def get_parameter_count(self):
@@ -387,21 +333,34 @@ class HGC(nn.Module):
             'non_trainable_parameters': total_params - trainable_params
         }
 
-def test_adaptive_hgc_model():
-    """测试自适应HGC模型 - 支持不同输入维度"""
-    print("=== 自适应HGC模型测试 ===")
+def test_hgc_model():
+    """测试HGC模型 - 修复一致性验证问题"""
+    print("=== HGC模型测试 (适配无UU元路径版本) ===")
     
     # 加载数据
     hgcdr.loadDatafromSql()
     device = hyperparams.device
     
-    # 创建模型 - 不再需要输入维度参数
-    model = HGC(embedding_dim=hyperparams.hgc_embedding_dim).to(device)
+    # 动态获取输入维度
+    lrn_input_dim = hgcdr.lrn_init.shape[1]
+    unt_input_dim = hgcdr.qusunt_init.shape[1]
+    cpt_input_dim = hgcdr.cpt_init.shape[1]
+    
+    print(f"输入维度: lrn={lrn_input_dim}, unt={unt_input_dim}, cpt={cpt_input_dim}")
+    
+    # 创建模型
+    model = HGC(
+        embedding_dim=hyperparams.hgc_embedding_dim,
+        lrn_input_dim=lrn_input_dim,
+        unt_input_dim=unt_input_dim,
+        cpt_input_dim=cpt_input_dim
+    ).to(device)
     
     print("模型配置:", model.get_embedding_info())
     print("参数统计:", model.get_parameter_count())
     
-    # 准备输入数据
+    # 测试新接口
+    print("\n1. 测试新输入数据接口...")
     input_data = {
         'lrn_init': hgcdr.lrn_init,
         'unt_init': hgcdr.qusunt_init,
@@ -417,66 +376,102 @@ def test_adaptive_hgc_model():
         'p_ctc': (hgcdr.p_ctc[0], hgcdr.p_ctc[1])
     }
     
-    print(f"\n输入维度: lrn={hgcdr.lrn_init.shape}, unt={hgcdr.qusunt_init.shape}, cpt={hgcdr.cpt_init.shape}")
-    
-    # 测试标准推理
-    print("\n1. 测试标准推理...")
     with torch.no_grad():
-        embeddings = model(input_data=input_data, device=device, return_dict=True)
+        # 使用新接口
+        embeddings_dict_new = model(input_data=input_data, device=device, return_dict=True)
+        embeddings_tuple_new = model(input_data=input_data, device=device, return_dict=False)
+        
+        # 使用旧接口
+        embeddings_dict_old = model(hgcdr=hgcdr, device=device, return_dict=True)
+        embeddings_tuple_old = model(hgcdr=hgcdr, device=device, return_dict=False)
     
-    print("推理结果:")
-    for key, value in embeddings.items():
+    print("新接口结果:")
+    for key, value in embeddings_dict_new.items():
         print(f"  {key}: {value.shape}, 范围[{value.min():.3f}, {value.max():.3f}]")
     
-    # 测试局部图推理（不同维度）
-    print("\n2. 测试局部图推理（不同维度）...")
+    # 验证新旧接口一致性
+    print("\n2. 验证新旧接口一致性...")
+    consistency_passed = True
+    for key in ['lrn_emb', 'unt_emb', 'cpt_emb']:
+        new_emb = embeddings_dict_new[key]
+        old_emb = embeddings_dict_old[key]
+        if torch.allclose(new_emb, old_emb, atol=1e-4, rtol=1e-3):
+            print(f"  ✓ {key} 新旧接口一致性验证通过")
+        else:
+            max_diff = (new_emb - old_emb).abs().max().item()
+            mean_diff = (new_emb - old_emb).abs().mean().item()
+            print(f"  ⚠ {key} 新旧接口有差异: 最大差异={max_diff:.6f}, 平均差异={mean_diff:.6f}")
+            consistency_passed = False
     
-    # 创建局部数据（不同维度）
-    local_input_data = {
-        'lrn_init': hgcdr.lrn_init[:10, :5],  # 只取前10个用户，前5门课程
-        'unt_init': hgcdr.qusunt_init[:5, :3],  # 只取前5个学习单元，前3个特征
-        'cpt_init': hgcdr.cpt_init[:20, :200],  # 只取前20个知识点，前200维Word2Vec
-        'p_lul': (hgcdr.p_lul[0][:30], hgcdr.p_lul[1][:30]),  # 对应的局部边
-        'p_lcl': (hgcdr.p_lcl[0][:20], hgcdr.p_lcl[1][:20]),
-        'p_ltl': (hgcdr.p_ltl[0][:25], hgcdr.p_ltl[1][:25]),
-        'p_ulu': (hgcdr.p_ulu[0][:15], hgcdr.p_ulu[1][:15]),
-        'p_ucrsu': (hgcdr.p_ucrsu[0][:18], hgcdr.p_ucrsu[1][:18]),
-        'p_ucptu': (hgcdr.p_ucptu[0][:22], hgcdr.p_ucptu[1][:22]),
-        'p_cc': (hgcdr.p_cc[0][:35], hgcdr.p_cc[1][:35]),
-        'p_cuc': (hgcdr.p_cuc[0][:28], hgcdr.p_cuc[1][:28]),
-        'p_ctc': (hgcdr.p_ctc[0][:32], hgcdr.p_ctc[1][:32])
-    }
-    
-    print(f"局部输入维度: lrn={local_input_data['lrn_init'].shape}, unt={local_input_data['unt_init'].shape}, cpt={local_input_data['cpt_init'].shape}")
-    
+    # 测试独立编码器
+    print("\n3. 测试独立编码器...")
     with torch.no_grad():
-        local_embeddings = model(input_data=local_input_data, device=device, return_dict=True)
+        lrn_emb_ind = model.compute_learner_embeddings(
+            hgcdr.lrn_init, 
+            (hgcdr.p_lul[0], hgcdr.p_lul[1]),
+            (hgcdr.p_lcl[0], hgcdr.p_lcl[1]),
+            (hgcdr.p_ltl[0], hgcdr.p_ltl[1]),
+            device
+        )
+        
+        unt_emb_ind = model.compute_unit_embeddings(
+            hgcdr.qusunt_init,
+            (hgcdr.p_ulu[0], hgcdr.p_ulu[1]),
+            (hgcdr.p_ucrsu[0], hgcdr.p_ucrsu[1]),
+            (hgcdr.p_ucptu[0], hgcdr.p_ucptu[1]),
+            device
+        )
+        
+        cpt_emb_ind = model.compute_concept_embeddings(
+            hgcdr.cpt_init,
+            (hgcdr.p_cc[0], hgcdr.p_cc[1]),
+            (hgcdr.p_cuc[0], hgcdr.p_cuc[1]),
+            (hgcdr.p_ctc[0], hgcdr.p_ctc[1]),
+            device
+        )
     
-    print("局部推理结果:")
-    for key, value in local_embeddings.items():
-        print(f"  {key}: {value.shape}, 范围[{value.min():.3f}, {value.max():.3f}]")
+    # 验证独立编码器与统一接口的一致性
+    print("4. 验证独立编码器与统一接口的一致性...")
+    ind_embs = [lrn_emb_ind, unt_emb_ind, cpt_emb_ind]
+    unified_embs = [embeddings_dict_new['lrn_emb'], embeddings_dict_new['unt_emb'], embeddings_dict_new['cpt_emb']]
+    
+    for i, (ind_emb, unified_emb) in enumerate(zip(ind_embs, unified_embs)):
+        if torch.allclose(ind_emb, unified_emb, atol=1e-6):
+            print(f"  ✓ 编码器{i+1} 独立与统一接口一致性验证通过")
+        else:
+            max_diff = (ind_emb - unified_emb).abs().max().item()
+            print(f"  ✗ 编码器{i+1} 独立与统一接口有差异: 最大差异={max_diff:.6f}")
+            consistency_passed = False
     
     # 测试梯度计算
-    print("\n3. 梯度计算测试...")
+    print("\n5. 梯度计算测试...")
     model.train()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     
-    # 使用局部数据进行梯度计算
-    lrn_emb, unt_emb, cpt_emb = model(input_data=local_input_data, device=device, return_dict=False)
+    # 使用新接口计算梯度
+    lrn_emb, unt_emb, cpt_emb = model(input_data=input_data, device=device, return_dict=False)
     loss = (lrn_emb.norm() + unt_emb.norm() + cpt_emb.norm()) / 3
     loss.backward()
     
     # 检查梯度
     has_gradients = False
     total_grad_norm = 0.0
+    grad_info = {}
     
     for name, param in model.named_parameters():
-        if param.grad is not None and param.grad.norm().item() > 1e-8:
-            has_gradients = True
-            total_grad_norm += param.grad.norm().item()
+        if param.grad is not None:
+            grad_norm = param.grad.norm().item()
+            if grad_norm > 1e-8:
+                has_gradients = True
+                total_grad_norm += grad_norm
+                module_name = name.split('.')[0]
+                grad_info[module_name] = grad_info.get(module_name, 0) + grad_norm
     
     if has_gradients:
         print(f"✓ 梯度计算正常，总梯度范数: {total_grad_norm:.6f}")
+        print("各模块梯度分布:")
+        for module, grad_norm in grad_info.items():
+            print(f"  {module}: {grad_norm:.6f}")
         
         # 参数更新测试
         optimizer.step()
@@ -484,11 +479,19 @@ def test_adaptive_hgc_model():
     else:
         print("✗ 没有检测到有效梯度")
     
+    # 总结测试结果
     print("\n=== 测试总结 ===")
-    print("✓ 自适应HGC模型测试完成")
-    print("✓ 支持任意输入维度的局部图推理")
-    print("✓ 投影层不依赖具体课程/知识点数量")
+    if consistency_passed and has_gradients:
+        print("✓ 所有测试通过!")
+    else:
+        print("⚠ 部分测试有问题:")
+        if not consistency_passed:
+            print("  - 接口一致性有微小数值差异（通常可接受）")
+        if not has_gradients:
+            print("  - 梯度计算异常")
+    
+    print("\n✓ HGC模型测试完成")
 
 if __name__ == '__main__':
     from DataReader.HGCDataReader import hgcdr
-    test_adaptive_hgc_model()
+    test_hgc_model()

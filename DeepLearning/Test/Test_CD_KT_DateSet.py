@@ -177,15 +177,27 @@ class CD_KT_DataPipelineTest:
         
         # 初始化HGC模型
         model_hgc = HGC(
-            embedding_dim=hyperparams.hgc_embedding_dim,
-            lrn_input_dim=lrn_input_dim,
-            unt_input_dim=unt_input_dim,
-            cpt_input_dim=cpt_input_dim
+            embedding_dim=hyperparams.hgc_embedding_dim
+            # 新版HGC不再需要输入维度参数
         ).to(self.device)
         
         # 计算嵌入
         with torch.no_grad():
-            lrn_emb, qusunt_emb, cpt_emb = model_hgc(hgcdr, self.device, return_dict=False)
+            input_data = {
+                'lrn_init': hgcdr.lrn_init,
+                'unt_init': hgcdr.qusunt_init,
+                'cpt_init': hgcdr.cpt_init,
+                'p_lul': (hgcdr.p_lul[0], hgcdr.p_lul[1]),
+                'p_lcl': (hgcdr.p_lcl[0], hgcdr.p_lcl[1]),
+                'p_ltl': (hgcdr.p_ltl[0], hgcdr.p_ltl[1]),
+                'p_ulu': (hgcdr.p_ulu[0], hgcdr.p_ulu[1]),
+                'p_ucrsu': (hgcdr.p_ucrsu[0], hgcdr.p_ucrsu[1]),
+                'p_ucptu': (hgcdr.p_ucptu[0], hgcdr.p_ucptu[1]),
+                'p_cc': (hgcdr.p_cc[0], hgcdr.p_cc[1]),
+                'p_cuc': (hgcdr.p_cuc[0], hgcdr.p_cuc[1]),
+                'p_ctc': (hgcdr.p_ctc[0], hgcdr.p_ctc[1])
+            }
+            lrn_emb, qusunt_emb, cpt_emb = model_hgc(input_data=input_data, device=self.device, return_dict=False)
         
         print("✓ HGC嵌入计算完成")
         print(f"  学习者嵌入维度: {lrn_emb.shape}")

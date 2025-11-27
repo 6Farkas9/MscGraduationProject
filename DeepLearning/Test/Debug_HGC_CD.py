@@ -105,10 +105,8 @@ class ComprehensiveTester:
         # 2. 初始化HGC模型
         print("2. 初始化HGC模型...")
         self.model_hgc = HGC(
-            embedding_dim=hyperparams.hgc_embedding_dim,
-            lrn_input_dim=lrn_input_dim,
-            unt_input_dim=unt_input_dim,
-            cpt_input_dim=cpt_input_dim
+            embedding_dim=hyperparams.hgc_embedding_dim
+            # 新版HGC不再需要输入维度参数
         ).to(self.device)
         
         print(f"   HGC模型参数:")
@@ -124,8 +122,22 @@ class ComprehensiveTester:
         print("4. 创建初始HGC嵌入...")
         self.model_hgc.eval()
         with torch.no_grad():
+            input_data = {
+                'lrn_init': hgcdr.lrn_init,
+                'unt_init': hgcdr.qusunt_init,
+                'cpt_init': hgcdr.cpt_init,
+                'p_lul': (hgcdr.p_lul[0], hgcdr.p_lul[1]),
+                'p_lcl': (hgcdr.p_lcl[0], hgcdr.p_lcl[1]),
+                'p_ltl': (hgcdr.p_ltl[0], hgcdr.p_ltl[1]),
+                'p_ulu': (hgcdr.p_ulu[0], hgcdr.p_ulu[1]),
+                'p_ucrsu': (hgcdr.p_ucrsu[0], hgcdr.p_ucrsu[1]),
+                'p_ucptu': (hgcdr.p_ucptu[0], hgcdr.p_ucptu[1]),
+                'p_cc': (hgcdr.p_cc[0], hgcdr.p_cc[1]),
+                'p_cuc': (hgcdr.p_cuc[0], hgcdr.p_cuc[1]),
+                'p_ctc': (hgcdr.p_ctc[0], hgcdr.p_ctc[1])
+            }
             initial_lrn_emb, initial_qusunt_emb, initial_cpt_emb = self.model_hgc(
-                hgcdr, self.device, return_dict=False
+                input_data=input_data, device=self.device, return_dict=False
             )
         
         # 5. 创建CD数据集（使用初始嵌入）
@@ -188,7 +200,21 @@ class ComprehensiveTester:
     
     def compute_hgc_embeddings(self):
         """计算HGC嵌入 - 每次训练步骤重新计算"""
-        return self.model_hgc(hgcdr, self.device, return_dict=False)
+        input_data = {
+            'lrn_init': hgcdr.lrn_init,
+            'unt_init': hgcdr.qusunt_init,
+            'cpt_init': hgcdr.cpt_init,
+            'p_lul': (hgcdr.p_lul[0], hgcdr.p_lul[1]),
+            'p_lcl': (hgcdr.p_lcl[0], hgcdr.p_lcl[1]),
+            'p_ltl': (hgcdr.p_ltl[0], hgcdr.p_ltl[1]),
+            'p_ulu': (hgcdr.p_ulu[0], hgcdr.p_ulu[1]),
+            'p_ucrsu': (hgcdr.p_ucrsu[0], hgcdr.p_ucrsu[1]),
+            'p_ucptu': (hgcdr.p_ucptu[0], hgcdr.p_ucptu[1]),
+            'p_cc': (hgcdr.p_cc[0], hgcdr.p_cc[1]),
+            'p_cuc': (hgcdr.p_cuc[0], hgcdr.p_cuc[1]),
+            'p_ctc': (hgcdr.p_ctc[0], hgcdr.p_ctc[1])
+        }
+        return self.model_hgc(input_data=input_data, device=self.device, return_dict=False)
     
     def train_step(self, batch, batch_idx):
         """单步训练 - 修复版本"""

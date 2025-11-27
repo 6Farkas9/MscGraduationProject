@@ -150,10 +150,8 @@ class CompletePipelineTrainer:
         # 2. 初始化HGC模型
         print("2. 初始化HGC模型...")
         self.model_hgc = HGC(
-            embedding_dim=hyperparams.hgc_embedding_dim,
-            lrn_input_dim=lrn_input_dim,
-            unt_input_dim=unt_input_dim,
-            cpt_input_dim=cpt_input_dim
+            embedding_dim=hyperparams.hgc_embedding_dim
+            # 不再需要输入维度参数
         ).to(self.device)
         
         # 3. 加载CD数据并创建数据集
@@ -180,8 +178,11 @@ class CompletePipelineTrainer:
         print("6. 计算初始HGC嵌入...")
         self.model_hgc.eval()
         with torch.no_grad():
+            # 准备输入数据字典
+            input_data = self._prepare_input_data()
+
             initial_lrn_emb, initial_qusunt_emb, initial_cpt_emb = self.model_hgc(
-                hgcdr, self.device, return_dict=False
+                input_data=input_data, device=self.device, return_dict=False
             )
         
         # 7. 创建CD数据集
@@ -318,7 +319,25 @@ class CompletePipelineTrainer:
     
     def compute_hgc_embeddings(self):
         """计算HGC嵌入（带梯度）"""
-        return self.model_hgc(hgcdr, self.device, return_dict=False)
+        input_data = self._prepare_input_data()
+        return self.model_hgc(input_data=input_data, device=self.device, return_dict=False)
+
+    def _prepare_input_data(self):
+        """准备输入数据字典"""
+        return {
+            'lrn_init': hgcdr.lrn_init,
+            'unt_init': hgcdr.qusunt_init,
+            'cpt_init': hgcdr.cpt_init,
+            'p_lul': (hgcdr.p_lul[0], hgcdr.p_lul[1]),
+            'p_lcl': (hgcdr.p_lcl[0], hgcdr.p_lcl[1]),
+            'p_ltl': (hgcdr.p_ltl[0], hgcdr.p_ltl[1]),
+            'p_ulu': (hgcdr.p_ulu[0], hgcdr.p_ulu[1]),
+            'p_ucrsu': (hgcdr.p_ucrsu[0], hgcdr.p_ucrsu[1]),
+            'p_ucptu': (hgcdr.p_ucptu[0], hgcdr.p_ucptu[1]),
+            'p_cc': (hgcdr.p_cc[0], hgcdr.p_cc[1]),
+            'p_cuc': (hgcdr.p_cuc[0], hgcdr.p_cuc[1]),
+            'p_ctc': (hgcdr.p_ctc[0], hgcdr.p_ctc[1])
+        }
     
     def save_checkpoint(self, epoch, cd_loss, kt_loss):
         """保存检查点（用于接续训练）"""

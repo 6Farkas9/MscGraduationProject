@@ -71,25 +71,23 @@ class HGCEngine:
             return False
     
     def _initialize_learner_encoder(self):
-        """初始化学习者编码器"""
+        """初始化学习者编码器 - 适配新版HGC模型"""
         logger.info("初始化学习者编码器...")
         
         # 使用超参数配置
         embedding_dim = hyperparams.hgc_embedding_dim
         
-        # 学习者输入维度需要根据实际数据确定，这里使用默认值
-        # 在实际使用中可以通过样本数据动态获取
-        lrn_input_dim = 128  # 默认值，可根据实际情况调整
-        
+        # 新版HGC使用自适应投影，不再需要输入维度参数
         self.model = LearnerEncoder(
-            embedding_dim=embedding_dim,
-            lrn_input_dim=lrn_input_dim
+            embedding_dim=embedding_dim
+            # 不再需要lrn_input_dim参数
         ).to(self.device)
         
-        logger.info(f"学习者编码器初始化完成: embedding_dim={embedding_dim}, lrn_input_dim={lrn_input_dim}")
+        logger.info(f"学习者编码器初始化完成: embedding_dim={embedding_dim}")
+        logger.info(f"使用自适应投影，支持任意输入维度")
     
     def _load_model_weights(self):
-        """加载训练好的模型权重"""
+        """加载训练好的模型权重 - 适配新版HGC模型结构"""
         logger.info("加载HGC模型权重...")
         
         # 模型权重路径
@@ -104,29 +102,69 @@ class HGCEngine:
         try:
             checkpoint = torch.load(hgc_path, map_location=self.device)
             
-            # 从完整HGC模型中提取学习者编码器的权重
-            if 'model_state_dict' in checkpoint:
+            # 根据训练脚本的保存格式处理权重
+            if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                # 训练脚本保存的完整检查点格式
                 state_dict = checkpoint['model_state_dict']
+                logger.info(f"加载完整检查点，epoch: {checkpoint.get('epoch', 'unknown')}")
             else:
+                # 直接保存的模型权重
                 state_dict = checkpoint
             
-            # 过滤出学习者编码器的权重
+            # 新版HGC模型权重映射
+            # 训练脚本保存的是完整的HGC模型，需要提取learner_encoder部分
             learner_encoder_state_dict = {}
+            
             for key, value in state_dict.items():
+                # 处理不同的权重命名方式
                 if key.startswith('learner_encoder.'):
-                    # 移除前缀
+                    # 新版HGC的权重格式
                     new_key = key.replace('learner_encoder.', '')
                     learner_encoder_state_dict[new_key] = value
+                elif key.startswith('lrn_proj.') or key.startswith('lrn_gcn_') or key.startswith('lrn_attn.') or key.startswith('output_norm.'):
+                    # 直接是学习者编码器的权重（没有learner_encoder前缀）
+                    learner_encoder_state_dict[key] = value
+                elif key.startswith('model_hgc_state_dict'):
+                    # 如果是嵌套的模型状态字典
+                    nested_state_dict = value
+                    for nested_key, nested_value in nested_state_dict.items():
+                        if nested_key.startswith('learner_encoder.'):
+                            new_nested_key = nested_key.replace('learner_encoder.', '')
+                            learner_encoder_state_dict[new_nested_key] = nested_value
             
             if learner_encoder_state_dict:
-                self.model.load_state_dict(learner_encoder_state_dict)
-                logger.info("学习者编码器权重加载成功")
+                # 检查模型结构是否匹配
+                model_keys = set(self.model.state_dict().keys())
+                loaded_keys = set(learner_encoder_state_dict.keys())
+                
+                missing_keys = model_keys - loaded_keys
+                unexpected_keys = loaded_keys - model_keys
+                
+                if missing_keys:
+                    logger.warning(f"权重文件中缺少以下键: {missing_keys}")
+                if unexpected_keys:
+                    logger.warning(f"权重文件中有意外的键: {unexpected_keys}")
+                
+                # 加载权重
+                load_result = self.model.load_state_dict(learner_encoder_state_dict, strict=False)
+                logger.info(f"学习者编码器权重加载成功")
+                logger.info(f"成功加载: {len(load_result.missing_keys)}个缺失键, {len(load_result.unexpected_keys)}个意外键")
             else:
                 logger.warning("未找到学习者编码器权重，使用随机初始化")
                 
         except Exception as e:
             logger.error(f"加载模型权重失败: {e}")
+            logger.error(f"权重文件路径: {hgc_path}")
+            logger.error(f"设备: {self.device}")
+            import traceback
+            logger.error(f"详细错误: {traceback.format_exc()}")
             logger.warning("使用随机初始化的模型")
+        
+        if learner_encoder_state_dict:
+            # 记录模型参数信息
+            total_params = sum(p.numel() for p in self.model.parameters())
+            trainable_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+            logger.info(f"模型参数统计 - 总数: {total_params:,}, 可训练: {trainable_params:,}")
     
     def _get_learner_data(self, learner_uids: List[str]) -> Dict[str, Any]:
         """
