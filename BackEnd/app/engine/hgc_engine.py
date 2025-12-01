@@ -1,5 +1,4 @@
 # BackEnd/app/engine/hgc_engine.py
-import sys
 import os
 import torch
 import torch.nn as nn
@@ -9,8 +8,8 @@ from typing import List, Dict, Any, Optional, Tuple
 import scipy.sparse as sparse
 from datetime import datetime
 
-# 添加项目路径
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+# 导入配置
+from app.core.config import path_config
 
 # 导入模型定义
 from DeepLearning.Model.HGC import LearnerEncoder
@@ -604,7 +603,7 @@ if __name__ == '__main__':
         # 测试多个学习者
         test_learner_uids = [
             "lrn_004a9c3f5bf246faab3d390ce716e658",
-            "lrn_00a6f6e5a1e84e9d9f3b3c3a3d3e3f3a"  # 替换为实际存在的UID
+            "lrn_51efbdbcf8844c478bbbb3ab7ad8e64e"  # 替换为实际存在的UID
         ]
         results = engine.compute_multiple_learners_embedding(test_learner_uids)
         print(f"多个学习者测试: 成功 {results['success_count']}/{results['total_count']}")

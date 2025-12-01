@@ -116,3 +116,19 @@ class BaseRepository:
         except Exception as e:
             logger.error(f"执行MongoDB聚合失败: {e}, 集合: {collection_name}")
             return []
+        
+    def get_concept_uid_to_id_mapping(self) -> Dict[str, int]:
+        """获取知识点UID到ID的映射（按id顺序）"""
+        try:
+            query = "SELECT uid, id FROM Concepts ORDER BY id"
+            results = self.mysql_operator.execute_custom_query(query)
+            
+            # 构建映射字典 {uid: id}
+            uid_to_id_map = {}
+            for result in results:
+                uid_to_id_map[result['uid']] = result['id']
+                
+            return uid_to_id_map
+        except Exception as e:
+            logger.error(f"获取知识点UID到ID映射失败: {e}")
+            return {}
