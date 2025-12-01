@@ -356,7 +356,7 @@ class CDEngine:
             learner_embeddings: 学习者嵌入列表（模式2），如果为None则从数据库获取
             
         Returns:
-            CD模型输入数据字典
+            CD模型输入数据字典，包含每个学习者的序列长度信息
         """
         try:
             # 对于单个学习者，不限制序列长度；对于多个学习者，取实际最大长度
@@ -385,6 +385,9 @@ class CDEngine:
             qus_seq_indices = torch.zeros(batch_size, effective_max_seq_len, dtype=torch.long, device=self.device)
             qus_seq_masks = torch.zeros(batch_size, effective_max_seq_len, dtype=torch.float32, device=self.device)
             
+            # 记录每个学习者的实际序列长度
+            learner_seq_lengths = []
+            
             # 获取学习者嵌入
             if learner_embeddings:
                 # 模式2：使用传入的嵌入
@@ -412,13 +415,18 @@ class CDEngine:
             for i, learner_uid in enumerate(learner_uids):
                 seq_data = sequences.get(learner_uid)
                 if not seq_data:
+                    learner_seq_lengths.append(0)
                     continue
                     
                 qus_seq = seq_data['qus_seq']
-                seq_len = len(qus_seq)
+                seq_len = seq_data['seq_len']  # 实际序列长度
                 
                 if seq_len == 0:
+                    learner_seq_lengths.append(0)
                     continue
+                
+                # 记录实际长度
+                learner_seq_lengths.append(seq_len)
                     
                 # 只填充实际有数据的位置
                 for j in range(seq_len):
@@ -443,10 +451,12 @@ class CDEngine:
                 'qus_seq_indices': qus_seq_indices,
                 'qus_seq_masks': qus_seq_masks,
                 'kt_ability': kt_ability,
-                'actual_seq_len': effective_max_seq_len
+                'actual_max_seq_len': effective_max_seq_len,
+                'learner_seq_lengths': learner_seq_lengths  # 添加每个学习者的实际长度
             }
             
-            logger.info(f"CD输入数据准备完成: 批次大小={batch_size}, 有效学习者={valid_learners}, 实际序列长度={effective_max_seq_len}")
+            logger.info(f"CD输入数据准备完成: 批次大小={batch_size}, 有效学习者={valid_learners}, 实际最大序列长度={effective_max_seq_len}")
+            logger.debug(f"各学习者序列长度: {learner_seq_lengths}")
             return inputs
             
         except Exception as e:
@@ -606,16 +616,26 @@ class CDEngine:
             # 处理结果
             results = {}
             success_count = 0
-            
+
             for i, learner_uid in enumerate(valid_learner_uids):
                 if i < len(ability_matrix):
-                    # 取每个学习者最后一个时间步的能力向量
-                    ability_vector = ability_matrix[i, -1].cpu().numpy().tolist()
+                    # 获取该学习者的实际序列长度
+                    seq_len = inputs.get('learner_seq_lengths', [])[i] if i < len(inputs.get('learner_seq_lengths', [])) else 0
+                    
+                    # 找到该学习者最后一个有效的时间步
+                    if seq_len > 0:
+                        # seq_len-1 是最后一个有效时间步的索引
+                        ability_vector = ability_matrix[i, seq_len-1].cpu().numpy().tolist()
+                    else:
+                        # 如果没有有效数据，使用最后一个时间步
+                        ability_vector = ability_matrix[i, -1].cpu().numpy().tolist()
+                        logger.warning(f"学习者 {learner_uid} 序列长度为0，使用最后一个时间步")
                     
                     results[learner_uid] = {
                         'concept_mastery_vector': ability_vector,
                         'concept_count': self.concept_num,
-                        'timestamp': datetime.now().isoformat()
+                        'timestamp': datetime.now().isoformat(),
+                        'actual_seq_len': seq_len  # 记录实际使用的序列长度
                     }
                     success_count += 1
                 else:
@@ -643,7 +663,6 @@ class CDEngine:
                 'success_count': 0,
                 'results': {}
             }
-    
     def compute_concept_mastery_with_embeddings(self, learner_embeddings: List[torch.Tensor], 
                                               learner_uids: List[str]) -> Dict[str, Any]:
         """
@@ -713,13 +732,22 @@ class CDEngine:
             
             for i, learner_uid in enumerate(valid_learner_uids):
                 if i < len(ability_matrix):
-                    ability_vector = ability_matrix[i, -1].cpu().numpy().tolist()
+                    # 获取该学习者的实际序列长度
+                    seq_len = inputs.get('learner_seq_lengths', [])[i] if i < len(inputs.get('learner_seq_lengths', [])) else 0
+                    
+                    # 找到该学习者最后一个有效的时间步
+                    if seq_len > 0:
+                        ability_vector = ability_matrix[i, seq_len-1].cpu().numpy().tolist()
+                    else:
+                        ability_vector = ability_matrix[i, -1].cpu().numpy().tolist()
+                        logger.warning(f"新学习者 {learner_uid} 序列长度为0，使用最后一个时间步")
                     
                     results[learner_uid] = {
                         'concept_mastery_vector': ability_vector,
                         'concept_count': self.concept_num,
                         'timestamp': datetime.now().isoformat(),
-                        'is_new_learner': True
+                        'is_new_learner': True,
+                        'actual_seq_len': seq_len
                     }
                     success_count += 1
             
@@ -878,11 +906,16 @@ def test_cd_engine():
                 if 'concept_mastery_vector' in data:
                     ability_vector = data['concept_mastery_vector']
                     non_zero_count = sum(1 for x in ability_vector if abs(x) > 0.001)
-                    print(f"   {uid}: 知识点数={data['concept_count']}, 非零值={non_zero_count}")
+                    seq_len = data.get('actual_seq_len', '未知')
+                    print(f"   {uid}: 知识点数={data['concept_count']}, 非零值={non_zero_count}, 序列长度={seq_len}")
+                    
+                    if non_zero_count == 0:
+                        print(f"     警告: 输出全零!")
+                        print(f"     前5个值: {ability_vector[:5]}")
+                    elif non_zero_count < 10:  # 如果非零值很少
+                        print(f"     非零值较少，前5个值: {ability_vector[:5]}")
                 else:
                     print(f"   {uid}: 失败 - {data.get('error', '未知错误')}")
-        else:
-            print(f"❌ 批量计算失败: {results.get('error', '未知错误')}")
         
         # 测试模式2：新学习者
         print("\n--- 测试模式2: 新学习者 ---")

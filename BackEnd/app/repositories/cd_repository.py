@@ -103,15 +103,17 @@ class CDRepository(BaseRepository):
                 if max_seq_len is not None and len(qus_seq) > max_seq_len:
                     qus_seq = qus_seq[-max_seq_len:]  # 取最近的部分
                 
+                seq_len = len(qus_seq)
+                
                 # 收集所有涉及的题目UID
                 all_question_uids.update(qus_seq)
                 
                 # 更新实际最大序列长度
-                actual_max_seq_len = max(actual_max_seq_len, len(qus_seq))
+                actual_max_seq_len = max(actual_max_seq_len, seq_len)
                 
                 sequences[learner_uid] = {
                     'qus_seq': qus_seq,
-                    'seq_len': len(qus_seq),
+                    'seq_len': seq_len,  # 记录实际长度
                     'interaction_count': len(interactions)
                 }
             
