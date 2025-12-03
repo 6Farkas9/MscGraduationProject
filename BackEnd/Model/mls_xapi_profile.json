@@ -1,0 +1,913 @@
+{
+  "id": "https://example.org/xapi/profiles/mls-metaverse-learning",
+  "type": "Profile",
+  "prefLabel": {
+    "en-US": "MLS Metaverse Learning xAPI Profile"
+  },
+  "definition": {
+    "en-US": "An xAPI profile describing verbs and usage patterns for a metaverse-based learning system (MLS), including video, AR/VR, interactive, cooperative, and assessment activities."
+  },
+  "versions": [
+    {
+      "id": "https://example.org/xapi/profiles/mls-metaverse-learning/v1",
+      "generatedAtTime": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "concepts": [
+    {
+      "id": "https://example.org/xapi/verbs/started-unit",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "started unit",
+        "zh-CN": "开始学习单元"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner has started a learning unit of any type (video, VR, AR, interactive, cooperative, or unknown)."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent",
+          "account": {
+            "homePage": {
+              "type": "string",
+              "description": "Base URI of the MLS system, e.g., https://example.org/mls"
+            },
+            "name": {
+              "type": "string",
+              "description": "Learner unique identifier (lrn_uid)."
+            }
+          }
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/started-unit",
+          "display": {
+            "en-US": "started unit"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/{unit_type}/{unt_uid}",
+          "definition": {
+            "type": {
+              "type": "string",
+              "description": "Activity type IRI such as https://example.org/mls/types/video, /vr, /ar, /interact, /cooperate, or /unknown."
+            }
+          }
+        },
+        "result": {
+          "type": "object",
+          "description": "Usually empty for started-unit.",
+          "properties": {}
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/completed-unit",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "completed unit",
+        "zh-CN": "完成学习单元"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner has completed a learning unit of any type."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/completed-unit",
+          "display": {
+            "en-US": "completed unit"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/{unit_type}/{unt_uid}",
+          "definition": {
+            "type": {
+              "type": "string",
+              "description": "Activity type IRI such as https://example.org/mls/types/video, /vr, /ar, /interact, /cooperate, or /unknown."
+            }
+          }
+        },
+        "result": {
+          "type": "object",
+          "description": "Optional completion result.",
+          "properties": {
+            "completion": {
+              "type": "boolean",
+              "description": "True if the unit is considered completed."
+            },
+            "score": {
+              "type": "object",
+              "description": "Optional score or performance for this unit.",
+              "properties": {
+                "raw": {
+                  "type": "number"
+                },
+                "min": {
+                  "type": "number"
+                },
+                "max": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/played-video",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "played video",
+        "zh-CN": "播放视频"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner started playing a segment of a video unit."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/played-video",
+          "display": {
+            "en-US": "played video"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/video/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/video"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/segment_length": {
+                  "type": "number",
+                  "description": "Length of the played segment in seconds."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/paused-video",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "paused video",
+        "zh-CN": "暂停视频"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner paused the video playback."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/paused-video",
+          "display": {
+            "en-US": "paused video"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/video/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/video"
+          }
+        },
+        "result": {
+          "type": "object",
+          "description": "Optional; usually empty.",
+          "properties": {}
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/replayed-segment",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "replayed segment",
+        "zh-CN": "重播视频片段"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner replayed a segment of the video."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/replayed-segment",
+          "display": {
+            "en-US": "replayed segment"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/video/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/video"
+          }
+        },
+        "result": {
+          "type": "object",
+          "description": "Optional information about the replayed segment.",
+          "properties": {}
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/entered-immersive-env",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "entered immersive environment",
+        "zh-CN": "进入沉浸式环境"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner entered an AR or VR immersive learning environment."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/entered-immersive-env",
+          "display": {
+            "en-US": "entered immersive environment"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/{unit_type}/{unt_uid}",
+          "definition": {
+            "type": {
+              "type": "string",
+              "description": "https://example.org/mls/types/vr or https://example.org/mls/types/ar."
+            }
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/planned_duration": {
+                  "type": "number",
+                  "description": "Planned duration of the immersive unit in seconds."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/navigated-environment",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "navigated environment",
+        "zh-CN": "在环境中导航"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner navigated or moved within an immersive environment (AR or VR)."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/navigated-environment",
+          "display": {
+            "en-US": "navigated environment"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/{unit_type}/{unt_uid}",
+          "definition": {
+            "type": {
+              "type": "string",
+              "description": "https://example.org/mls/types/vr or https://example.org/mls/types/ar."
+            }
+          }
+        },
+        "result": {
+          "type": "object",
+          "description": "Optional information about navigation (e.g., distance).",
+          "properties": {}
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/manipulated-object",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "manipulated virtual object",
+        "zh-CN": "操作虚拟对象"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner manipulated a virtual object (e.g., grab, rotate, scale) in an immersive environment."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/manipulated-object",
+          "display": {
+            "en-US": "manipulated virtual object"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/{unit_type}/{unt_uid}",
+          "definition": {
+            "type": {
+              "type": "string",
+              "description": "https://example.org/mls/types/vr or https://example.org/mls/types/ar."
+            }
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/object_id": {
+                  "type": "string",
+                  "description": "Identifier of the manipulated virtual object."
+                },
+                "https://example.org/mls/extensions/action": {
+                  "type": "string",
+                  "description": "Type of manipulation, such as grab, rotate, scale."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/performed-trial",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "performed interactive trial",
+        "zh-CN": "执行交互尝试"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner performed one interactive trial or attempt in a game-like or interactive unit."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/performed-trial",
+          "display": {
+            "en-US": "performed interactive trial"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/interact/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/interact"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "True if the trial is successful."
+            },
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/trial_index": {
+                  "type": "integer",
+                  "description": "Index of the trial within the unit, starting from 1."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/solved-puzzle",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "solved puzzle",
+        "zh-CN": "解决谜题"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner successfully solved a puzzle or key challenge in an interactive unit."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/solved-puzzle",
+          "display": {
+            "en-US": "solved puzzle"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/interact/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/interact"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "Should be true when the puzzle is solved."
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/posted-message",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "posted message in collaboration",
+        "zh-CN": "在协作中发言"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner posted a message or utterance in a cooperative activity."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/posted-message",
+          "display": {
+            "en-US": "posted message in collaboration"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/cooperate/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/cooperate"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "string",
+              "description": "Optional text of the message. The system may also store text elsewhere."
+            },
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/message_length": {
+                  "type": "integer",
+                  "description": "Length of the message in characters."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/replied-to-peer",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "replied to peer",
+        "zh-CN": "回复同伴"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner replied to a message from a peer within a cooperative activity."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/replied-to-peer",
+          "display": {
+            "en-US": "replied to peer"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/cooperate/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/cooperate"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "string",
+              "description": "Optional reply content."
+            },
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/replied_to_message_id": {
+                  "type": "string",
+                  "description": "Identifier of the message being replied to, if available."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/pointed-to-shared-object",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "pointed to shared object",
+        "zh-CN": "指向共享对象"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner pointed to a shared resource or object in a cooperative activity, acting as a referring behavior."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/pointed-to-shared-object",
+          "display": {
+            "en-US": "pointed to shared object"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/cooperate/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/cooperate"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/shared_object_id": {
+                  "type": "string",
+                  "description": "Identifier of the shared object being pointed at."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/followed-peer-reference",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "followed peer reference",
+        "zh-CN": "跟随同伴引用"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner followed a peer's reference to a shared object or resource (e.g., moved gaze or viewport to the referred object)."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/followed-peer-reference",
+          "display": {
+            "en-US": "followed peer reference"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/cooperate/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/cooperate"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/followed_object_id": {
+                  "type": "string",
+                  "description": "Identifier of the shared object being followed."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/managed-shared-resource",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "managed shared resource",
+        "zh-CN": "管理共享资源"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner managed a shared resource (e.g., moving, resizing, editing a shared canvas or document) in a cooperative activity."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/managed-shared-resource",
+          "display": {
+            "en-US": "managed shared resource"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/cooperate/{unt_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/cooperate"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/shared_object_id": {
+                  "type": "string",
+                  "description": "Identifier of the shared resource being managed."
+                },
+                "https://example.org/mls/extensions/action": {
+                  "type": "string",
+                  "description": "Type of management action, such as move, resize, edit."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    },
+    {
+      "id": "https://example.org/xapi/verbs/attempted-question",
+      "type": "Verb",
+      "inScheme": "https://example.org/xapi/profiles/mls-metaverse-learning",
+      "prefLabel": {
+        "en-US": "attempted question",
+        "zh-CN": "尝试作答题目"
+      },
+      "definition": {
+        "en-US": "Indicates that the learner attempted a question item. Each coarse Interaction record corresponds to one attempt, and additioninfo1 indicates the attempt index."
+      },
+      "usage": {
+        "actor": {
+          "objectType": "Agent"
+        },
+        "verb": {
+          "id": "https://example.org/xapi/verbs/attempted-question",
+          "display": {
+            "en-US": "attempted question"
+          }
+        },
+        "object": {
+          "objectType": "Activity",
+          "idPattern": "https://example.org/mls/question/{qus_uid}",
+          "definition": {
+            "type": "https://example.org/mls/types/question"
+          }
+        },
+        "result": {
+          "type": "object",
+          "properties": {
+            "success": {
+              "type": "boolean",
+              "description": "True if this attempt answered the question correctly."
+            },
+            "extensions": {
+              "type": "object",
+              "properties": {
+                "https://example.org/mls/extensions/attempt_index": {
+                  "type": "integer",
+                  "description": "The index of this attempt (1 = first attempt, 2 = second, etc.), corresponding to additioninfo1 in the coarse Interaction table."
+                }
+              },
+              "required": []
+            }
+          },
+          "required": [
+            "success"
+          ]
+        },
+        "context": {
+          "contextActivities": {
+            "parent": {
+              "idPattern": "https://example.org/mls/course/{course_id}",
+              "required": false
+            }
+          },
+          "extensions": {}
+        }
+      }
+    }
+  ]
+}
