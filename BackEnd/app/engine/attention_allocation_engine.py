@@ -1,284 +1,260 @@
-# BackEnd/app/engine/attention_allocation_engine.py
+# attention_allocation_engine.py
+# -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import logging
-from typing import Dict, Any, List, Tuple, Optional
+from collections import Counter, defaultdict
 from math import sqrt
-from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.repositories.attention_allocation_repository import (
-    attention_allocation_repository,
+    AttentionAllocationRepository,
 )
 
 logger = logging.getLogger(__name__)
 
 
-# 与分析脚本保持一致的扩展字段 URL
-EXT_UNIT_TYPE = "https://legend-meta.com/xapi/ext/unit-type"
-EXT_FOCUS_TARGET = "https://legend-meta.com/xapi/ext/focus-target-id"
+# ----------------------------------------------------------------------
+# 通用小工具
+# ----------------------------------------------------------------------
+def compute_mean_std(values: List[float]) -> Tuple[float, float]:
+    """简单均值 + 总体标准差。"""
+    n = len(values)
+    if n == 0:
+        return 0.0, 0.0
+    mean_v = sum(values) / float(n)
+    if n == 1:
+        return mean_v, 0.0
+    var = sum((v - mean_v) ** 2 for v in values) / float(n)
+    return mean_v, sqrt(var)
 
 
+def kmeans_1d(values: List[float], k: int = 3, max_iter: int = 50) -> List[int]:
+    """
+    一维 k-means 聚类，返回每个值所属的簇编号（0..k-1）。
+    """
+    n = len(values)
+    if n == 0:
+        return []
+    if k <= 0:
+        k = 1
+    if n < k:
+        k = n
+
+    v_min, v_max = min(values), max(values)
+    if abs(v_max - v_min) < 1e-6:
+        return [0 for _ in values]
+
+    centers = [
+        v_min + (v_max - v_min) * (i + 0.5) / float(k) for i in range(k)
+    ]
+
+    for _ in range(max_iter):
+        clusters = [[] for _ in range(k)]
+        for idx, v in enumerate(values):
+            best_c = 0
+            best_dist = abs(v - centers[0])
+            for ci in range(1, k):
+                d = abs(v - centers[ci])
+                if d < best_dist:
+                    best_dist = d
+                    best_c = ci
+            clusters[best_c].append(idx)
+
+        new_centers = centers[:]
+        for ci in range(k):
+            if clusters[ci]:
+                new_centers[ci] = sum(
+                    values[i] for i in clusters[ci]
+                ) / float(len(clusters[ci]))
+        max_shift = max(abs(new_centers[ci] - centers[ci]) for ci in range(k))
+        centers = new_centers
+        if max_shift < 1e-4:
+            break
+
+    assignments: List[int] = []
+    for v in values:
+        best_c = 0
+        best_dist = abs(v - centers[0])
+        for ci in range(1, k):
+            d = abs(v - centers[ci])
+            if d < best_dist:
+                best_dist = d
+                best_c = ci
+        assignments.append(best_c)
+
+    # 中心从小到大映射到 0..k-1，code 越大代表“越高”
+    sorted_idx = sorted(range(k), key=lambda i: centers[i])
+    cluster_to_rank = {cluster_idx: rank for rank, cluster_idx in enumerate(sorted_idx)}
+    return [cluster_to_rank[c] for c in assignments]
+
+
+def classify_style_code(metrics: Dict[str, float]) -> int:
+    """
+    根据 AOI 比例和首注视比例，给出 style 数值 code：
+        0: 文本优先
+        1: 图像/模型优先
+        2: 示例/演示优先
+        3: 均衡整合
+        4: 未定义/数据不足
+
+    与 app/models/profiles_labels.py 中 attention_allocation.style 定义保持一致。
+    """
+    tr = metrics.get("text_ratio", 0.0)
+    vr = metrics.get("visual_ratio", 0.0)
+    er = metrics.get("example_ratio", 0.0)
+    rr = metrics.get("relevant_ratio", 0.0)
+    ftr = metrics.get("first_text_ratio", 0.0)
+    fvr = metrics.get("first_visual_ratio", 0.0)
+    fer = metrics.get("first_example_ratio", 0.0)
+
+    max_ratio = max(tr, vr, er)
+    first_max = max(ftr, fvr, fer)
+
+    # 文本优先
+    if (tr == max_ratio and tr >= 0.55) or (ftr == first_max and ftr > 0):
+        return 0
+
+    # 图像/模型优先
+    if (vr == max_ratio and vr >= 0.55) or (fvr == first_max and fvr > 0):
+        return 1
+
+    # 示例/演示优先
+    if (er == max_ratio and er >= 0.45) or (fer == first_max and fer > 0):
+        return 2
+
+    # 均衡整合：任务相关比例高且三类较均衡
+    if rr >= 0.7 and max_ratio <= 0.6:
+        return 3
+
+    return 4  # 未定义 / 数据不足
+
+
+def choose_final_code(codes: List[int], code_priority: Dict[int, int]) -> Optional[int]:
+    """
+    从一组课程级标签 code 中选整体标签：
+    - 先看出现次数（众数）；
+    - 若有并列，则用优先级（越大越“好”）来打破平局。
+    """
+    if not codes:
+        return None
+    counter = Counter(codes)
+    max_count = max(counter.values())
+    candidates = [c for c, cnt in counter.items() if cnt == max_count]
+    if len(candidates) == 1:
+        return candidates[0]
+
+    best_code = None
+    best_priority = None
+    for c in candidates:
+        pr = code_priority.get(c, 0)
+        if best_code is None or pr > best_priority:
+            best_code = c
+            best_priority = pr
+    return best_code
+
+
+# ----------------------------------------------------------------------
+# Engine 主体
+# ----------------------------------------------------------------------
 class AttentionAllocationEngine:
     """
-    注意力分配与信息加工方式分析引擎
+    注意力分配画像分析引擎。
 
-    功能：
-    - 给定一个或多个学习者 UID，从 Repository 读取细粒度 xAPI 行为；
-    - 以 (学习者, 课程) 为单位，计算注意力分配比例、首注视比例、表现；
-    - 基于规则生成信息加工风格标签（style_label）；
-    - 计算注意效率指数 E_att & 归一化到 [0,1] 的 E_att_norm；
-    - 基于 E_att_norm 做三档分类（低 / 中 / 高效），并为学习者整体结果聚合：
-        * 数值：多课程 E_att_norm 的均值；
-        * 分类：多课程效率标签的众数，如有并列则选择“更好”的那一档。
+    对外只暴露一个接口:
+        analyze(learner_uids: List[str]) -> Dict[str, Any]
+
+    - Repository 只提供原始聚合数据；
+    - Engine 在课程内部完成 E_att / 聚类，并在学习者层面汇总整体标签。
     """
 
-    def __init__(self):
-        # 目前不需要复杂初始化，这里保留接口方便以后拓展
-        logger.info("AttentionAllocationEngine 初始化完成")
+    DIMENSION_KEY = "attention_allocation"
+    EFFICIENCY_CATEGORY = "efficiency"
+    STYLE_CATEGORY = "style"
 
-    # ------------------------------------------------------------------
-    # 一些工具函数（来自原分析脚本）
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def parse_iso8601_duration(duration_str: Optional[str]) -> Optional[int]:
-        """
-        解析简单形式的 ISO8601 时长字符串 "PT{秒数}S"。
-        - 若为空或格式不正确，返回 None。
-        """
-        if not duration_str:
-            return None
-        # 简单健壮解析：PT{int}S
-        try:
-            if not duration_str.startswith("PT") or not duration_str.endswith("S"):
-                return None
-            num_part = duration_str[2:-1]
-            return int(num_part)
-        except Exception:
-            return None
-
-    @staticmethod
-    def compute_mean_std(values: List[float]) -> Tuple[float, float]:
-        """
-        计算均值和总体标准差：
-        - 空列表 => (0.0, 0.0)
-        - 单元素 => (value, 0.0)
-        """
-        n = len(values)
-        if n == 0:
-            return 0.0, 0.0
-        mean_v = sum(values) / float(n)
-        if n == 1:
-            return mean_v, 0.0
-        var = sum((v - mean_v) ** 2 for v in values) / float(n)
-        return mean_v, sqrt(var)
-
-    @staticmethod
-    def categorize_aoi(target_id: Optional[str]) -> str:
-        """
-        根据 focus-target-id 粗略判断 AOI 类型：
-        - 文本（text）
-        - 图像/模型（visual）
-        - 示例/提示（example）
-        - 界面/其他（ui_other）
-
-        规则与原脚本保持一致。
-        """
-        if not target_id:
-            return "ui_other"
-
-        tid = target_id.lower()
-
-        # 文本区域
-        if (
-            "subtitle" in tid
-            or "caption" in tid
-            or "text" in tid
-            or "label" in tid
-            or "title" in tid
-        ):
-            return "text"
-
-        # 图像 / 示意图 / 3D 模型 / 主屏
-        if (
-            "diagram" in tid
-            or "image" in tid
-            or "picture" in tid
-            or "screen" in tid
-            or "model" in tid
-            or tid.startswith("vr-object")
-            or tid.startswith("ar-object")
-        ):
-            return "visual"
-
-        # 提示 / 示例 / 解答 / 演示
-        if (
-            "hint" in tid
-            or "tip" in tid
-            or "example" in tid
-            or "demo" in tid
-            or "solution" in tid
-            or "explanation" in tid
-        ):
-            return "example"
-
-        return "ui_other"
-
-    # ------------------------------------------------------------------
-    # 核心内部步骤：从原始事件构造 attention_metrics
-    # ------------------------------------------------------------------
-
-    def _build_attention_metrics(
+    def __init__(
         self,
-        focus_events: List[Dict[str, Any]],
-        observed_events: List[Dict[str, Any]],
-        performance_events: List[Dict[str, Any]],
-    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        repository: Optional[AttentionAllocationRepository] = None,
+        efficiency_cluster_k: int = 3,
+        min_learners_per_course: Optional[int] = None,
+    ):
         """
-        根据原始 xAPI 事件，计算 (learner, course) 级别的注意力指标：
-
-        返回：
-        attention_metrics[(lrn_uid, crs_uid)] = {
-            "text_ratio": ...,
-            "visual_ratio": ...,
-            "example_ratio": ...,
-            "ui_ratio": ...,
-            "relevant_ratio": ...,
-            "first_text_ratio": ...,
-            "first_visual_ratio": ...,
-            "first_example_ratio": ...,
-            "performance": ... or None,
-        }
+        Args:
+            repository: 可注入自定义 Repository 实现，默认使用 AttentionAllocationRepository。
+            efficiency_cluster_k: 每门课程做效率聚类的簇数（默认 3）。
+            min_learners_per_course: 单门课程参与聚类的最小学习者数量，
+                                     默认与 efficiency_cluster_k 相同。
         """
+        self.repo = repository or AttentionAllocationRepository()
+        self.efficiency_cluster_k = efficiency_cluster_k
+        self.min_learners_per_course = (
+            min_learners_per_course or efficiency_cluster_k
+        )
 
-        # 1) 聚合 focused-on-resource 的 AOI 时长与首注视
-        aoi_durations: Dict[Tuple[str, str], Dict[str, float]] = {}
-        first_aoi: Dict[Tuple[str, str, str], Tuple[datetime, str]] = {}
+        # 效率标签：code 越大越“好”
+        self.efficiency_priority = {0: 0, 1: 1, 2: 2}
+        # 风格标签优先级：3(均衡) > 0/1/2(单一偏好) > 4(未定义)
+        self.style_priority = {3: 2, 0: 1, 1: 1, 2: 1, 4: 0}
 
-        for doc in focus_events:
-            lrn_uid = doc.get("_lrn_uid")
-            crs_uid = doc.get("_course_uid")
-            if not lrn_uid or not crs_uid:
-                continue
+    # ------------------------------------------------------------------
+    # 对外主接口
+    # ------------------------------------------------------------------
+    def analyze(self, learner_uids: List[str]) -> Dict[str, Any]:
+        """
+        对一批学习者进行注意力分配画像分析。
 
-            result = doc.get("result") or {}
-            duration_str = result.get("duration")
-            duration_sec = self.parse_iso8601_duration(duration_str)
-            if duration_sec is None or duration_sec <= 0:
-                continue
+        Args:
+            learner_uids: 学习者 uid 列表（可包含多个）。
 
-            context = doc.get("context") or {}
-            ctx_ext = context.get("extensions") or {}
-            target_id = ctx_ext.get(EXT_FOCUS_TARGET)
-            aoi_type = self.categorize_aoi(target_id)
+        Returns:
+            { learner_uid: { "attention_allocation": { ... } } }
+        """
+        learner_uids = list({uid for uid in (learner_uids or []) if uid})
+        if not learner_uids:
+            logger.info("AttentionAllocationEngine.analyze: 空的学习者列表，直接返回。")
+            return {}
 
-            # 解析 timestamp（用于首注视）
-            ts_str = doc.get("timestamp")
-            try:
-                if ts_str:
-                    # 与原脚本兼容：把 Z 结尾处理成 +00:00
-                    ts = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
-                else:
-                    ts = datetime.utcnow()
-            except Exception:
-                ts = datetime.utcnow()
+        logger.info(
+            "AttentionAllocationEngine: 开始分析，学习者数: %d",
+            len(learner_uids),
+        )
 
-            # unit_key：优先用 object.id，否则用 course + unit-type 粗糙表示
-            obj = doc.get("object") or {}
-            obj_id = obj.get("id")
-            if obj_id:
-                unit_key = obj_id
-            else:
-                unit_type = ctx_ext.get(EXT_UNIT_TYPE, "unknown")
-                unit_key = f"{crs_uid}:{unit_type}"
+        # 1. 仓库层：准备原始聚合数据
+        (
+            raw_by_lc,
+            learners_per_course_count,
+            learner_courses_map,
+        ) = self.repo.load_metrics_for_learners(learner_uids)
 
-            key = (lrn_uid, crs_uid)
-
-            if key not in aoi_durations:
-                aoi_durations[key] = {
-                    "text": 0.0,
-                    "visual": 0.0,
-                    "example": 0.0,
-                    "ui_other": 0.0,
+        if not raw_by_lc:
+            logger.info("AttentionAllocationEngine: 所有学习者均无有效原始数据。")
+            result = {}
+            for uid in learner_uids:
+                result[uid] = {
+                    self.DIMENSION_KEY: {
+                        "insufficient_data": True,
+                        "insufficient_reason": "no_data_in_interaction",
+                    }
                 }
-            aoi_durations[key][aoi_type] += float(duration_sec)
+            return result
 
-            fu_key = (lrn_uid, crs_uid, unit_key)
-            if fu_key not in first_aoi:
-                first_aoi[fu_key] = (ts, aoi_type)
-            else:
-                prev_ts, _ = first_aoi[fu_key]
-                if ts < prev_ts:
-                    first_aoi[fu_key] = (ts, aoi_type)
+        logger.info(
+            "AttentionAllocationEngine: 收到原始 (lrn, crs) 对数: %d，课程数: %d",
+            len(raw_by_lc),
+            len(learners_per_course_count),
+        )
 
-        # 2) observed-peer 叠加到 example 类时长
-        for doc in observed_events:
-            lrn_uid = doc.get("_lrn_uid")
-            crs_uid = doc.get("_course_uid")
-            if not lrn_uid or not crs_uid:
-                continue
-
-            result = doc.get("result") or {}
-            duration_str = result.get("duration")
-            duration_sec = self.parse_iso8601_duration(duration_str)
-            if duration_sec is None or duration_sec <= 0:
-                continue
-
-            key = (lrn_uid, crs_uid)
-            if key not in aoi_durations:
-                aoi_durations[key] = {
-                    "text": 0.0,
-                    "visual": 0.0,
-                    "example": 0.0,
-                    "ui_other": 0.0,
-                }
-            aoi_durations[key]["example"] += float(duration_sec)
-
-        # 3) 计算 performance（answered / passed / completed）
-        perf_stats: Dict[Tuple[str, str], Dict[str, float]] = {}
-        for doc in performance_events:
-            lrn_uid = doc.get("_lrn_uid")
-            crs_uid = doc.get("_course_uid")
-            if not lrn_uid or not crs_uid:
-                continue
-
-            result = doc.get("result") or {}
-            success = result.get("success")
-            completion = result.get("completion")
-            if success is None and completion is None:
-                continue
-
-            if success is None:
-                val = 1.0 if completion else 0.0
-            else:
-                val = 1.0 if bool(success) else 0.0
-
-            key = (lrn_uid, crs_uid)
-            if key not in perf_stats:
-                perf_stats[key] = {"sum": 0.0, "cnt": 0}
-            perf_stats[key]["sum"] += val
-            perf_stats[key]["cnt"] += 1
-
-        # 4) 计算各类比例 + 首注视比例
-        attention_metrics: Dict[Tuple[str, str], Dict[str, Any]] = {}
-
-        # 先统计首注视次数
-        first_counts: Dict[Tuple[str, str], Dict[str, int]] = {}
-        for (lrn_uid, crs_uid, _unit_key), (_ts, aoi_type) in first_aoi.items():
-            key = (lrn_uid, crs_uid)
-            if key not in first_counts:
-                first_counts[key] = {"text": 0, "visual": 0, "example": 0}
-            if aoi_type in ("text", "visual", "example"):
-                first_counts[key][aoi_type] += 1
-
-        for key, dur_dict in aoi_durations.items():
-            lrn_uid, crs_uid = key
-            total_dur = sum(dur_dict.values())
+        # 2. 根据原始统计计算每个 (lrn, crs) 的基础数值指标（比例等）
+        base_metrics_by_lc: Dict[Tuple[str, str], Dict[str, float]] = {}
+        for (lrn_uid, crs_uid), raw in raw_by_lc.items():
+            durations = raw.get("durations") or {}
+            text_dur = float(durations.get("text", 0.0))
+            visual_dur = float(durations.get("visual", 0.0))
+            example_dur = float(durations.get("example", 0.0))
+            ui_dur = float(durations.get("ui_other", 0.0))
+            total_dur = text_dur + visual_dur + example_dur + ui_dur
             if total_dur <= 0:
                 continue
-
-            text_dur = dur_dict["text"]
-            visual_dur = dur_dict["visual"]
-            example_dur = dur_dict["example"]
-            ui_dur = dur_dict["ui_other"]
 
             text_ratio = text_dur / total_dur
             visual_ratio = visual_dur / total_dur
@@ -286,22 +262,23 @@ class AttentionAllocationEngine:
             ui_ratio = ui_dur / total_dur
             relevant_ratio = (text_dur + visual_dur + example_dur) / total_dur
 
-            fc = first_counts.get(key, {})
-            total_first = sum(fc.values())
-            if total_first > 0:
-                first_text_ratio = fc.get("text", 0) / float(total_first)
-                first_visual_ratio = fc.get("visual", 0) / float(total_first)
-                first_example_ratio = fc.get("example", 0) / float(total_first)
+            first_counts = raw.get("first_counts") or {}
+            ft = int(first_counts.get("text", 0))
+            fv = int(first_counts.get("visual", 0))
+            fe = int(first_counts.get("example", 0))
+            first_total = ft + fv + fe
+            if first_total > 0:
+                first_text_ratio = ft / float(first_total)
+                first_visual_ratio = fv / float(first_total)
+                first_example_ratio = fe / float(first_total)
             else:
                 first_text_ratio = first_visual_ratio = first_example_ratio = 0.0
 
-            perf = perf_stats.get(key, {"sum": 0.0, "cnt": 0})
-            if perf["cnt"] > 0:
-                performance = perf["sum"] / float(perf["cnt"])
-            else:
-                performance = None
+            perf_sum = float(raw.get("perf_sum", 0.0))
+            perf_cnt = int(raw.get("perf_cnt", 0))
+            performance = perf_sum / perf_cnt if perf_cnt > 0 else None
 
-            attention_metrics[key] = {
+            base_metrics_by_lc[(lrn_uid, crs_uid)] = {
                 "text_ratio": text_ratio,
                 "visual_ratio": visual_ratio,
                 "example_ratio": example_ratio,
@@ -313,104 +290,58 @@ class AttentionAllocationEngine:
                 "performance": performance,
             }
 
-        return attention_metrics
+        logger.info(
+            "AttentionAllocationEngine: 完成基础比例指标计算，有效 (lrn, crs) 条目: %d",
+            len(base_metrics_by_lc),
+        )
 
-    # ------------------------------------------------------------------
-    # 加工风格分类 + 注意效率指数
-    # ------------------------------------------------------------------
+        # 3. 以课程为单位组织数据
+        course_entries: Dict[str, List[Tuple[str, Dict[str, float]]]] = defaultdict(list)
+        for (lrn_uid, crs_uid), metrics in base_metrics_by_lc.items():
+            course_entries[crs_uid].append((lrn_uid, metrics))
 
-    @staticmethod
-    def _classify_style(m: Dict[str, Any]) -> str:
-        """
-        生成信息加工风格标签（与原脚本逻辑一致）
-        """
-        tr = m["text_ratio"]
-        vr = m["visual_ratio"]
-        er = m["example_ratio"]
-        rr = m["relevant_ratio"]
-        ftr = m["first_text_ratio"]
-        fvr = m["first_visual_ratio"]
-        fer = m["first_example_ratio"]
+        logger.info(
+            "AttentionAllocationEngine: 参与分析的课程数: %d",
+            len(course_entries),
+        )
 
-        max_ratio = max(tr, vr, er)
-        first_max = max(ftr, fvr, fer)
+        # 4. 在课程内部计算 E_att / E_att_norm，并做聚类得到 efficiency_code
+        per_lc_result: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        total_courses = len(course_entries)
+        processed_courses = 0
 
-        if (tr == max_ratio and tr >= 0.55) or (ftr == first_max and ftr > 0):
-            return "文本优先型加工（进入或整体上更偏向文字信息）"
-
-        if (vr == max_ratio and vr >= 0.55) or (fvr == first_max and fvr > 0):
-            return "图像/模型优先型加工（进入或整体上更偏向图像/3D 模型）"
-
-        if (er == max_ratio and er >= 0.45) or (fer == first_max and fer > 0):
-            return "示例/演示优先型加工（更偏向提示、示例或同伴演示）"
-
-        if rr >= 0.7 and max_ratio <= 0.6:
-            return "均衡整合型加工（在文本/图像/示例之间较为均衡地分配注意）"
-
-        return "加工风格未明（数据不足或注意非常分散）"
-
-    @staticmethod
-    def _classify_efficiency(e_norm: float) -> Tuple[int, str]:
-        """
-        根据 E_att_norm ∈ [0,1] 做简单三档分类：
-        - <= 0.33: 低效
-        - >= 0.66: 高效
-        - 其他：中等
-
-        这样不依赖全局样本的 k-means，单个学习者也有直观的结果。
-        """
-        if e_norm <= 0.33:
-            rank = 0
-            label = "低效注意策略（任务表现较低、任务相关注意比例较低且在非任务 UI 区域停留较多）"
-        elif e_norm >= 0.66:
-            rank = 2
-            label = "高效注意策略（在关键资源上集中注意、较少停留在无关 UI，且表现较好）"
-        else:
-            rank = 1
-            label = "中等注意策略（任务相关注意与表现处于中间水平）"
-        return rank, label
-
-    def _compute_efficiency_indices(
-        self, attention_metrics: Dict[Tuple[str, str], Dict[str, Any]]
-    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
-        """
-        按课程维度计算注意效率指数 E_att & E_att_norm，并附加到结果中。
-        """
-        if not attention_metrics:
-            return {}
-
-        # 按课程分组
-        course_to_entries: Dict[str, List[Tuple[str, Dict[str, Any]]]] = {}
-        for (lrn_uid, crs_uid), m in attention_metrics.items():
-            course_to_entries.setdefault(crs_uid, []).append((lrn_uid, m))
-
-        attention_results: Dict[Tuple[str, str], Dict[str, Any]] = {}
-
-        for crs_uid, entries in course_to_entries.items():
-            if not entries:
+        for crs_uid, entries in course_entries.items():
+            processed_courses += 1
+            learner_count = learners_per_course_count.get(crs_uid, len(entries))
+            if learner_count < self.min_learners_per_course:
+                logger.info(
+                    "AttentionAllocationEngine: 课程 %s 学习者数 %d 少于聚类簇数 %d，跳过该课程。",
+                    crs_uid,
+                    learner_count,
+                    self.efficiency_cluster_k,
+                )
                 continue
 
             perf_vals: List[float] = []
             rel_vals: List[float] = []
             ui_vals: List[float] = []
 
-            for (_lrn_uid, m) in entries:
-                perf = m["performance"]
+            for _, m in entries:
+                perf = m.get("performance")
                 if perf is None:
-                    perf = 0.5
+                    perf = 0.5  # 无表现数据，视为中性
                 perf_vals.append(perf)
-                rel_vals.append(m["relevant_ratio"])
-                ui_vals.append(m["ui_ratio"])
+                rel_vals.append(m.get("relevant_ratio", 0.0))
+                ui_vals.append(m.get("ui_ratio", 0.0))
 
-            mean_perf, std_perf = self.compute_mean_std(perf_vals)
-            mean_rel, std_rel = self.compute_mean_std(rel_vals)
-            mean_ui, std_ui = self.compute_mean_std(ui_vals)
+            mean_perf, std_perf = compute_mean_std(perf_vals)
+            mean_rel, std_rel = compute_mean_std(rel_vals)
+            mean_ui, std_ui = compute_mean_std(ui_vals)
 
-            # 计算 E_att
-            tmp_store: Dict[Tuple[str, str], Dict[str, float]] = {}
-            e_vals: List[float] = []
+            E_vals: List[float] = []
+            z_cache: List[Tuple[float, float, float]] = []
 
-            for idx, (lrn_uid, m) in enumerate(entries):
+            for idx, (_, m) in enumerate(entries):
                 perf = perf_vals[idx]
                 rel = rel_vals[idx]
                 ui = ui_vals[idx]
@@ -419,279 +350,247 @@ class AttentionAllocationEngine:
                 z_rel = (rel - mean_rel) / std_rel if std_rel > 1e-6 else 0.0
                 z_ui = (ui - mean_ui) / std_ui if std_ui > 1e-6 else 0.0
 
-                e_att = (z_perf + z_rel - z_ui) / sqrt(3.0)
-                tmp_store[(lrn_uid, crs_uid)] = {
+                E_att = (z_perf + z_rel - z_ui) / sqrt(3.0)
+                E_vals.append(E_att)
+                z_cache.append((z_perf, z_rel, z_ui))
+
+            if not E_vals:
+                continue
+
+            E_min, E_max = min(E_vals), max(E_vals)
+            span = E_max - E_min if E_max > E_min else 0.0
+            E_norm_vals: List[float] = []
+            for E_att in E_vals:
+                if span > 1e-6:
+                    E_norm_vals.append((E_att - E_min) / span)
+                else:
+                    E_norm_vals.append(0.5)
+
+            cluster_codes = kmeans_1d(E_norm_vals, k=self.efficiency_cluster_k)
+
+            for idx, (lrn_uid, base_metrics) in enumerate(entries):
+                z_perf, z_rel, z_ui = z_cache[idx]
+                E_att = E_vals[idx]
+                E_norm = E_norm_vals[idx]
+                eff_code = cluster_codes[idx]
+                style_code = classify_style_code(base_metrics)
+
+                lc_key = (lrn_uid, crs_uid)
+                per_lc_result[lc_key] = {
+                    "course_uid": crs_uid,
+                    "learner_uid": lrn_uid,
+                    "efficiency_code": eff_code,
+                    "style_code": style_code,
+                    "E_att": E_att,
+                    "E_att_norm": E_norm,
                     "z_perf": z_perf,
                     "z_rel": z_rel,
                     "z_ui": z_ui,
-                    "E_att": e_att,
-                }
-                e_vals.append(e_att)
-
-            if not e_vals:
-                continue
-
-            e_min = min(e_vals)
-            e_max = max(e_vals)
-            span = e_max - e_min if e_max > e_min else 0.0
-
-            for (lrn_uid, _m) in entries:
-                key = (lrn_uid, crs_uid)
-                base = tmp_store[key]
-                e_att = base["E_att"]
-                if span > 1e-6:
-                    e_norm = (e_att - e_min) / span
-                else:
-                    e_norm = 0.5  # 只有一个样本时，中性值
-
-                m_full = dict(attention_metrics[key])  # 拷贝原 metrics
-                m_full["z_perf"] = base["z_perf"]
-                m_full["z_rel"] = base["z_rel"]
-                m_full["z_ui"] = base["z_ui"]
-                m_full["E_att"] = e_att
-                m_full["E_att_norm"] = e_norm
-
-                # 加工风格标签
-                m_full["style_label"] = self._classify_style(m_full)
-
-                # 效率档位标签
-                rank, eff_label = self._classify_efficiency(e_norm)
-                m_full["cluster_rank"] = rank
-                m_full["efficiency_label"] = eff_label
-
-                attention_results[key] = m_full
-
-        return attention_results
-
-    # ------------------------------------------------------------------
-    # 对外公开接口：单个 / 多个学习者
-    # ------------------------------------------------------------------
-
-    def _build_learner_summaries(
-        self, attention_results: Dict[Tuple[str, str], Dict[str, Any]]
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        把 (lrn, crs) 级别的结果，聚合成按学习者的结果：
-        - per_course_results: 列表
-        - overall_score: 所有课程 E_att_norm 的均值
-        - overall_efficiency_label: 以 cluster_rank 众数为准，冲突时选更高档
-        """
-        learner_data: Dict[str, Dict[str, Any]] = {}
-
-        for (lrn_uid, crs_uid), res in attention_results.items():
-            if lrn_uid not in learner_data:
-                learner_data[lrn_uid] = {
-                    "learner_uid": lrn_uid,
-                    "has_data": True,
-                    "per_course_results": [],
-                    "overall_score": None,
-                    "overall_efficiency_label": None,
-                    "overall_cluster_rank": None,
+                    **base_metrics,
                 }
 
-            per_course_item = {
-                "course_uid": crs_uid,
-                "text_ratio": res["text_ratio"],
-                "visual_ratio": res["visual_ratio"],
-                "example_ratio": res["example_ratio"],
-                "ui_ratio": res["ui_ratio"],
-                "relevant_ratio": res["relevant_ratio"],
-                "first_text_ratio": res["first_text_ratio"],
-                "first_visual_ratio": res["first_visual_ratio"],
-                "first_example_ratio": res["first_example_ratio"],
-                "performance": res["performance"],
-                "attention_style_label": res["style_label"],
-                "attention_efficiency_index": res["E_att"],
-                "attention_efficiency_normalized": res["E_att_norm"],
-                "efficiency_label": res["efficiency_label"],
-                "cluster_rank": res["cluster_rank"],
-            }
+            if processed_courses % 50 == 0 or processed_courses == total_courses:
+                logger.info(
+                    "AttentionAllocationEngine: 已完成课程级分析 %d/%d",
+                    processed_courses,
+                    total_courses,
+                )
 
-            learner_data[lrn_uid]["per_course_results"].append(per_course_item)
-
-        # 聚合 overall_score + overall_efficiency_label
-        for lrn_uid, info in learner_data.items():
-            pcs = info["per_course_results"]
-            if not pcs:
-                info["has_data"] = False
-                continue
-
-            # 数值：E_att_norm 均值
-            scores = [it["attention_efficiency_normalized"] for it in pcs]
-            info["overall_score"] = sum(scores) / float(len(scores))
-
-            # 分类：按 cluster_rank 众数，若并列则选 rank 较大者（更“好”的那档）
-            rank_counts: Dict[int, int] = {}
-            for it in pcs:
-                r = int(it["cluster_rank"])
-                rank_counts[r] = rank_counts.get(r, 0) + 1
-
-            if rank_counts:
-                max_count = max(rank_counts.values())
-                candidate_ranks = [r for r, c in rank_counts.items() if c == max_count]
-                best_rank = max(candidate_ranks)  # 并列时选更高的一档
-
-                # 与 _classify_efficiency 的文案保持一致
-                if best_rank == 0:
-                    eff_label = (
-                        "低效注意策略（任务表现较低、任务相关注意比例较低且在非任务 UI 区域停留较多）"
-                    )
-                elif best_rank == 2:
-                    eff_label = (
-                        "高效注意策略（在关键资源上集中注意、较少停留在无关 UI，且表现较好）"
-                    )
-                else:
-                    eff_label = "中等注意策略（任务相关注意与表现处于中间水平）"
-
-                info["overall_cluster_rank"] = best_rank
-                info["overall_efficiency_label"] = eff_label
-            else:
-                info["overall_cluster_rank"] = None
-                info["overall_efficiency_label"] = None
-
-        return learner_data
-
-    def analyze_multiple_learners(
-        self, learner_uids: List[str]
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        对多个学习者进行注意力分配分析。
-
-        返回：
-        {
-            learner_uid: {
-                "learner_uid": "...",
-                "has_data": bool,
-                "overall_score": float 或 None,
-                "overall_efficiency_label": str 或 None,
-                "overall_cluster_rank": int 或 None,
-                "per_course_results": [...],
-            },
-            ...
-        }
-        """
-        if not learner_uids:
-            return {}
-
-        try:
-            # 1) 从 Repository 获取原始事件
-            raw = attention_allocation_repository.get_attention_raw_data_for_learners(
-                learner_uids
-            )
-            focus_events = raw.get("focus_events", [])
-            observed_events = raw.get("observed_events", [])
-            performance_events = raw.get("performance_events", [])
-
-            if not focus_events:
-                # 没有 focus 数据，直接标记无数据
-                result: Dict[str, Dict[str, Any]] = {}
-                for uid in learner_uids:
-                    result[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_efficiency_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-                return result
-
-            # 2) 计算 (lrn, crs) 级别注意力指标
-            attention_metrics = self._build_attention_metrics(
-                focus_events, observed_events, performance_events
-            )
-
-            # 3) 计算注意效率指数和标签
-            attention_results = self._compute_efficiency_indices(attention_metrics)
-
-            # 4) 聚合为按学习者的结果
-            learner_summaries = self._build_learner_summaries(attention_results)
-
-            # 5) 对于传入但没有任何数据的学习者，也返回空结果
-            for uid in learner_uids:
-                if uid not in learner_summaries:
-                    learner_summaries[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_efficiency_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-
-            return learner_summaries
-
-        except Exception as e:
-            logger.error(f"多学习者注意力分析失败: {e}", exc_info=True)
-            # 出错时，也保证返回结构是按 learner_uid 的 dict
-            result: Dict[str, Dict[str, Any]] = {}
-            for uid in learner_uids:
-                result[uid] = {
-                    "learner_uid": uid,
-                    "has_data": False,
-                    "overall_score": None,
-                    "overall_efficiency_label": None,
-                    "overall_cluster_rank": None,
-                    "per_course_results": [],
-                    "error": str(e),
-                }
-            return result
-
-    def analyze_single_learner(self, learner_uid: str) -> Dict[str, Any]:
-        """
-        单学习者便捷接口：
-        返回结构同 analyze_multiple_learners()[learner_uid]
-        """
-        results = self.analyze_multiple_learners([learner_uid])
-        return results.get(
-            learner_uid,
-            {
-                "learner_uid": learner_uid,
-                "has_data": False,
-                "overall_score": None,
-                "overall_efficiency_label": None,
-                "overall_cluster_rank": None,
-                "per_course_results": [],
-            },
+        logger.info(
+            "AttentionAllocationEngine: 课程级分析完成，有课程级结果的 (lrn, crs) 条目: %d",
+            len(per_lc_result),
         )
 
+        # 5. 逐个学习者汇总课程级结果，构建最终结构
+        result: Dict[str, Any] = {}
+        for lrn_uid in learner_uids:
+            dim_result: Dict[str, Any] = {}
+            courses_for_learner = learner_courses_map.get(lrn_uid, set())
+            learner_course_results = {
+                crs_uid: per_lc_result.get((lrn_uid, crs_uid))
+                for crs_uid in courses_for_learner
+                if (lrn_uid, crs_uid) in per_lc_result
+            }
 
-# 全局引擎实例 + 便捷函数，风格与 hgc_engine 对齐
-_attention_engine_instance: Optional[AttentionAllocationEngine] = None
+            if not learner_course_results:
+                dim_result["insufficient_data"] = True
+                dim_result["insufficient_reason"] = "no_valid_courses"
+                result[lrn_uid] = {self.DIMENSION_KEY: dim_result}
+                continue
+
+            dim_result["insufficient_data"] = False
+            dim_result["insufficient_reason"] = None
+
+            eff_codes: List[int] = []
+            eff_overall_metrics = {
+                "E_att_norm_mean": 0.0,
+                "performance_mean": 0.0,
+                "relevant_ratio_mean": 0.0,
+                "ui_ratio_mean": 0.0,
+            }
+            eff_courses_detail: Dict[str, Any] = {}
+
+            style_codes: List[int] = []
+            style_overall_metrics = {
+                "text_ratio_mean": 0.0,
+                "visual_ratio_mean": 0.0,
+                "example_ratio_mean": 0.0,
+                "first_text_ratio_mean": 0.0,
+                "first_visual_ratio_mean": 0.0,
+                "first_example_ratio_mean": 0.0,
+            }
+            style_courses_detail: Dict[str, Any] = {}
+
+            eff_n = 0
+            style_n = 0
+
+            for crs_uid, lc_res in learner_course_results.items():
+                if lc_res is None:
+                    continue
+
+                eff_code = lc_res["efficiency_code"]
+                style_code = lc_res["style_code"]
+                eff_codes.append(eff_code)
+                style_codes.append(style_code)
+
+                E_norm = lc_res.get("E_att_norm", 0.0)
+                perf = lc_res.get("performance")
+                if perf is None:
+                    perf = 0.5
+                rel_r = lc_res.get("relevant_ratio", 0.0)
+                ui_r = lc_res.get("ui_ratio", 0.0)
+
+                eff_n += 1
+                eff_overall_metrics["E_att_norm_mean"] += E_norm
+                eff_overall_metrics["performance_mean"] += perf
+                eff_overall_metrics["relevant_ratio_mean"] += rel_r
+                eff_overall_metrics["ui_ratio_mean"] += ui_r
+
+                eff_courses_detail[crs_uid] = {
+                    "code": eff_code,
+                    "metrics": {
+                        "E_att": lc_res.get("E_att", 0.0),
+                        "E_att_norm": E_norm,
+                        "performance": perf,
+                        "relevant_ratio": rel_r,
+                        "ui_ratio": ui_r,
+                        "text_ratio": lc_res.get("text_ratio", 0.0),
+                        "visual_ratio": lc_res.get("visual_ratio", 0.0),
+                        "example_ratio": lc_res.get("example_ratio", 0.0),
+                    },
+                }
+
+                tr = lc_res.get("text_ratio", 0.0)
+                vr = lc_res.get("visual_ratio", 0.0)
+                er = lc_res.get("example_ratio", 0.0)
+                ftr = lc_res.get("first_text_ratio", 0.0)
+                fvr = lc_res.get("first_visual_ratio", 0.0)
+                fer = lc_res.get("first_example_ratio", 0.0)
+
+                style_n += 1
+                style_overall_metrics["text_ratio_mean"] += tr
+                style_overall_metrics["visual_ratio_mean"] += vr
+                style_overall_metrics["example_ratio_mean"] += er
+                style_overall_metrics["first_text_ratio_mean"] += ftr
+                style_overall_metrics["first_visual_ratio_mean"] += fvr
+                style_overall_metrics["first_example_ratio_mean"] += fer
+
+                style_courses_detail[crs_uid] = {
+                    "code": style_code,
+                    "metrics": {
+                        "text_ratio": tr,
+                        "visual_ratio": vr,
+                        "example_ratio": er,
+                        "ui_ratio": ui_r,
+                        "relevant_ratio": rel_r,
+                        "first_text_ratio": ftr,
+                        "first_visual_ratio": fvr,
+                        "first_example_ratio": fer,
+                    },
+                }
+
+            if eff_n > 0:
+                for k in eff_overall_metrics:
+                    eff_overall_metrics[k] /= float(eff_n)
+            if style_n > 0:
+                for k in style_overall_metrics:
+                    style_overall_metrics[k] /= float(style_n)
+
+            final_eff_code = choose_final_code(
+                eff_codes, self.efficiency_priority
+            )
+            final_style_code = choose_final_code(
+                style_codes, self.style_priority
+            )
+
+            dim_result[self.EFFICIENCY_CATEGORY] = {
+                "final_code": final_eff_code,
+                "overall_metrics": eff_overall_metrics,
+                "courses": eff_courses_detail,
+            }
+            dim_result[self.STYLE_CATEGORY] = {
+                "final_code": final_style_code,
+                "overall_metrics": style_overall_metrics,
+                "courses": style_courses_detail,
+            }
+
+            result[lrn_uid] = {self.DIMENSION_KEY: dim_result}
+
+        logger.info(
+            "AttentionAllocationEngine: 完成 %d 个学习者的注意力分配画像分析。",
+            len(result),
+        )
+
+        return result
 
 
-def get_attention_allocation_engine() -> AttentionAllocationEngine:
-    global _attention_engine_instance
-    if _attention_engine_instance is None:
-        _attention_engine_instance = AttentionAllocationEngine()
-    return _attention_engine_instance
+# ----------------------------------------------------------------------
+# main: 简单测试（包括标签文本演示）
+# ----------------------------------------------------------------------
+def _print_with_text_labels(engine_result: Dict[str, Any]) -> None:
+    """
+    演示如何结合 profiles_labels 把数值标签转换成文本标签并打印。
+    """
+    from app.models.profiles_labels import get_label  # 只在测试/展示时使用
+
+    dim = AttentionAllocationEngine.DIMENSION_KEY
+    for learner_uid, dim_map in engine_result.items():
+        aa = dim_map.get(dim) or {}
+        if aa.get("insufficient_data"):
+            print(f"[{learner_uid}] 数据不足：{aa.get('insufficient_reason')}")
+            continue
+
+        eff = aa.get("efficiency") or {}
+        sty = aa.get("style") or {}
+
+        eff_code = eff.get("final_code")
+        sty_code = sty.get("final_code")
+
+        eff_label = get_label(dim, "efficiency", eff_code)
+        sty_label = get_label(dim, "style", sty_code)
+
+        print(f"\n=== 学习者 {learner_uid} 的注意力分配画像 ===")
+        print(f"- 整体效率标签 (code={eff_code}): {eff_label}")
+        print(f"- 整体加工风格标签 (code={sty_code}): {sty_label}")
+        print("  效率整体数值指标:", eff.get("overall_metrics"))
+        print("  风格整体数值指标:", sty.get("overall_metrics"))
 
 
-def analyze_single_learner(learner_uid: str) -> Dict[str, Any]:
-    engine = get_attention_allocation_engine()
-    return engine.analyze_single_learner(learner_uid)
-
-
-def analyze_multiple_learners(learner_uids: List[str]) -> Dict[str, Dict[str, Any]]:
-    engine = get_attention_allocation_engine()
-    return engine.analyze_multiple_learners(learner_uids)
-
-
-# 简单本地测试（可选）
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-
-    engine = AttentionAllocationEngine()
-    # 真实存在的学习者UID
-    test_learner_uids = [
+    # 使用两个真实 uid 做简单测试
+    test_learners = [
         "lrn_51efbdbcf8844c478bbbb3ab7ad8e64e",
-        "lrn_004a9c3f5bf246faab3d390ce716e658"
+        "lrn_004a9c3f5bf246faab3d390ce716e658",
     ]
 
-    print("=== 单学习者测试 ===")
-    res = engine.analyze_single_learner(test_learner_uids[0])
-    print(res)
+    engine = AttentionAllocationEngine()
+    numeric_result = engine.analyze(test_learners)
 
-    print("=== 多学习者测试 ===")
-    res = engine.analyze_multiple_learners(test_learner_uids)
-    print(res)
+    # 1) 直接打印数值结构的 keys
+    print("=== 原始数值结果结构（只展示顶层 keys） ===")
+    for uid, payload in numeric_result.items():
+        print(uid, "=>", list(payload.keys()))
+
+    # 2) 使用标签配置文件输出带文本标签的整体结果
+    print("\n=== 转换为带标签文本的整体结果 ===")
+    _print_with_text_labels(numeric_result)
