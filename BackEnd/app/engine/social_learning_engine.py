@@ -1,623 +1,609 @@
-# BackEnd/app/engine/social_learning_engine.py
-import logging
-from typing import Dict, Any, List, Tuple, Optional
-from math import sqrt
-from collections import defaultdict
-import re
+# social_learning_engine.py
+# -*- coding: utf-8 -*-
+from __future__ import annotations
 
-from app.repositories.social_learning_repository import (
-    social_learning_repository,
-    SocialLearningRepository,
-)
+import logging
+import math
+from collections import Counter, defaultdict
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+from app.repositories.social_learning_repository import SocialLearningRepository
 
 logger = logging.getLogger(__name__)
-
-# 预编译 duration 的正则，解析 "PT{n}S"
-DURATION_RE = re.compile(r"^PT(\d+)S$")
-
-# 判定“低社交参与”的总时长阈值（秒）
-MIN_SOCIAL_TIME = 30.0
-
-# 观摩对象 learner-id 扩展字段
-EXT_OBSERVED_LEARNER_ID = (
-    "https://legend-meta.com/xapi/ext/observed-learner-id"
-)
 
 
 class SocialLearningEngine:
     """
-    社会性学习与同伴取向分析引擎
+    社会性学习与同伴取向（social_learning）分析引擎。
 
-    功能：
-    - 给定一个或多个学习者 UID，从 Repository 读取 xAPI 行为；
-    - 以 (学习者, 课程) 为单位计算：
-        * obs_count              观摩事件次数（observed-peer）
-        * obs_total_time         观摩总时长（秒）
-        * obs_unique_peers       被观摩同伴的数量（去重）
-        * collab_count           协作事件次数（collaborated-on-activity）
-        * collab_total_time      协作总时长（秒）
-        * z_obs, z_collab        课程内标准化后的观摩/协作 z 值
-        * social_index           合成社会性学习指数 S
-        * social_index_normalized课程内 min-max 归一化 [0,1]
-        * social_label           行为角色标签：
-                                   - low_social_participation
-                                   - observer_dominant
-                                   - collab_dominant
-                                   - balanced_active_social
-        * cluster_rank           0~3：从低社交参与到积极社会学习
-    - 对单个学习者的多门课程结果做聚合：
-        * overall_score          多课程 social_index_normalized 的均值
-        * overall_cluster_rank   多课程 cluster_rank 的众数（并列取“更好”的一档）
-        * overall_label          综合中文描述标签
+    - Repository 负责准备课程级行为统计指标：
+        obs/collab 次数与时长、观摩同伴数、social_index_norm 等；
+    - Engine 在“课程内部”基于 (social_index_norm, ratio_obs) 做 2D k-means 聚类，
+      并将 cluster 映射为四档社会角色 code（0~3）：
+        0: 低社交参与型
+        1: 观察型（观摩为主）
+        2: 协作导向型（协作为主）
+        3: 积极社会学习型（观摩+协作均衡且总体较高）；
+    - Engine 只返回数值 code，具体文案由 app.models.profiles_labels 负责映射。
     """
 
-    def __init__(self) -> None:
-        logger.info("SocialLearningEngine 初始化完成")
+    DIMENSION_KEY = "social_learning"
 
-    # ------------------------------------------------------------------
-    # 工具函数
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _parse_iso8601_duration(duration_str: Any) -> Optional[float]:
-        """
-        解析简单形式的 ISO8601 时长字符串，例如："PT120S"
-        若为空或格式不符，返回 None。
-        """
-        if not duration_str or not isinstance(duration_str, str):
-            return None
-        m = DURATION_RE.match(duration_str)
-        if not m:
-            return None
-        try:
-            seconds = int(m.group(1))
-            if seconds < 0:
-                return None
-            return float(seconds)
-        except ValueError:
-            return None
-
-    @staticmethod
-    def _compute_mean_std(values: List[float]) -> Tuple[float, float]:
-        """
-        计算一组数的平均值与总体标准差：
-        - 若列表为空，返回 (0.0, 0.0)
-        - 若只有一个样本，标准差视为 0.0
-        """
-        n = len(values)
-        if n == 0:
-            return 0.0, 0.0
-        mean_v = sum(values) / float(n)
-        if n == 1:
-            return mean_v, 0.0
-        var = sum((v - mean_v) ** 2 for v in values) / float(n)
-        std_v = sqrt(var)
-        return mean_v, std_v
-
-    @staticmethod
-    def _ratio_safe(num: float, den: float) -> float:
-        """
-        安全计算比例，避免除零。
-        """
-        if not den:
-            return 0.0
-        return float(num) / float(den)
-
-    # ------------------------------------------------------------------
-    # 第一步：从事件构建 (学习者, 课程) 粗粒度统计
-    # ------------------------------------------------------------------
-    def _build_social_stats(
+    def __init__(
         self,
-        events: List[Dict[str, Any]],
-    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        repository: Optional[SocialLearningRepository] = None,
+        role_cluster_k: int = 4,
+        min_learners_per_course: Optional[int] = None,
+    ):
         """
-        对每个 (lrn_uid, crs_uid) 统计：
-        - obs_count：observed-peer 事件次数
-        - obs_total_time：观摩总时长（秒）
-        - obs_peers：被观摩同伴集合
-        - collab_count：协作事件次数
-        - collab_total_time：协作总时长（秒）
+        Args:
+            repository: 数据准备仓库实例，默认自动构造。
+            role_cluster_k: 课程内聚类簇数（对应 role code 0/1/2/3）。
+            min_learners_per_course: 单门课程参与学习者数量下限，
+                若 None 则默认 = role_cluster_k。
         """
-        if not events:
-            return {}
-
-        verb_dict = SocialLearningRepository.VERBS
-
-        social_stats: Dict[Tuple[str, str], Dict[str, Any]] = defaultdict(
-            lambda: {
-                "obs_count": 0,
-                "obs_total_time": 0.0,
-                "obs_peers": set(),
-                "collab_count": 0,
-                "collab_total_time": 0.0,
-            }
+        self.repository = repository or SocialLearningRepository()
+        # 该维度设计为 4 类角色
+        self.role_cluster_k = max(2, min(role_cluster_k, 4))
+        self.min_learners_per_course = (
+            min_learners_per_course or self.role_cluster_k
         )
 
-        used_events = 0
-
-        for doc in events:
-            lrn_uid = doc.get("_lrn_uid")
-            crs_uid = doc.get("_course_uid")
-            if not lrn_uid or not crs_uid:
-                continue
-
-            verb_id = (doc.get("verb") or {}).get("id") or doc.get("verb.id")
-            result = doc.get("result") or {}
-            duration_str = result.get("duration")
-            duration_sec = self._parse_iso8601_duration(duration_str)
-
-            if duration_sec is not None and duration_sec < 0:
-                continue
-
-            key = (lrn_uid, crs_uid)
-            stat = social_stats[key]
-
-            if verb_id == verb_dict["observed_peer"]:
-                stat["obs_count"] += 1
-                if duration_sec is not None:
-                    stat["obs_total_time"] += float(duration_sec)
-
-                context = doc.get("context") or {}
-                ext = context.get("extensions") or {}
-                peer_id = ext.get(EXT_OBSERVED_LEARNER_ID)
-                if peer_id:
-                    stat["obs_peers"].add(peer_id)
-
-                used_events += 1
-
-            elif verb_id == verb_dict["collaborated_on_activity"]:
-                stat["collab_count"] += 1
-                if duration_sec is not None:
-                    stat["collab_total_time"] += float(duration_sec)
-                used_events += 1
-
-        logger.info(
-            "[SocialLearningEngine] 参与社会性学习统计的有效事件数: %d, "
-            "有社会性数据的 (学习者, 课程) 数量: %d",
-            used_events,
-            len(social_stats),
-        )
-
-        return social_stats
-
     # ------------------------------------------------------------------
-    # 第二步：按课程计算社会性学习指数（标准化 + 归一化）
+    # 对外主接口
     # ------------------------------------------------------------------
-    def _compute_course_social_indices(
-        self,
-        social_stats: Dict[Tuple[str, str], Dict[str, Any]],
-    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+    def analyze(self, learner_uids: List[str]) -> Dict[str, Any]:
         """
-        在每门课程内部，对 obs_total_time 与 collab_total_time 标准化：
-        - z_obs, z_collab
-        - social_index = (z_obs + z_collab) / sqrt(2)
-        然后做 min-max 归一化得到 social_index_normalized ∈ [0,1]。
-        """
-        if not social_stats:
-            return {}
+        对若干学习者进行“社会性学习与同伴取向”分析。
 
-        # course_uid -> list[(lrn_uid, obs_total, collab_total, obs_count, collab_count, obs_peers_count)]
-        course_to_entries: Dict[str, List[Tuple[str, float, float, int, int, int]]] = defaultdict(
-            list
-        )
-        for (lrn_uid, crs_uid), stat in social_stats.items():
-            obs_total = float(stat.get("obs_total_time", 0.0))
-            collab_total = float(stat.get("collab_total_time", 0.0))
-            obs_count = int(stat.get("obs_count", 0))
-            collab_count = int(stat.get("collab_count", 0))
-            obs_peers_count = len(stat.get("obs_peers") or set())
-            course_to_entries[crs_uid].append(
-                (lrn_uid, obs_total, collab_total, obs_count, collab_count, obs_peers_count)
-            )
-
-        social_results: Dict[Tuple[str, str], Dict[str, Any]] = {}
-
-        for crs_uid, entries in course_to_entries.items():
-            if not entries:
-                continue
-
-            obs_vals = [e[1] for e in entries]
-            collab_vals = [e[2] for e in entries]
-            mean_obs, std_obs = self._compute_mean_std(obs_vals)
-            mean_collab, std_collab = self._compute_mean_std(collab_vals)
-
-            S_vals: List[float] = []
-
-            # 先计算 z 与 S
-            for (
-                lrn_uid,
-                obs_total,
-                collab_total,
-                obs_count,
-                collab_count,
-                obs_peers_count,
-            ) in entries:
-                z_obs = (
-                    (obs_total - mean_obs) / std_obs
-                    if std_obs > 1e-6
-                    else 0.0
-                )
-                z_collab = (
-                    (collab_total - mean_collab) / std_collab
-                    if std_collab > 1e-6
-                    else 0.0
-                )
-
-                S = (z_obs + z_collab) / sqrt(2.0)
-
-                key = (lrn_uid, crs_uid)
-                social_results[key] = {
-                    "obs_count": obs_count,
-                    "obs_total_time": obs_total,
-                    "obs_unique_peers": obs_peers_count,
-                    "collab_count": collab_count,
-                    "collab_total_time": collab_total,
-                    "z_obs": float(z_obs),
-                    "z_collab": float(z_collab),
-                    "social_index": float(S),
-                    # social_index_normalized 后面再填
-                }
-                S_vals.append(S)
-
-            # 再在课程内对 S 做 [0,1] min-max 归一化
-            if S_vals:
-                S_min = min(S_vals)
-                S_max = max(S_vals)
-                span = S_max - S_min if S_max > S_min else 0.0
-
-                for (
-                    lrn_uid,
-                    obs_total,
-                    collab_total,
-                    obs_count,
-                    collab_count,
-                    obs_peers_count,
-                ) in entries:
-                    key = (lrn_uid, crs_uid)
-                    S = social_results[key]["social_index"]
-                    if span > 1e-6:
-                        S_norm = (S - S_min) / span
-                    else:
-                        S_norm = 0.5
-                    social_results[key]["social_index_normalized"] = float(S_norm)
-
-        logger.info(
-            "[SocialLearningEngine] 完成 social_index_normalized 计算，条目数: %d",
-            len(social_results),
-        )
-
-        return social_results
-
-    # ------------------------------------------------------------------
-    # 第三步：基于观摩/协作比例进行角色分类
-    # ------------------------------------------------------------------
-    def _assign_social_labels(
-        self,
-        social_results: Dict[Tuple[str, str], Dict[str, Any]],
-    ) -> None:
-        """
-        使用 total_time + ratio_obs + social_index_normalized 进行角色划分：
-
-        - low_social_participation（cluster_rank=0）
-        - observer_dominant（cluster_rank=1）
-        - collab_dominant（cluster_rank=2）
-        - balanced_active_social（cluster_rank=3）
-        """
-        if not social_results:
-            return
-
-        label_counts: Dict[str, int] = defaultdict(int)
-
-        for key, res in social_results.items():
-            obs_time = float(res.get("obs_total_time", 0.0))
-            collab_time = float(res.get("collab_total_time", 0.0))
-            obs_count = int(res.get("obs_count", 0))
-            collab_count = int(res.get("collab_count", 0))
-            S_norm = float(res.get("social_index_normalized", 0.0))
-
-            total_time = obs_time + collab_time
-            total_events = obs_count + collab_count
-
-            if total_time < MIN_SOCIAL_TIME or total_events <= 0:
-                label = "low_social_participation"
-                cluster_rank = 0
-            else:
-                ratio_obs = self._ratio_safe(obs_time, total_time)
-
-                if ratio_obs >= 0.8 and collab_time <= total_time * 0.2:
-                    label = "observer_dominant"
-                    cluster_rank = 1
-                elif ratio_obs <= 0.3 and collab_time >= total_time * 0.5:
-                    label = "collab_dominant"
-                    cluster_rank = 2
-                else:
-                    if S_norm >= 0.5:
-                        label = "balanced_active_social"
-                        cluster_rank = 3
-                    else:
-                        label = "low_social_participation"
-                        cluster_rank = 0
-
-            res["social_label"] = label
-            res["cluster_rank"] = int(cluster_rank)
-            label_counts[label] += 1
-
-        # 简单日志输出角色分布
-        total_records = len(social_results)
-        logger.info(
-            "[SocialLearningEngine] 角色分类完成，总记录数: %d", total_records
-        )
-        for label in [
-            "low_social_participation",
-            "observer_dominant",
-            "collab_dominant",
-            "balanced_active_social",
-        ]:
-            cnt = label_counts.get(label, 0)
-            pct = self._ratio_safe(cnt, total_records) * 100.0
-            logger.info(
-                "  - %s: %d (%.1f%%)", label, cnt, pct
-            )
-
-    # ------------------------------------------------------------------
-    # 第四步：聚合到学习者级别
-    # ------------------------------------------------------------------
-    def _build_learner_summaries(
-        self,
-        social_results: Dict[Tuple[str, str], Dict[str, Any]],
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        把 (学习者, 课程) 级别结果聚合为按学习者的结果。
-
-        返回结构：
+        返回结构示例：
         {
-            learner_uid: {
-                "learner_uid": "...",
-                "has_data": bool,
-                "overall_score": float 或 None,          # 多课程 social_index_normalized 均值
-                "overall_label": str 或 None,            # 综合标签
-                "overall_cluster_rank": int 或 None,     # 0~3
-                "per_course_results": [...],             # 每门课程详情
-            },
-            ...
-        }
-        """
-        learner_data: Dict[str, Dict[str, Any]] = {}
-
-        for (lrn_uid, crs_uid), res in social_results.items():
-            S_norm = res.get("social_index_normalized")
-            if S_norm is None:
-                continue
-
-            if lrn_uid not in learner_data:
-                learner_data[lrn_uid] = {
-                    "learner_uid": lrn_uid,
-                    "has_data": True,
-                    "overall_score": None,
-                    "overall_label": None,
-                    "overall_cluster_rank": None,
-                    "per_course_results": [],
-                }
-
-            item = {
-                "course_uid": crs_uid,
-                "obs_count": int(res.get("obs_count", 0)),
-                "obs_total_time": float(res.get("obs_total_time", 0.0)),
-                "obs_unique_peers": int(res.get("obs_unique_peers", 0)),
-                "collab_count": int(res.get("collab_count", 0)),
-                "collab_total_time": float(res.get("collab_total_time", 0.0)),
-                "z_obs": float(res.get("z_obs", 0.0)),
-                "z_collab": float(res.get("z_collab", 0.0)),
-                "social_index": float(res.get("social_index", 0.0)),
-                "social_index_normalized": float(
-                    res.get("social_index_normalized", 0.0)
-                ),
-                "social_label": res.get("social_label"),
-                "cluster_rank": int(res.get("cluster_rank", 0)),
+          learner_uid: {
+            "social_learning": {
+              "insufficient_data": bool,
+              "insufficient_reason": Optional[str],
+              "role": {
+                "final_code": Optional[int],
+                "overall_metrics": {...},
+                "courses": {
+                  crs_uid: {
+                    "code": int,
+                    "metrics": {...}
+                  },
+                  ...
+                },
+              },
             }
-            learner_data[lrn_uid]["per_course_results"].append(item)
-
-        overall_rank_label = {
-            0: "整体社交参与水平偏低（观摩与协作行为都较少，多数课程中几乎不通过同伴进行学习）。",
-            1: "整体以观察他人为主（更多通过观摩同伴作品或表现来学习，协作参与相对较少）。",
-            2: "整体协作导向（在协作单元中参与较多联合编辑与操作，相对较少停留在单纯观摩）。",
-            3: "整体为积极社会学习型（在观摩同伴与参与协作两方面都较活跃，兼具观察与贡献）。",
-        }
-
-        for lrn_uid, info in learner_data.items():
-            pcs = info["per_course_results"]
-            if not pcs:
-                info["has_data"] = False
-                continue
-
-            scores = [it["social_index_normalized"] for it in pcs]
-            info["overall_score"] = float(sum(scores) / float(len(scores)))
-
-            rank_counts: Dict[int, int] = {}
-            for it in pcs:
-                rnk = int(it.get("cluster_rank", 0))
-                rank_counts[rnk] = rank_counts.get(rnk, 0) + 1
-
-            if rank_counts:
-                max_count = max(rank_counts.values())
-                candidate_ranks = [
-                    r for r, c in rank_counts.items() if c == max_count
-                ]
-                best_rank = max(candidate_ranks)  # 并列时选择“更好”的一档
-
-                info["overall_cluster_rank"] = int(best_rank)
-                info["overall_label"] = overall_rank_label.get(
-                    best_rank,
-                    "整体社交参与水平中等（默认）。",
-                )
-            else:
-                info["overall_cluster_rank"] = None
-                info["overall_label"] = None
-
-        return learner_data
-
-    # ------------------------------------------------------------------
-    # 对外公开接口
-    # ------------------------------------------------------------------
-    def analyze_multiple_learners(
-        self,
-        learner_uids: List[str],
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        对多个学习者进行“社会性学习与同伴取向”分析。
-
-        返回：
-        {
-            learner_uid: {
-                "learner_uid": "...",
-                "has_data": bool,
-                "overall_score": float 或 None,
-                "overall_label": str 或 None,
-                "overall_cluster_rank": int 或 None,
-                "per_course_results": [...],
-                # 如出错，还会包含 "error": str
-            },
-            ...
+          }
         }
         """
+        learner_uids = list({uid for uid in (learner_uids or []) if uid})
+        logger.info(
+            "SocialLearningEngine.analyze: 开始分析，学习者数量: %d",
+            len(learner_uids),
+        )
+
         if not learner_uids:
             return {}
 
-        try:
-            events = social_learning_repository.get_social_learning_events(
-                learner_uids
-            )
+        (
+            metrics_by_lc,
+            learners_per_course,
+            learner_courses_map,
+        ) = self.repository.load_metrics_for_learners(learner_uids)
 
-            if not events:
-                result: Dict[str, Dict[str, Any]] = {}
-                for uid in learner_uids:
-                    result[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-                return result
-
-            social_stats = self._build_social_stats(events)
-            if not social_stats:
-                result: Dict[str, Dict[str, Any]] = {}
-                for uid in learner_uids:
-                    result[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-                return result
-
-            social_results = self._compute_course_social_indices(social_stats)
-            if not social_results:
-                result: Dict[str, Dict[str, Any]] = {}
-                for uid in learner_uids:
-                    result[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-                return result
-
-            self._assign_social_labels(social_results)
-
-            learner_summaries = self._build_learner_summaries(social_results)
-
-            # 确保所有传入 UID 都有结构化返回
-            for uid in learner_uids:
-                if uid not in learner_summaries:
-                    learner_summaries[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-
-            return learner_summaries
-
-        except Exception as e:
-            logger.error(
-                f"多学习者社会性学习与同伴取向分析失败: {e}", exc_info=True
-            )
-            result: Dict[str, Dict[str, Any]] = {}
-            for uid in learner_uids:
-                result[uid] = {
-                    "learner_uid": uid,
-                    "has_data": False,
-                    "overall_score": None,
-                    "overall_label": None,
-                    "overall_cluster_rank": None,
-                    "per_course_results": [],
-                    "error": str(e),
-                }
-            return result
-
-    def analyze_single_learner(self, learner_uid: str) -> Dict[str, Any]:
-        """
-        单学习者便捷接口：返回结构等同于 analyze_multiple_learners()[learner_uid]
-        """
-        results = self.analyze_multiple_learners([learner_uid])
-        return results.get(
-            learner_uid,
-            {
-                "learner_uid": learner_uid,
-                "has_data": False,
-                "overall_score": None,
-                "overall_label": None,
-                "overall_cluster_rank": None,
-                "per_course_results": [],
-            },
+        logger.info(
+            "SocialLearningEngine.analyze: Repository 返回 (lrn, crs) 条目数: %d，课程数: %d",
+            len(metrics_by_lc),
+            len(learners_per_course),
         )
 
+        if not metrics_by_lc:
+            results: Dict[str, Any] = {}
+            for uid in learner_uids:
+                results[uid] = {
+                    self.DIMENSION_KEY: {
+                        "insufficient_data": True,
+                        "insufficient_reason": "该学习者在社会性相关课程中没有可用数据。",
+                        "role": None,
+                    }
+                }
+            return results
 
-# 全局引擎实例 + 便捷函数（与其它 Engine 保持一致）
-_social_engine_instance: Optional[SocialLearningEngine] = None
+        per_lc_result = self._analyze_per_course(metrics_by_lc, learners_per_course)
+
+        logger.info(
+            "SocialLearningEngine.analyze: 课程内聚类完成，(lrn, crs) 有效条目数: %d",
+            len(per_lc_result),
+        )
+
+        final_results: Dict[str, Any] = {}
+        for lrn_uid in learner_uids:
+            dim_result = self._build_dimension_result_for_learner(
+                learner_uid=lrn_uid,
+                learner_courses=learner_courses_map.get(lrn_uid, set()),
+                per_lc_result=per_lc_result,
+            )
+            final_results[lrn_uid] = {self.DIMENSION_KEY: dim_result}
+
+        logger.info(
+            "SocialLearningEngine.analyze: 分析完成，返回学习者数: %d",
+            len(final_results),
+        )
+        return final_results
+
+    # ------------------------------------------------------------------
+    # 课程内部聚类：2D k-means on (social_index_norm, ratio_obs)
+    # ------------------------------------------------------------------
+    def _analyze_per_course(
+        self,
+        metrics_by_lc: Dict[Tuple[str, str], Dict[str, Any]],
+        learners_per_course: Dict[str, int],
+    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        """
+        在单门课程内部完成：
+        - 基于 (social_index_norm, ratio_obs) 做二维 k-means 聚类；
+        - 根据簇中心的「总体社会性水平 + 观摩占比」映射为 4 档角色 code（0/1/2/3）；
+        - 生成 (lrn, crs) 级结果。
+        """
+        course_entries: Dict[str, List[Tuple[str, Dict[str, Any]]]] = defaultdict(list)
+        for (lrn_uid, crs_uid), metrics in metrics_by_lc.items():
+            course_entries[crs_uid].append((lrn_uid, metrics))
+
+        per_lc_result: Dict[Tuple[str, str], Dict[str, Any]] = {}
+
+        for crs_uid, entries in course_entries.items():
+            num_learners = learners_per_course.get(crs_uid, len(entries))
+
+            # 健壮性：若课程学习者数少于聚类簇数，则跳过整门课程
+            if num_learners < self.min_learners_per_course:
+                logger.info(
+                    "SocialLearningEngine: 课程 %s 学习者数 %d < 聚类数 %d，跳过课程级聚类。",
+                    crs_uid,
+                    num_learners,
+                    self.role_cluster_k,
+                )
+                continue
+
+            logger.info(
+                "SocialLearningEngine: 开始对课程 %s 做社会性角色聚类，学习者数: %d",
+                crs_uid,
+                num_learners,
+            )
+
+            points: List[Tuple[float, float]] = []
+            total_times: List[float] = []
+
+            for _, m in entries:
+                obs_time = float(m.get("obs_total_time", 0.0))
+                collab_time = float(m.get("collab_total_time", 0.0))
+                total_time = obs_time + collab_time
+                total_times.append(total_time)
+
+                s_norm = float(m.get("social_index_norm", 0.0))
+                if total_time > 0:
+                    ratio_obs = obs_time / total_time
+                else:
+                    ratio_obs = 0.5  # 无数据时给中间值
+                points.append((s_norm, ratio_obs))
+
+            k = min(self.role_cluster_k, num_learners)
+            centers, assignments = self._kmeans_2d(points, k=k, max_iter=50)
+
+            if not centers:
+                logger.info(
+                    "SocialLearningEngine: 课程 %s k-means 结果为空，跳过。",
+                    crs_uid,
+                )
+                continue
+
+            # 聚类后，统计每个簇的平均 social_index_norm / ratio_obs / total_time
+            cluster_stats: Dict[int, Dict[str, float]] = defaultdict(
+                lambda: {"sum_s": 0.0, "sum_ratio": 0.0, "sum_time": 0.0, "cnt": 0.0}
+            )
+            for (s_norm, ratio_obs), total_time, c_idx in zip(
+                points, total_times, assignments
+            ):
+                st = cluster_stats[c_idx]
+                st["sum_s"] += s_norm
+                st["sum_ratio"] += ratio_obs
+                st["sum_time"] += total_time
+                st["cnt"] += 1.0
+
+            for ci, st in cluster_stats.items():
+                if st["cnt"] > 0:
+                    st["avg_s"] = st["sum_s"] / st["cnt"]
+                    st["avg_ratio"] = st["sum_ratio"] / st["cnt"]
+                    st["avg_time"] = st["sum_time"] / st["cnt"]
+                else:
+                    st["avg_s"] = 0.0
+                    st["avg_ratio"] = 0.5
+                    st["avg_time"] = 0.0
+
+            cluster_to_role_code = self._map_clusters_to_role_codes(cluster_stats)
+
+            for (lrn_uid, metrics), c_idx in zip(entries, assignments):
+                role_code = cluster_to_role_code.get(c_idx, 0)
+
+                obs_time = float(metrics.get("obs_total_time", 0.0))
+                collab_time = float(metrics.get("collab_total_time", 0.0))
+                total_time = obs_time + collab_time
+                if total_time > 0:
+                    ratio_obs = obs_time / total_time
+                else:
+                    ratio_obs = 0.5
+
+                key = (lrn_uid, crs_uid)
+                per_lc_result[key] = {
+                    "course_uid": crs_uid,
+                    "learner_uid": lrn_uid,
+                    "role_code": role_code,
+                    "social_index_norm": float(
+                        metrics.get("social_index_norm", 0.0)
+                    ),
+                    "social_index": float(metrics.get("social_index", 0.0)),
+                    "obs_count": int(metrics.get("obs_count", 0)),
+                    "obs_total_time": obs_time,
+                    "obs_unique_peers": int(metrics.get("obs_unique_peers", 0)),
+                    "collab_count": int(metrics.get("collab_count", 0)),
+                    "collab_total_time": collab_time,
+                    "ratio_obs": ratio_obs,
+                    "total_social_time": total_time,
+                }
+
+        return per_lc_result
+
+    def _map_clusters_to_role_codes(
+        self,
+        cluster_stats: Dict[int, Dict[str, float]],
+    ) -> Dict[int, int]:
+        """
+        根据每个簇的平均 social_index_norm / ratio_obs / total_time
+        将簇映射为四类角色 code：
+
+        设计思路（在单门课程内部）：
+        - avg_time 越小 → 越像低社交参与型；
+        - 在剩余簇中：
+            * avg_ratio 越大 → 越观察型；
+            * avg_ratio 越小 → 越协作导向；
+            * avg_ratio 居中且 avg_s 高 → 积极社会学习型。
+        """
+        nonempty_clusters = [ci for ci, st in cluster_stats.items() if st["cnt"] > 0]
+        if not nonempty_clusters:
+            return {}
+
+        # 1) 低社交参与型：total time 最小的簇
+        low_ci = min(
+            nonempty_clusters, key=lambda ci: cluster_stats[ci].get("avg_time", 0.0)
+        )
+
+        cluster_to_code: Dict[int, int] = {low_ci: 0}
+        remaining = [ci for ci in nonempty_clusters if ci != low_ci]
+        if not remaining:
+            return cluster_to_code
+
+        # 2) 观察型：观摩占比最高
+        obs_ci = max(
+            remaining, key=lambda ci: cluster_stats[ci].get("avg_ratio", 0.0)
+        )
+        cluster_to_code[obs_ci] = 1
+        remaining = [ci for ci in remaining if ci != obs_ci]
+        if not remaining:
+            return cluster_to_code
+
+        # 3) 协作导向型：观摩占比最低
+        collab_ci = min(
+            remaining, key=lambda ci: cluster_stats[ci].get("avg_ratio", 0.0)
+        )
+        cluster_to_code[collab_ci] = 2
+        remaining = [ci for ci in remaining if ci != collab_ci]
+        if not remaining:
+            return cluster_to_code
+
+        # 4) 积极社会学习型：在剩余簇中 social_index_norm 平均值最高
+        balanced_ci = max(
+            remaining, key=lambda ci: cluster_stats[ci].get("avg_s", 0.0)
+        )
+        cluster_to_code[balanced_ci] = 3
+
+        return cluster_to_code
+
+    # ------------------------------------------------------------------
+    # 学习者维度聚合
+    # ------------------------------------------------------------------
+    def _build_dimension_result_for_learner(
+        self,
+        learner_uid: str,
+        learner_courses: set,
+        per_lc_result: Dict[Tuple[str, str], Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        将 (lrn, crs) 级结果聚合为学习者维度的总结果。
+        """
+        course_keys = [
+            (learner_uid, crs_uid)
+            for crs_uid in learner_courses
+            if (learner_uid, crs_uid) in per_lc_result
+        ]
+
+        if not course_keys:
+            return {
+                "insufficient_data": True,
+                "insufficient_reason": "该学习者在社会性相关课程中的样本量不足，无法进行课程内聚类分析。",
+                "role": None,
+            }
+
+        role_codes: Dict[str, int] = {}
+        course_metrics: Dict[str, Dict[str, Any]] = {}
+
+        for (_, crs_uid) in course_keys:
+            item = per_lc_result[(learner_uid, crs_uid)]
+            role_codes[crs_uid] = int(item.get("role_code", 0))
+
+            course_metrics[crs_uid] = {
+                "social_index_norm": float(
+                    item.get("social_index_norm", 0.0)
+                ),
+                "social_index": float(item.get("social_index", 0.0)),
+                "obs_count": int(item.get("obs_count", 0)),
+                "obs_total_time": float(item.get("obs_total_time", 0.0)),
+                "obs_unique_peers": int(item.get("obs_unique_peers", 0)),
+                "collab_count": int(item.get("collab_count", 0)),
+                "collab_total_time": float(item.get("collab_total_time", 0.0)),
+                "ratio_obs": float(item.get("ratio_obs", 0.5)),
+                "total_social_time": float(item.get("total_social_time", 0.0)),
+            }
+
+        # 最终 role：出现次数最多；并列时 code 越大越好（3>2>1>0）
+        final_code = self._choose_final_code_with_priority(
+            role_codes.values(),
+            priority_map={0: 0, 1: 1, 2: 2, 3: 3},
+        )
+
+        overall_metrics = self._aggregate_overall_role_metrics(course_metrics)
+
+        role_courses_dict = {
+            crs_uid: {
+                "code": role_codes[crs_uid],
+                "metrics": course_metrics[crs_uid],
+            }
+            for crs_uid in role_codes
+        }
+
+        return {
+            "insufficient_data": False,
+            "insufficient_reason": None,
+            "role": {
+                "final_code": final_code,
+                "overall_metrics": overall_metrics,
+                "courses": role_courses_dict,
+            },
+        }
+
+    # ------------------------------------------------------------------
+    # 工具函数：2D k-means / 统计
+    # ------------------------------------------------------------------
+    def _kmeans_2d(
+        self,
+        points: List[Tuple[float, float]],
+        k: int,
+        max_iter: int = 50,
+    ) -> Tuple[List[Tuple[float, float]], List[int]]:
+        """
+        二维 k-means 聚类，返回 (centers, assignments)。
+        """
+        if not points:
+            return [], []
+
+        n = len(points)
+        if n < k:
+            k = n
+
+        xs = [p[0] for p in points]
+        ys = [p[1] for p in points]
+        x_min, x_max = min(xs), max(xs)
+        y_min, y_max = min(ys), max(ys)
+
+        if abs(x_max - x_min) < 1e-6 and abs(y_max - y_min) < 1e-6:
+            centers = [(x_min, y_min) for _ in range(k)]
+            assignments = [0 for _ in range(n)]
+            return centers, assignments
+
+        centers: List[Tuple[float, float]] = []
+        for i in range(k):
+            alpha = (i + 0.5) / float(k)
+            cx = x_min + (x_max - x_min) * alpha
+            cy = y_min + (y_max - y_min) * alpha
+            centers.append((cx, cy))
+
+        for _ in range(max_iter):
+            clusters: List[List[int]] = [[] for _ in range(k)]
+            for idx, (x, y) in enumerate(points):
+                best_c = 0
+                cx, cy = centers[0]
+                best_dist = (x - cx) ** 2 + (y - cy) ** 2
+                for ci in range(1, k):
+                    cx, cy = centers[ci]
+                    d = (x - cx) ** 2 + (y - cy) ** 2
+                    if d < best_dist:
+                        best_dist = d
+                        best_c = ci
+                clusters[best_c].append(idx)
+
+            new_centers = list(centers)
+            for ci in range(k):
+                if clusters[ci]:
+                    sum_x = sum(points[idx][0] for idx in clusters[ci])
+                    sum_y = sum(points[idx][1] for idx in clusters[ci])
+                    cnt = float(len(clusters[ci]))
+                    new_centers[ci] = (sum_x / cnt, sum_y / cnt)
+                else:
+                    new_centers[ci] = centers[ci]
+
+            max_shift = 0.0
+            for (ox, oy), (nx, ny) in zip(centers, new_centers):
+                shift = (ox - nx) ** 2 + (oy - ny) ** 2
+                if shift > max_shift:
+                    max_shift = shift
+            centers = new_centers
+            if max_shift < 1e-4:
+                break
+
+        assignments: List[int] = []
+        for (x, y) in points:
+            best_c = 0
+            cx, cy = centers[0]
+            best_dist = (x - cx) ** 2 + (y - cy) ** 2
+            for ci in range(1, k):
+                cx, cy = centers[ci]
+                d = (x - cx) ** 2 + (y - cy) ** 2
+                if d < best_dist:
+                    best_dist = d
+                    best_c = ci
+            assignments.append(best_c)
+
+        return centers, assignments
+
+    @staticmethod
+    def _choose_final_code_with_priority(
+        codes: Iterable[int], priority_map: Dict[int, int]
+    ) -> Optional[int]:
+        codes = [c for c in codes if c is not None]
+        if not codes:
+            return None
+        counter = Counter(codes)
+        max_count = max(counter.values())
+        candidate_codes = [c for c, cnt in counter.items() if cnt == max_count]
+
+        if len(candidate_codes) == 1:
+            return candidate_codes[0]
+
+        best_code = None
+        best_pri = -1
+        for c in candidate_codes:
+            pri = priority_map.get(c, 0)
+            if pri > best_pri or (pri == best_pri and (best_code is None or c > best_code)):
+                best_code = c
+                best_pri = pri
+        return best_code
+
+    @staticmethod
+    def _aggregate_overall_role_metrics(
+        course_metrics: Dict[str, Dict[str, Any]]
+    ) -> Dict[str, float]:
+        if not course_metrics:
+            return {}
+
+        def mean(arr: List[float]) -> float:
+            return sum(arr) / float(len(arr)) if arr else 0.0
+
+        s_norm_vals = [
+            float(m.get("social_index_norm", 0.0))
+            for m in course_metrics.values()
+        ]
+        s_vals = [
+            float(m.get("social_index", 0.0))
+            for m in course_metrics.values()
+        ]
+        obs_time_vals = [
+            float(m.get("obs_total_time", 0.0))
+            for m in course_metrics.values()
+        ]
+        collab_time_vals = [
+            float(m.get("collab_total_time", 0.0))
+            for m in course_metrics.values()
+        ]
+        obs_cnt_vals = [
+            float(m.get("obs_count", 0.0))
+            for m in course_metrics.values()
+        ]
+        collab_cnt_vals = [
+            float(m.get("collab_count", 0.0))
+            for m in course_metrics.values()
+        ]
+        peers_vals = [
+            float(m.get("obs_unique_peers", 0.0))
+            for m in course_metrics.values()
+        ]
+        ratio_vals = [
+            float(m.get("ratio_obs", 0.0))
+            for m in course_metrics.values()
+        ]
+
+        return {
+            "social_index_norm_mean": mean(s_norm_vals),
+            "social_index_mean": mean(s_vals),
+            "obs_total_time_mean": mean(obs_time_vals),
+            "collab_total_time_mean": mean(collab_time_vals),
+            "obs_count_mean": mean(obs_cnt_vals),
+            "collab_count_mean": mean(collab_cnt_vals),
+            "obs_unique_peers_mean": mean(peers_vals),
+            "ratio_obs_mean": mean(ratio_vals),
+            "courses_count": len(course_metrics),
+        }
 
 
-def get_social_learning_engine() -> SocialLearningEngine:
-    global _social_engine_instance
-    if _social_engine_instance is None:
-        _social_engine_instance = SocialLearningEngine()
-    return _social_engine_instance
-
-
-def analyze_single_learner(learner_uid: str) -> Dict[str, Any]:
-    engine = get_social_learning_engine()
-    return engine.analyze_single_learner(learner_uid)
-
-
-def analyze_multiple_learners(
-    learner_uids: List[str],
-) -> Dict[str, Dict[str, Any]]:
-    engine = get_social_learning_engine()
-    return engine.analyze_multiple_learners(learner_uids)
-
-
-# 简单本地测试（使用与其它 engine 相同的测试 UID）
+# ----------------------------------------------------------------------
+# main：简单测试（数值结果 + 文本标签）
+# ----------------------------------------------------------------------
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    import pprint
+    from app.models.profiles_labels import get_label
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
 
     engine = SocialLearningEngine()
-    test_learner_uids = [
+
+    # 使用你指定的两个真实 UID 做测试
+    test_learners = [
         "lrn_51efbdbcf8844c478bbbb3ab7ad8e64e",
         "lrn_004a9c3f5bf246faab3d390ce716e658",
     ]
 
-    print("=== 单学习者测试 ===")
-    res_single = engine.analyze_single_learner(test_learner_uids[0])
-    print(res_single)
+    print("=" * 80)
+    print("1) 数值型原始结果（结构示意，仅打印顶层维度 key）：")
+    numeric_result = engine.analyze(test_learners)
+    pprint.pprint(
+        {uid: list(numeric_result.get(uid, {}).keys()) for uid in test_learners},
+        width=120,
+    )
 
-    print("=== 多学习者测试 ===")
-    res_multi = engine.analyze_multiple_learners(test_learner_uids)
-    print(res_multi)
+    print("\n" + "=" * 80)
+    print("2) 带文本标签的整体结果（逐个学习者打印）：\n")
+
+    dim_key = SocialLearningEngine.DIMENSION_KEY
+
+    for uid in test_learners:
+        dim_data = numeric_result.get(uid, {}).get(dim_key)
+        print(f"\n>>> 学习者 {uid}")
+        if not dim_data or dim_data.get("insufficient_data"):
+            print("  - 数据不足，无法进行社会性学习与同伴取向分析。")
+            continue
+
+        role_info = dim_data.get("role") or {}
+        role_code = role_info.get("final_code")
+        role_label = get_label(dim_key, "role", role_code)
+
+        print(f"  - 社会性学习角色（role_code={role_code}）: {role_label}")
+        print("  - 角色整体指标:")
+        pprint.pprint(role_info.get("overall_metrics"), indent=4, width=120)
+
+        print("  - 课程级角色与指标（部分字段）：")
+        courses = role_info.get("courses") or {}
+        for crs_uid, c in courses.items():
+            code = c.get("code")
+            label = get_label(dim_key, "role", code)
+            m = c.get("metrics") or {}
+            print(
+                f"    · 课程 {crs_uid}: role={code}({label}), "
+                f"S_norm={m.get('social_index_norm', 0.0):.3f}, "
+                f"obs_t={m.get('obs_total_time', 0.0):.1f}s, "
+                f"collab_t={m.get('collab_total_time', 0.0):.1f}s, "
+                f"ratio_obs={m.get('ratio_obs', 0.0):.2f}, "
+                f"obs_cnt={m.get('obs_count', 0)}, "
+                f"collab_cnt={m.get('collab_count', 0)}, "
+                f"peers={m.get('obs_unique_peers', 0)}"
+            )
