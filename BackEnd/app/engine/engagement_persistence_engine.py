@@ -1,783 +1,581 @@
-# BackEnd/app/engine/engagement_persistence_engine.py
+# engagement_persistence_engine.py
+# -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import logging
-from typing import Dict, Any, List, Tuple, Optional
-from math import sqrt
-import re
-import random
-from collections import defaultdict
+import math
+from collections import Counter, defaultdict
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from app.repositories.engagement_persistence_repository import (
-    engagement_persistence_repository,
     EngagementPersistenceRepository,
 )
 
 logger = logging.getLogger(__name__)
 
-# 上下文扩展字段常量前缀（与分析脚本保持一致）
-CTX_EXT_BASE = "https://legend-meta.com/xapi/ext/"
-EXT_STEP_ID = CTX_EXT_BASE + "step-id"
-EXT_IDLE_THRESHOLD = CTX_EXT_BASE + "idle-threshold-seconds"
-EXT_UNIT_OPTIONAL = CTX_EXT_BASE + "unit-optional"
-EXT_VALUE_CHANGE = CTX_EXT_BASE + "value-change"
-
-# ISO8601 时长解析正则，仅支持 "PT{整数秒}S"
-DURATION_RE = re.compile(r"^PT(\d+)S$")
-
 
 class EngagementPersistenceEngine:
     """
-    行为投入度与坚持性分析引擎
+    行为投入度与坚持性（Behavioral Engagement & Persistence）分析引擎。
 
-    功能：
-    - 给定一个或多个学习者 UID，从 Repository 读取细粒度 xAPI 行为；
-    - 以 (学习者, 课程) 为单位计算：
-        * completion_rate
-        * interaction_per_unit
-        * retry_rate
-        * extension_rate
-        * idle_ratio
-        * value_rate
-        * EP / EP_norm（行为投入度与坚持性指数）
-        * 聚类标签 label / cluster_rank（0/1/2 = 低/中/高）
-    - 对单个学习者的多门课程结果做聚合：
-        * overall_score：多课程 EP_norm 的均值；
-        * overall_cluster_rank & overall_label：根据 cluster_rank 众数得到综合分类，
-          若并列则选择“更好”的那一档（rank 数值更大）。
+    - Repository 负责准备课程级行为统计指标：
+        completion_rate / interaction_per_unit / retry_rate /
+        extension_rate / idle_ratio / value_rate
+    - Engine 在“课程内部”基于上述指标构建 EP 指数，并进行 1D k-means 聚类，
+      得到三档行为投入度与坚持性水平标签（level_code 0/1/2）；
+    - Engine 只返回数值 code，具体文案由 app.models.profiles_labels 负责映射。
     """
 
-    def __init__(self) -> None:
-        logger.info("EngagementPersistenceEngine 初始化完成")
+    DIMENSION_KEY = "engagement_persistence"
 
-    # ------------------------------------------------------------------
-    # 工具函数
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _parse_iso8601_duration(duration_str: Any) -> Optional[int]:
-        """解析简单形式的 ISO8601 时长，例如 'PT120S' -> 120（秒）"""
-        if not duration_str:
-            return None
-        m = DURATION_RE.match(str(duration_str))
-        if not m:
-            return None
-        try:
-            return int(m.group(1))
-        except Exception:
-            return None
-
-    @staticmethod
-    def _compute_mean_std(values: List[float]) -> Tuple[float, float]:
+    def __init__(
+        self,
+        repository: Optional[EngagementPersistenceRepository] = None,
+        level_cluster_k: int = 3,
+        min_learners_per_course: Optional[int] = None,
+    ):
         """
-        计算一组数的均值和总体标准差：
-        - 列表为空 -> (0.0, 0.0)
-        - 仅一个元素 -> std 视为 0.0
+        Args:
+            repository: 数据准备仓库实例，默认自动构造。
+            level_cluster_k: 课程内聚类簇数（对应 level code 0/1/2）。
+            min_learners_per_course: 单门课程参与学习者数量下限，
+                若 None 则默认 = level_cluster_k。
+        """
+        self.repository = repository or EngagementPersistenceRepository()
+        self.level_cluster_k = max(2, min(level_cluster_k, 3))
+        self.min_learners_per_course = (
+            min_learners_per_course or self.level_cluster_k
+        )
+
+        # EP 权重设定，与原脚本保持一致语义 :contentReference[oaicite:1]{index=1}
+        self.w_completion = 1.5
+        self.w_retry = 1.5
+        self.w_extension = 1.2
+        self.w_value = 1.0
+        self.w_interact = 1.0
+        self.w_idle = 1.2
+        self._ep_weight_norm = math.sqrt(
+            self.w_completion**2
+            + self.w_retry**2
+            + self.w_extension**2
+            + self.w_value**2
+            + self.w_interact**2
+            + self.w_idle**2
+        )
+
+    # ------------------------------------------------------------------
+    # 对外主接口
+    # ------------------------------------------------------------------
+    def analyze(self, learner_uids: List[str]) -> Dict[str, Any]:
+        """
+        对若干学习者进行“行为投入度与坚持性”分析。
+
+        返回结构示意：
+        {
+          learner_uid: {
+            "engagement_persistence": {
+              "insufficient_data": bool,
+              "insufficient_reason": Optional[str],
+              "level": {
+                "final_code": Optional[int],
+                "overall_metrics": {...},
+                "courses": {
+                  crs_uid: {
+                    "code": int,
+                    "metrics": {...}
+                  },
+                  ...
+                },
+              },
+            }
+          }
+        }
+        """
+        learner_uids = list({uid for uid in (learner_uids or []) if uid})
+        logger.info(
+            "EngagementPersistenceEngine.analyze: 开始分析，学习者数量: %d",
+            len(learner_uids),
+        )
+
+        if not learner_uids:
+            return {}
+
+        # 1) 仓库层：准备课程级基础指标
+        (
+            metrics_by_lc,
+            learners_per_course,
+            learner_courses_map,
+        ) = self.repository.load_metrics_for_learners(learner_uids)
+
+        logger.info(
+            "EngagementPersistenceEngine.analyze: Repository 返回 (lrn, crs) 条目数: %d，课程数: %d",
+            len(metrics_by_lc),
+            len(learners_per_course),
+        )
+
+        if not metrics_by_lc:
+            # 所有人都没有可用数据
+            results = {}
+            for uid in learner_uids:
+                results[uid] = {
+                    self.DIMENSION_KEY: {
+                        "insufficient_data": True,
+                        "insufficient_reason": "该学习者在行为投入度与坚持性相关的课程中没有可用数据。",
+                        "level": None,
+                    }
+                }
+            return results
+
+        # 2) 课程内 EP 指数计算 + 聚类
+        per_lc_result = self._analyze_per_course(metrics_by_lc, learners_per_course)
+
+        logger.info(
+            "EngagementPersistenceEngine.analyze: 课程内聚类完成，(lrn, crs) 有效条目数: %d",
+            len(per_lc_result),
+        )
+
+        # 3) 学习者维度聚合
+        final_results: Dict[str, Any] = {}
+        for lrn_uid in learner_uids:
+            dim_result = self._build_dimension_result_for_learner(
+                learner_uid=lrn_uid,
+                learner_courses=learner_courses_map.get(lrn_uid, set()),
+                per_lc_result=per_lc_result,
+            )
+            final_results[lrn_uid] = {self.DIMENSION_KEY: dim_result}
+
+        logger.info(
+            "EngagementPersistenceEngine.analyze: 分析完成，返回学习者数: %d",
+            len(final_results),
+        )
+        return final_results
+
+    # ------------------------------------------------------------------
+    # 课程内部 EP 计算 + 聚类
+    # ------------------------------------------------------------------
+    def _analyze_per_course(
+        self,
+        metrics_by_lc: Dict[Tuple[str, str], Dict[str, float]],
+        learners_per_course: Dict[str, int],
+    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
+        """
+        在单门课程内部完成：
+        - 针对 completion_rate / interaction_per_unit / retry_rate /
+          extension_rate / idle_ratio / value_rate 进行课程内 z 标准化；
+        - 计算行为投入度与坚持性指数 EP，并在课程级做 min-max 归一化得到 EP_norm_course；
+        - 对 EP_norm_course 进行 1D k-means 聚类，得到 level_code（0/1/2）。
+        """
+        course_entries: Dict[str, List[Tuple[str, Dict[str, float]]]] = defaultdict(list)
+        for (lrn_uid, crs_uid), metrics in metrics_by_lc.items():
+            course_entries[crs_uid].append((lrn_uid, metrics))
+
+        per_lc_result: Dict[Tuple[str, str], Dict[str, Any]] = {}
+
+        for crs_uid, entries in course_entries.items():
+            num_learners = learners_per_course.get(crs_uid, len(entries))
+
+            if num_learners < self.min_learners_per_course:
+                logger.info(
+                    "EngagementPersistenceEngine: 课程 %s 学习者数 %d < 聚类数 %d，跳过课程级聚类。",
+                    crs_uid,
+                    num_learners,
+                    self.level_cluster_k,
+                )
+                continue
+
+            logger.info(
+                "EngagementPersistenceEngine: 开始对课程 %s 做行为投入度聚类，学习者数: %d",
+                crs_uid,
+                num_learners,
+            )
+
+            # 收集课程内各指标列表
+            comp_vals: List[float] = []
+            inter_vals: List[float] = []
+            retry_vals: List[float] = []
+            ext_vals: List[float] = []
+            idle_vals: List[float] = []
+            value_vals: List[float] = []
+
+            for _, m in entries:
+                comp_vals.append(float(m.get("completion_rate", 0.0)))
+                inter_vals.append(float(m.get("interaction_per_unit", 0.0)))
+                retry_vals.append(float(m.get("retry_rate", 0.0)))
+                ext_vals.append(float(m.get("extension_rate", 0.0)))
+                idle_vals.append(float(m.get("idle_ratio", 0.0)))
+                value_vals.append(float(m.get("value_rate", 0.0)))
+
+            mean_comp, std_comp = self._mean_std(comp_vals)
+            mean_inter, std_inter = self._mean_std(inter_vals)
+            mean_retry, std_retry = self._mean_std(retry_vals)
+            mean_ext, std_ext = self._mean_std(ext_vals)
+            mean_idle, std_idle = self._mean_std(idle_vals)
+            mean_value, std_value = self._mean_std(value_vals)
+
+            # 课程内 EP & EP_norm_course
+            EP_vals: List[float] = []
+            for i in range(len(entries)):
+                z_c = self._z(comp_vals[i], mean_comp, std_comp)
+                z_i = self._z(inter_vals[i], mean_inter, std_inter)
+                z_r = self._z(retry_vals[i], mean_retry, std_retry)
+                z_e = self._z(ext_vals[i], mean_ext, std_ext)
+                z_idle = self._z(idle_vals[i], mean_idle, std_idle)
+                z_v = self._z(value_vals[i], mean_value, std_value)
+
+                EP = (
+                    self.w_completion * z_c
+                    + self.w_retry * z_r
+                    + self.w_extension * z_e
+                    + self.w_value * z_v
+                    + self.w_interact * z_i
+                    - self.w_idle * z_idle
+                )
+                if self._ep_weight_norm > 0:
+                    EP /= self._ep_weight_norm
+                EP_vals.append(EP)
+
+            EP_norm = self._min_max_norm(EP_vals)
+
+            # 一维 k-means 聚类（课程内部）
+            k = min(self.level_cluster_k, num_learners)
+            cluster_ids = self._kmeans_1d(EP_norm, k=k, max_iter=50)
+            cluster_centers = self._compute_cluster_centers(cluster_ids, EP_norm, k)
+
+            # cluster 中心从小到大排序映射到 level_code 0/1/2
+            ordered_clusters = sorted(
+                range(k), key=lambda cid: cluster_centers.get(cid, 0.0)
+            )
+            cluster_to_level_code: Dict[int, int] = {}
+            for rank, cid in enumerate(ordered_clusters):
+                level_code = min(rank, 2)
+                cluster_to_level_code[cid] = level_code
+
+            # 汇总为 (lrn, crs) 级结果
+            for idx, (lrn_uid, metrics) in enumerate(entries):
+                cid = cluster_ids[idx]
+                level_code = cluster_to_level_code.get(cid, 1)  # 默认中档
+
+                per_lc_result[(lrn_uid, crs_uid)] = {
+                    "course_uid": crs_uid,
+                    "learner_uid": lrn_uid,
+                    "level_code": level_code,
+                    "EP": EP_vals[idx],
+                    "EP_norm_course": EP_norm[idx],
+                    # 回写基础指标，便于后续聚合与展示
+                    "completion_rate": float(metrics.get("completion_rate", 0.0)),
+                    "interaction_per_unit": float(
+                        metrics.get("interaction_per_unit", 0.0)
+                    ),
+                    "retry_rate": float(metrics.get("retry_rate", 0.0)),
+                    "extension_rate": float(metrics.get("extension_rate", 0.0)),
+                    "idle_ratio": float(metrics.get("idle_ratio", 0.0)),
+                    "value_rate": float(metrics.get("value_rate", 0.0)),
+                }
+
+        return per_lc_result
+
+    # ------------------------------------------------------------------
+    # 学习者维度聚合
+    # ------------------------------------------------------------------
+    def _build_dimension_result_for_learner(
+        self,
+        learner_uid: str,
+        learner_courses: set,
+        per_lc_result: Dict[Tuple[str, str], Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        将 (lrn, crs) 级结果聚合为学习者维度的总结果。
+        """
+        course_keys = [
+            (learner_uid, crs_uid)
+            for crs_uid in learner_courses
+            if (learner_uid, crs_uid) in per_lc_result
+        ]
+
+        if not course_keys:
+            return {
+                "insufficient_data": True,
+                "insufficient_reason": "该学习者在行为投入度与坚持性相关课程中的样本量不足，无法进行课程内聚类分析。",
+                "level": None,
+            }
+
+        level_codes: Dict[str, int] = {}
+        level_course_metrics: Dict[str, Dict[str, float]] = {}
+
+        for (_, crs_uid) in course_keys:
+            item = per_lc_result[(learner_uid, crs_uid)]
+            level_codes[crs_uid] = int(item.get("level_code", 0))
+
+            level_course_metrics[crs_uid] = {
+                "EP_norm_course": float(item.get("EP_norm_course", 0.0)),
+                "EP": float(item.get("EP", 0.0)),
+                "completion_rate": float(item.get("completion_rate", 0.0)),
+                "interaction_per_unit": float(
+                    item.get("interaction_per_unit", 0.0)
+                ),
+                "retry_rate": float(item.get("retry_rate", 0.0)),
+                "extension_rate": float(item.get("extension_rate", 0.0)),
+                "idle_ratio": float(item.get("idle_ratio", 0.0)),
+                "value_rate": float(item.get("value_rate", 0.0)),
+            }
+
+        # 最终 level：出现次数最多；并列时 code 越大越好
+        final_level_code = self._choose_final_code_with_priority(
+            level_codes.values(),
+            priority_map={0: 0, 1: 1, 2: 2},
+        )
+
+        level_overall_metrics = self._aggregate_overall_level_metrics(
+            level_course_metrics
+        )
+
+        level_courses_dict = {
+            crs_uid: {
+                "code": level_codes[crs_uid],
+                "metrics": level_course_metrics[crs_uid],
+            }
+            for crs_uid in level_codes
+        }
+
+        return {
+            "insufficient_data": False,
+            "insufficient_reason": None,
+            "level": {
+                "final_code": final_level_code,
+                "overall_metrics": level_overall_metrics,
+                "courses": level_courses_dict,
+            },
+        }
+
+    # ------------------------------------------------------------------
+    # 工具函数：统计 / 聚类 / 聚合
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _mean_std(values: List[float]) -> Tuple[float, float]:
+        if not values:
+            return 0.0, 0.0
+        n = len(values)
+        mean_v = sum(values) / float(n)
+        if n <= 1:
+            return mean_v, 0.0
+        var = sum((v - mean_v) ** 2 for v in values) / float(n)
+        return mean_v, math.sqrt(var)
+
+    @staticmethod
+    def _z(v: float, mean_v: float, std_v: float) -> float:
+        if std_v <= 1e-6:
+            return 0.0
+        return (v - mean_v) / float(std_v)
+
+    @staticmethod
+    def _min_max_norm(vals: List[float]) -> List[float]:
+        if not vals:
+            return []
+        v_min = min(vals)
+        v_max = max(vals)
+        if abs(v_max - v_min) <= 1e-9:
+            return [0.5 for _ in vals]
+        return [(v - v_min) / (v_max - v_min) for v in vals]
+
+    def _kmeans_1d(
+        self, values: List[float], k: int, max_iter: int = 50
+    ) -> List[int]:
+        """
+        一维 KMeans，用于课程内 EP_norm_course 聚类。
+        返回：每个样本的 cluster id（0 ~ k-1）。
         """
         n = len(values)
         if n == 0:
-            return 0.0, 0.0
-        mean_v = sum(values) / float(n)
-        if n == 1:
-            return mean_v, 0.0
-        var = sum((v - mean_v) ** 2 for v in values) / float(n)
-        return mean_v, sqrt(var)
+            return []
+        if k <= 1:
+            return [0] * n
+        k = min(k, n)
 
-    @staticmethod
-    def _kmeans_1d(
-        values: List[float], k: int = 3, max_iter: int = 50
-    ) -> Tuple[List[float], List[int]]:
-        """
-        一维 k-means 聚类（Lloyd 算法），用于基于 EP_norm 自动划分学习者类型。
+        # 初始化中心：按分位点从数据中取 k 个初始值，避免随机不稳定
+        sorted_vals = sorted(values)
+        centers = [
+            sorted_vals[int(i * (n - 1) / float(k - 1))]
+            for i in range(k)
+        ]
 
-        返回：
-        - centers: 聚类中心列表
-        - assignments: 与 values 一一对应的簇编号（0 ~ k-1）
-        """
-        n = len(values)
-        if n == 0 or k <= 0:
-            return [], []
-        if n <= k:
-            centers = list(values)
-            assignments = list(range(n))
-            return centers, assignments
-
-        centers = random.sample(list(values), k)
         for _ in range(max_iter):
-            clusters = [[] for _ in range(k)]
+            clusters: List[List[float]] = [[] for _ in range(k)]
+            assignments: List[int] = []
             for v in values:
                 dists = [abs(v - c) for c in centers]
-                idx = dists.index(min(dists))
-                clusters[idx].append(v)
+                cid = min(range(k), key=lambda i: dists[i])
+                assignments.append(cid)
+                clusters[cid].append(v)
 
-            new_centers: List[float] = []
-            for idx in range(k):
-                if clusters[idx]:
-                    new_centers.append(sum(clusters[idx]) / float(len(clusters[idx])))
+            new_centers = []
+            for cid in range(k):
+                if clusters[cid]:
+                    new_centers.append(
+                        sum(clusters[cid]) / float(len(clusters[cid]))
+                    )
                 else:
-                    new_centers.append(random.choice(values))
+                    new_centers.append(centers[cid])
 
-            if all(abs(new_centers[i] - centers[i]) < 1e-6 for i in range(k)):
+            if all(
+                abs(new_centers[i] - centers[i]) <= 1e-4
+                for i in range(k)
+            ):
                 centers = new_centers
                 break
             centers = new_centers
 
-        assignments: List[int] = []
-        for v in values:
-            dists = [abs(v - c) for c in centers]
-            idx = dists.index(min(dists))
-            assignments.append(idx)
+        return assignments
 
-        return centers, assignments
-
-    # ------------------------------------------------------------------
-    # 第一步：聚合中间统计量
-    # ------------------------------------------------------------------
-    def _build_intermediate_stats(
-        self, events: List[Dict[str, Any]]
-    ) -> Tuple[
-        Dict[Tuple[str, str], Dict[str, Any]],
-        Dict[Tuple[str, str, str], List[Dict[str, Any]]],
-        Dict[Tuple[str, str, str], List[Dict[str, Any]]],
-    ]:
-        """
-        将原始 xAPI 事件聚合为中间统计量：
-
-        返回：
-        - agg[(lrn_uid, crs_uid)] = {
-              "units_started": set(),
-              "units_completed": set(),
-              "event_count": int,
-              "active_time": float,
-              "idle_time": float,
-              "extension_count": int,
-              "value_events": int,
-              "value_change_sum": float,
-              "q_fail_count": int,
-              "q_fail_then_success": int,
-              "step_fail_count": int,
-              "step_fail_then_success": int,
-          }
-        - question_events[(lrn_uid, crs_uid, obj_id)] = [{"t": ts, "success": bool}, ...]
-        - step_events[(lrn_uid, crs_uid, step_id)] = [{"t": ts, "success": bool}, ...]
-        """
-        verb_dict = EngagementPersistenceRepository.VERBS
-
-        agg: Dict[Tuple[str, str], Dict[str, Any]] = defaultdict(
-            lambda: {
-                "units_started": set(),
-                "units_completed": set(),
-                "event_count": 0,
-                "active_time": 0.0,
-                "idle_time": 0.0,
-                "extension_count": 0,
-                "value_events": 0,
-                "value_change_sum": 0.0,
-                "q_fail_count": 0,
-                "q_fail_then_success": 0,
-                "step_fail_count": 0,
-                "step_fail_then_success": 0,
-            }
-        )
-
-        question_events: Dict[Tuple[str, str, str], List[Dict[str, Any]]] = defaultdict(list)
-        step_events: Dict[Tuple[str, str, str], List[Dict[str, Any]]] = defaultdict(list)
-
-        for doc in events:
-            lrn_uid = doc.get("_lrn_uid")
-            crs_uid = doc.get("_course_uid")
-            if not lrn_uid or not crs_uid:
-                continue
-
-            verb = (doc.get("verb") or {}).get("id") or doc.get("verb.id")
-            result = doc.get("result") or {}
-            context = doc.get("context") or {}
-            extensions = context.get("extensions") or {}
-            obj_id = (doc.get("object") or {}).get("id") or doc.get("object.id")
-            unt_uid = doc.get("_unt_uid")
-            utype = doc.get("_type")  # video / vr / ar / interact / cooperate / question / course-level
-            timestamp = doc.get("timestamp") or ""
-
-            key_lc = (lrn_uid, crs_uid)
-            stat = agg[key_lc]
-
-            # 标记单元参与（question / course-level 不计入单元集合）
-            if unt_uid and utype and utype not in ("question", "course-level"):
-                stat["units_started"].add(unt_uid)
-
-            # 行为事件数量
-            stat["event_count"] += 1
-
-            # completed：完成率 + active_time
-            if verb == verb_dict["completed"]:
-                if unt_uid and utype and utype not in ("question", "course-level"):
-                    if result.get("completion") is True:
-                        stat["units_completed"].add(unt_uid)
-
-                dur_sec = self._parse_iso8601_duration(result.get("duration"))
-                if dur_sec and dur_sec > 0:
-                    stat["active_time"] += float(dur_sec)
-
-            # performed-procedure-step：步骤级 active_time + retry 序列
-            elif verb == verb_dict["performed_procedure_step"]:
-                dur_sec = self._parse_iso8601_duration(result.get("duration"))
-                if dur_sec and dur_sec > 0:
-                    stat["active_time"] += float(dur_sec)
-
-                step_id = extensions.get(EXT_STEP_ID)
-                if step_id:
-                    success_flag = bool(result.get("success"))
-                    step_events[(lrn_uid, crs_uid, step_id)].append(
-                        {"t": timestamp, "success": success_flag}
-                    )
-
-            # answered：题目级 retry 序列
-            elif verb == verb_dict["answered"]:
-                if obj_id:
-                    success_flag = bool(result.get("success"))
-                    question_events[(lrn_uid, crs_uid, obj_id)].append(
-                        {"t": timestamp, "success": success_flag}
-                    )
-
-            # explored-extension：失败后主动额外练习
-            elif verb == verb_dict["explored_extension"]:
-                stat["extension_count"] += 1
-
-            # remained-idle：挂机 / 走神
-            elif verb == verb_dict["remained_idle"]:
-                dur_sec = self._parse_iso8601_duration(result.get("duration"))
-                if dur_sec and dur_sec > 0:
-                    stat["idle_time"] += float(dur_sec)
-
-            # exchanged-value：价值交换
-            elif verb == verb_dict["exchanged_value"]:
-                stat["value_events"] += 1
-                value_change = extensions.get(EXT_VALUE_CHANGE)
-                if value_change is not None:
-                    try:
-                        stat["value_change_sum"] += float(value_change)
-                    except Exception:
-                        pass
-
-            # initialized 在本分析中不参与统计字段
-
-        # 基于题目与步骤序列统计“先错后对”的重试行为
-        for (lrn_uid, crs_uid, qid), seq in question_events.items():
-            if not seq:
-                continue
-            seq_sorted = sorted(seq, key=lambda x: x["t"])
-            had_wrong = False
-            had_wrong_then_success = False
-            for ev in seq_sorted:
-                if not ev["success"]:
-                    had_wrong = True
-                elif ev["success"] and had_wrong:
-                    had_wrong_then_success = True
-                    break
-            if had_wrong:
-                agg[(lrn_uid, crs_uid)]["q_fail_count"] += 1
-            if had_wrong_then_success:
-                agg[(lrn_uid, crs_uid)]["q_fail_then_success"] += 1
-
-        for (lrn_uid, crs_uid, step_id), seq in step_events.items():
-            if not seq:
-                continue
-            seq_sorted = sorted(seq, key=lambda x: x["t"])
-            had_wrong = False
-            had_wrong_then_success = False
-            for ev in seq_sorted:
-                if not ev["success"]:
-                    had_wrong = True
-                elif ev["success"] and had_wrong:
-                    had_wrong_then_success = True
-                    break
-            if had_wrong:
-                agg[(lrn_uid, crs_uid)]["step_fail_count"] += 1
-            if had_wrong_then_success:
-                agg[(lrn_uid, crs_uid)]["step_fail_then_success"] += 1
-
-        return agg, question_events, step_events
-
-    # ------------------------------------------------------------------
-    # 第二步：计算 (学习者, 课程) 级别指标 + EP / EP_norm
-    # ------------------------------------------------------------------
-    def _compute_ep_index(
-        self, agg: Dict[Tuple[str, str], Dict[str, Any]]
-    ) -> Dict[Tuple[str, str], Dict[str, Any]]:
-        """
-        从中间统计量计算每个 (学习者, 课程) 的行为指标与 EP / EP_norm。
-        """
-        ep_results: Dict[Tuple[str, str], Dict[str, Any]] = {}
-        course_metrics: Dict[str, Dict[str, List[float]]] = defaultdict(
-            lambda: defaultdict(list)
-        )
-
-        # 先计算原始指标
-        for (lrn_uid, crs_uid), stat in agg.items():
-            units_started = len(stat["units_started"])
-            units_completed = len(stat["units_completed"])
-            event_count = stat["event_count"]
-            active_time = stat["active_time"]
-            idle_time = stat["idle_time"]
-            extension_count = stat["extension_count"]
-            value_events = stat["value_events"]
-            q_fail = stat["q_fail_count"]
-            q_retry = stat["q_fail_then_success"]
-            step_fail = stat["step_fail_count"]
-            step_retry = stat["step_fail_then_success"]
-
-            if units_started == 0 and event_count == 0:
-                # 完全没有有效行为的课程窗口直接跳过
-                continue
-
-            # 完成率：units_completed / units_started
-            completion_rate = (
-                units_completed / float(units_started)
-                if units_started > 0
-                else 0.0
-            )
-
-            # 单位单元交互量：event_count / max(units_started, 1)
-            denom_units = float(units_started) if units_started > 0 else 1.0
-            interaction_per_unit = event_count / denom_units
-
-            # 重试率：先错后对的比率
-            total_fail = q_fail + step_fail
-            total_retry = q_retry + step_retry
-            if total_fail > 0:
-                retry_rate = total_retry / float(total_fail)
+    @staticmethod
+    def _compute_cluster_centers(
+        cluster_ids: List[int], values: List[float], k: int
+    ) -> Dict[int, float]:
+        sums = [0.0] * k
+        cnts = [0] * k
+        for cid, v in zip(cluster_ids, values):
+            if 0 <= cid < k:
+                sums[cid] += v
+                cnts[cid] += 1
+        centers: Dict[int, float] = {}
+        for cid in range(k):
+            if cnts[cid] > 0:
+                centers[cid] = sums[cid] / float(cnts[cid])
             else:
-                # 没有失败，给中性值 0.5
-                retry_rate = 0.5
+                centers[cid] = 0.0
+        return centers
 
-            # 失败后 extension 率
-            if q_fail > 0:
-                extension_rate = extension_count / float(q_fail)
-            else:
-                extension_rate = extension_count / float(units_started + 1)
+    @staticmethod
+    def _choose_final_code_with_priority(
+        codes: Iterable[int], priority_map: Dict[int, int]
+    ) -> Optional[int]:
+        codes = [c for c in codes if c is not None]
+        if not codes:
+            return None
+        counter = Counter(codes)
+        max_count = max(counter.values())
+        candidate_codes = [c for c, cnt in counter.items() if cnt == max_count]
 
-            # idle 比例：空闲时长 / (空闲 + 有效时长)
-            total_time_for_idle = idle_time + active_time
-            idle_ratio = (
-                idle_time / float(total_time_for_idle)
-                if total_time_for_idle > 0
-                else 0.0
-            )
+        if len(candidate_codes) == 1:
+            return candidate_codes[0]
 
-            # value 率：价值交换事件数 / 单元数量
-            value_rate = value_events / denom_units
+        best_code = None
+        best_pri = -1
+        for c in candidate_codes:
+            pri = priority_map.get(c, 0)
+            if pri > best_pri or (pri == best_pri and (best_code is None or c > best_code)):
+                best_code = c
+                best_pri = pri
+        return best_code
 
-            res = {
-                "completion_rate": float(completion_rate),
-                "interaction_per_unit": float(interaction_per_unit),
-                "retry_rate": float(retry_rate),
-                "extension_rate": float(extension_rate),
-                "idle_ratio": float(idle_ratio),
-                "value_rate": float(value_rate),
-            }
-            ep_results[(lrn_uid, crs_uid)] = res
-
-            # 为课程内标准化收集指标
-            course_metrics[crs_uid]["completion_rate"].append(completion_rate)
-            course_metrics[crs_uid]["interaction_per_unit"].append(
-                interaction_per_unit
-            )
-            course_metrics[crs_uid]["retry_rate"].append(retry_rate)
-            course_metrics[crs_uid]["extension_rate"].append(extension_rate)
-            course_metrics[crs_uid]["idle_ratio"].append(idle_ratio)
-            course_metrics[crs_uid]["value_rate"].append(value_rate)
-
-        if not ep_results:
-            logger.warning(
-                "[EngagementPersistenceEngine] 没有任何 (学习者, 课程) 具备可用行为指标"
-            )
+    @staticmethod
+    def _aggregate_overall_level_metrics(
+        level_course_metrics: Dict[str, Dict[str, float]]
+    ) -> Dict[str, float]:
+        if not level_course_metrics:
             return {}
 
-        # 课程内 mean/std
-        course_stats: Dict[str, Dict[str, Tuple[float, float]]] = {}
-        for crs_uid, metrics in course_metrics.items():
-            course_stats[crs_uid] = {}
-            for metric_name, vals in metrics.items():
-                course_stats[crs_uid][metric_name] = self._compute_mean_std(vals)
+        def mean(arr: List[float]) -> float:
+            return sum(arr) / float(len(arr)) if arr else 0.0
 
-        # 权重（与分析脚本保持一致的设计思路）
-        w_completion = 1.5
-        w_retry = 1.5
-        w_extension = 1.2
-        w_value = 1.0
-        w_interact = 1.0
-        w_idle = 1.2
+        EP_norm_vals = [
+            m.get("EP_norm_course", 0.0) for m in level_course_metrics.values()
+        ]
+        EP_vals = [m.get("EP", 0.0) for m in level_course_metrics.values()]
+        comp_vals = [
+            m.get("completion_rate", 0.0)
+            for m in level_course_metrics.values()
+        ]
+        inter_vals = [
+            m.get("interaction_per_unit", 0.0)
+            for m in level_course_metrics.values()
+        ]
+        retry_vals = [
+            m.get("retry_rate", 0.0) for m in level_course_metrics.values()
+        ]
+        ext_vals = [
+            m.get("extension_rate", 0.0)
+            for m in level_course_metrics.values()
+        ]
+        idle_vals = [
+            m.get("idle_ratio", 0.0) for m in level_course_metrics.values()
+        ]
+        val_vals = [
+            m.get("value_rate", 0.0) for m in level_course_metrics.values()
+        ]
 
-        denom_w = sqrt(
-            w_completion ** 2
-            + w_retry ** 2
-            + w_extension ** 2
-            + w_value ** 2
-            + w_interact ** 2
-            + w_idle ** 2
-        )
-
-        all_EP: List[float] = []
-
-        # 计算 EP
-        for (lrn_uid, crs_uid), res in ep_results.items():
-            stats_course = course_stats.get(crs_uid, {})
-
-            def z_score(metric_key: str) -> float:
-                val = res.get(metric_key, 0.0)
-                mean_v, std_v = stats_course.get(metric_key, (0.0, 0.0))
-                if std_v <= 1e-6:
-                    return 0.0
-                return (val - mean_v) / float(std_v)
-
-            z_c = z_score("completion_rate")
-            z_r = z_score("retry_rate")
-            z_e = z_score("extension_rate")
-            z_v = z_score("value_rate")
-            z_i = z_score("interaction_per_unit")
-            z_idle = z_score("idle_ratio")
-
-            EP = (
-                w_completion * z_c
-                + w_retry * z_r
-                + w_extension * z_e
-                + w_value * z_v
-                + w_interact * z_i
-                - w_idle * z_idle
-            )
-            if denom_w > 0:
-                EP = EP / denom_w
-
-            res["EP"] = float(EP)
-            all_EP.append(EP)
-
-        # 全局 min-max 归一化得到 EP_norm
-        if all_EP:
-            min_EP = min(all_EP)
-            max_EP = max(all_EP)
-            if max_EP > min_EP:
-                span = max_EP - min_EP
-                for res in ep_results.values():
-                    EP = res.get("EP", 0.0)
-                    res["EP_norm"] = float((EP - min_EP) / float(span))
-            else:
-                for res in ep_results.values():
-                    res["EP_norm"] = 0.5
-        else:
-            for res in ep_results.values():
-                res["EP_norm"] = 0.5
-
-        return ep_results
-
-    # ------------------------------------------------------------------
-    # 第三步：聚类 & 标签
-    # ------------------------------------------------------------------
-    def _assign_labels(
-        self, ep_results: Dict[Tuple[str, str], Dict[str, Any]]
-    ) -> None:
-        """
-        基于 EP_norm 对 (学习者, 课程) 进行聚类并赋予语义标签：
-        - cluster_index: 原始簇编号
-        - cluster_rank: 按中心高低排序后的等级（0: 低, 1: 中, 2: 高）
-        - label: 中文标签
-        """
-        values_norm: List[float] = []
-        keys_list: List[Tuple[str, str]] = []
-
-        for key, res in ep_results.items():
-            ep_norm = res.get("EP_norm")
-            if ep_norm is None:
-                continue
-            values_norm.append(float(ep_norm))
-            keys_list.append(key)
-
-        if not values_norm:
-            logger.warning("[EngagementPersistenceEngine] 无 EP_norm 可用于聚类")
-            return
-
-        centers, assignments = self._kmeans_1d(values_norm, k=3, max_iter=50)
-        if not centers or not assignments:
-            logger.warning("[EngagementPersistenceEngine] k-means 聚类失败")
-            return
-
-        # 将中心从小到大排序，映射为 rank 0/1/2
-        center_with_idx = list(enumerate(centers))
-        center_with_idx.sort(key=lambda x: x[1])
-        cluster_to_rank = {cluster_idx: rank for rank, (cluster_idx, _) in enumerate(center_with_idx)}
-
-        label_map = {
-            0: "低投入易放弃型学习者",
-            1: "中等投入型学习者",
-            2: "高投入高坚持型学习者",
+        return {
+            "EP_norm_mean": mean(EP_norm_vals),
+            "EP_mean": mean(EP_vals),
+            "completion_rate_mean": mean(comp_vals),
+            "interaction_per_unit_mean": mean(inter_vals),
+            "retry_rate_mean": mean(retry_vals),
+            "extension_rate_mean": mean(ext_vals),
+            "idle_ratio_mean": mean(idle_vals),
+            "value_rate_mean": mean(val_vals),
+            "courses_count": len(level_course_metrics),
         }
 
-        label_counter: Dict[str, int] = defaultdict(int)
 
-        for key, cluster_idx in zip(keys_list, assignments):
-            res = ep_results[key]
-            rank = cluster_to_rank.get(cluster_idx, 1)
-            label = label_map.get(rank, "中等投入型学习者")
-
-            res["cluster_index"] = int(cluster_idx)
-            res["cluster_rank"] = int(rank)
-            res["label"] = label
-
-            label_counter[label] += 1
-
-        for label, cnt in label_counter.items():
-            logger.info(f"[EngagementPersistenceEngine] 标签分布: {label} -> {cnt}")
-
-    # ------------------------------------------------------------------
-    # 第四步：聚合到学习者级别
-    # ------------------------------------------------------------------
-    def _build_learner_summaries(
-        self, ep_results: Dict[Tuple[str, str], Dict[str, Any]]
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        把 (学习者, 课程) 级别结果聚合为按学习者的结果。
-
-        返回结构：
-        {
-            learner_uid: {
-                "learner_uid": "...",
-                "has_data": bool,
-                "overall_score": float 或 None,          # 多课程 EP_norm 均值
-                "overall_label": str 或 None,            # 综合标签
-                "overall_cluster_rank": int 或 None,     # 0/1/2
-                "per_course_results": [...],             # 每门课程详情
-            },
-            ...
-        }
-        """
-        learner_data: Dict[str, Dict[str, Any]] = {}
-
-        for (lrn_uid, crs_uid), res in ep_results.items():
-            if "EP_norm" not in res:
-                continue
-
-            if lrn_uid not in learner_data:
-                learner_data[lrn_uid] = {
-                    "learner_uid": lrn_uid,
-                    "has_data": True,
-                    "overall_score": None,
-                    "overall_label": None,
-                    "overall_cluster_rank": None,
-                    "per_course_results": [],
-                }
-
-            item = {
-                "course_uid": crs_uid,
-                "completion_rate": float(res.get("completion_rate", 0.0)),
-                "interaction_per_unit": float(res.get("interaction_per_unit", 0.0)),
-                "retry_rate": float(res.get("retry_rate", 0.0)),
-                "extension_rate": float(res.get("extension_rate", 0.0)),
-                "idle_ratio": float(res.get("idle_ratio", 0.0)),
-                "value_rate": float(res.get("value_rate", 0.0)),
-                "EP": float(res.get("EP", 0.0)),
-                "EP_norm": float(res.get("EP_norm", 0.0)),
-                "label": res.get("label"),
-                "cluster_rank": int(res.get("cluster_rank", 1)),
-            }
-            learner_data[lrn_uid]["per_course_results"].append(item)
-
-        overall_rank_label = {
-            0: "整体行为投入度与坚持性偏低（在所参与课程中完成率、交互量和重试/延展行为整体偏弱）",
-            1: "整体行为投入度与坚持性中等（整体上能够完成任务并保持一定的参与度）",
-            2: "整体行为投入度与坚持性较高（整体上完成率较高，且愿意重试与进行额外练习）",
-        }
-
-        for lrn_uid, info in learner_data.items():
-            pcs = info["per_course_results"]
-            if not pcs:
-                info["has_data"] = False
-                continue
-
-            scores = [it["EP_norm"] for it in pcs]
-            info["overall_score"] = float(sum(scores) / float(len(scores)))
-
-            rank_counts: Dict[int, int] = {}
-            for it in pcs:
-                r = int(it["cluster_rank"])
-                rank_counts[r] = rank_counts.get(r, 0) + 1
-
-            if rank_counts:
-                max_count = max(rank_counts.values())
-                candidate_ranks = [r for r, c in rank_counts.items() if c == max_count]
-                best_rank = max(candidate_ranks)  # 并列时选择“更好”的一档
-
-                info["overall_cluster_rank"] = best_rank
-                info["overall_label"] = overall_rank_label.get(
-                    best_rank,
-                    "整体行为投入度与坚持性中等（默认）",
-                )
-            else:
-                info["overall_cluster_rank"] = None
-                info["overall_label"] = None
-
-        return learner_data
-
-    # ------------------------------------------------------------------
-    # 对外公开接口
-    # ------------------------------------------------------------------
-    def analyze_multiple_learners(
-        self, learner_uids: List[str]
-    ) -> Dict[str, Dict[str, Any]]:
-        """
-        对多个学习者进行“行为投入度与坚持性”分析。
-
-        返回：
-        {
-            learner_uid: {
-                "learner_uid": "...",
-                "has_data": bool,
-                "overall_score": float 或 None,
-                "overall_label": str 或 None,
-                "overall_cluster_rank": int 或 None,
-                "per_course_results": [...],
-                # 如出错，还会包含 "error": str
-            },
-            ...
-        }
-        """
-        if not learner_uids:
-            return {}
-
-        try:
-            # 1) 从 Repository 获取原始事件
-            events = engagement_persistence_repository.get_engagement_persistence_events(
-                learner_uids
-            )
-
-            if not events:
-                result: Dict[str, Dict[str, Any]] = {}
-                for uid in learner_uids:
-                    result[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-                return result
-
-            # 2) 构建中间统计量
-            agg, _, _ = self._build_intermediate_stats(events)
-            if not agg:
-                result: Dict[str, Dict[str, Any]] = {}
-                for uid in learner_uids:
-                    result[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-                return result
-
-            # 3) 计算 EP 指数
-            ep_results = self._compute_ep_index(agg)
-            if not ep_results:
-                result: Dict[str, Dict[str, Any]] = {}
-                for uid in learner_uids:
-                    result[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-                return result
-
-            # 4) 聚类 + 标签
-            self._assign_labels(ep_results)
-
-            # 5) 聚合为学习者级别结果
-            learner_summaries = self._build_learner_summaries(ep_results)
-
-            # 6) 对于传入但没有任何结果的学习者，也返回结构化空结果
-            for uid in learner_uids:
-                if uid not in learner_summaries:
-                    learner_summaries[uid] = {
-                        "learner_uid": uid,
-                        "has_data": False,
-                        "overall_score": None,
-                        "overall_label": None,
-                        "overall_cluster_rank": None,
-                        "per_course_results": [],
-                    }
-
-            return learner_summaries
-
-        except Exception as e:
-            logger.error(f"多学习者行为投入度与坚持性分析失败: {e}", exc_info=True)
-            result: Dict[str, Dict[str, Any]] = {}
-            for uid in learner_uids:
-                result[uid] = {
-                    "learner_uid": uid,
-                    "has_data": False,
-                    "overall_score": None,
-                    "overall_label": None,
-                    "overall_cluster_rank": None,
-                    "per_course_results": [],
-                    "error": str(e),
-                }
-            return result
-
-    def analyze_single_learner(self, learner_uid: str) -> Dict[str, Any]:
-        """
-        单学习者便捷接口：返回结构等同于 analyze_multiple_learners()[learner_uid]
-        """
-        results = self.analyze_multiple_learners([learner_uid])
-        return results.get(
-            learner_uid,
-            {
-                "learner_uid": learner_uid,
-                "has_data": False,
-                "overall_score": None,
-                "overall_label": None,
-                "overall_cluster_rank": None,
-                "per_course_results": [],
-            },
-        )
-
-
-# 全局引擎实例 + 便捷函数（与 attention_allocation_engine 风格一致）
-_engagement_engine_instance: Optional[EngagementPersistenceEngine] = None
-
-
-def get_engagement_persistence_engine() -> EngagementPersistenceEngine:
-    global _engagement_engine_instance
-    if _engagement_engine_instance is None:
-        _engagement_engine_instance = EngagementPersistenceEngine()
-    return _engagement_engine_instance
-
-
-def analyze_single_learner(learner_uid: str) -> Dict[str, Any]:
-    engine = get_engagement_persistence_engine()
-    return engine.analyze_single_learner(learner_uid)
-
-
-def analyze_multiple_learners(
-    learner_uids: List[str],
-) -> Dict[str, Dict[str, Any]]:
-    engine = get_engagement_persistence_engine()
-    return engine.analyze_multiple_learners(learner_uids)
-
-
-# 简单本地测试（使用与 attention_allocation_engine 相同的测试 UID）
+# ----------------------------------------------------------------------
+# main：简单测试（数值结果 + 文本标签）
+# ----------------------------------------------------------------------
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    import pprint
+    from app.models.profiles_labels import get_label
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
 
     engine = EngagementPersistenceEngine()
-    test_learner_uids = [
+
+    # 按你的要求，使用这两个真实 UID 测试
+    test_learners = [
         "lrn_51efbdbcf8844c478bbbb3ab7ad8e64e",
         "lrn_004a9c3f5bf246faab3d390ce716e658",
     ]
 
-    print("=== 单学习者测试 ===")
-    res_single = engine.analyze_single_learner(test_learner_uids[0])
-    print(res_single)
+    print("=" * 80)
+    print("1) 数值型原始结果（结构示意，仅打印顶层维度 key）：")
+    numeric_result = engine.analyze(test_learners)
+    pprint.pprint(
+        {uid: list(numeric_result.get(uid, {}).keys()) for uid in test_learners},
+        width=120,
+    )
 
-    print("=== 多学习者测试 ===")
-    res_multi = engine.analyze_multiple_learners(test_learner_uids)
-    print(res_multi)
+    print("\n" + "=" * 80)
+    print("2) 带文本标签的整体结果（逐个学习者打印）：\n")
+
+    dim_key = EngagementPersistenceEngine.DIMENSION_KEY
+
+    for uid in test_learners:
+        dim_data = numeric_result.get(uid, {}).get(dim_key)
+        print(f"\n>>> 学习者 {uid}")
+        if not dim_data or dim_data.get("insufficient_data"):
+            print("  - 数据不足，无法进行行为投入度与坚持性分析。")
+            continue
+
+        level_info = dim_data.get("level") or {}
+        level_code = level_info.get("final_code")
+        level_label = get_label(dim_key, "level", level_code)
+
+        print(f"  - 行为投入度与坚持性水平（level_code={level_code}）: {level_label}")
+        print("  - 整体指标:")
+        pprint.pprint(level_info.get("overall_metrics"), indent=4, width=120)
+
+        # 展示部分课程标签，方便检查课程内聚类效果
+        print("  - 课程级标签与指标（部分字段）：")
+        courses = level_info.get("courses") or {}
+        for crs_uid, c in courses.items():
+            code = c.get("code")
+            label = get_label(dim_key, "level", code)
+            metrics = c.get("metrics") or {}
+            print(
+                f"    · 课程 {crs_uid}: level={code}({label}), "
+                f"EP_norm={metrics.get('EP_norm_course', 0.0):.3f}, "
+                f"completion={metrics.get('completion_rate', 0.0):.3f}, "
+                f"retry={metrics.get('retry_rate', 0.0):.3f}, "
+                f"ext={metrics.get('extension_rate', 0.0):.3f}, "
+                f"idle={metrics.get('idle_ratio', 0.0):.3f}"
+            )
