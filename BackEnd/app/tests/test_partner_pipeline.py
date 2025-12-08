@@ -7,7 +7,7 @@
 ----
 - 不依赖 pytest，只做：
     1. 构造一批模拟学习者画像 + 知识点预测数据（全在内存中）；
-    2. 调用 PartnerRecommendationPipeline.analyze(...)；
+    2. 调用 PartnerRecommendationPipeline.analyze(learner_uids, data)；
     3. 做一些基本的结果检查（用 assert）；
     4. 打印耗时和部分结果，粗略观察性能与输出结构。
 
@@ -211,31 +211,36 @@ def build_mock_inputs(
     """
     构造模拟的三类输入：
     - learner_uids: 目标学习者列表（长度 n_targets）
-    - learner_profiles: 所有学习者画像 dict
-    - knowledge_concepts: 所有学习者 KT dict
+    - data: 所有学习者的聚合输入（给 pipeline / engine 使用）
 
-    这里规模可以调大一点，用来粗测性能；比如：
-    n_learners=5000, n_concepts=200, n_targets=50
+    data 结构与实际调用保持一致：
+    data = {
+      "<uid>": {
+        "learner_profile": {...},        # 画像（11 维）
+        "knowledge_concepts": {...},     # KT 向量
+      },
+      ...
+    }
     """
     concept_uids = generate_concept_uids(n_concepts)
 
-    learner_profiles: Dict[str, Any] = {}
-    knowledge_concepts: Dict[str, Any] = {}
-
+    data: Dict[str, Any] = {}
     all_uids: List[str] = []
 
     for i in range(1, n_learners + 1):
         uid = f"lrn_test_{i:05d}"
         all_uids.append(uid)
 
-        learner_profiles[uid] = sample_profile_for_learner()
-        knowledge_concepts[uid] = sample_kt_for_learner(concept_uids)
+        data[uid] = {
+            "learner_profile": sample_profile_for_learner(),
+            "knowledge_concepts": sample_kt_for_learner(concept_uids),
+        }
 
     # 从所有学习者中随机选出部分作为“需要推荐”的目标学习者
     n_targets = min(n_targets, len(all_uids))
     target_uids = random.sample(all_uids, k=n_targets)
 
-    return target_uids, learner_profiles, knowledge_concepts
+    return target_uids, data
 
 
 # ------------------------ 简单跑通 + 性能测试 ------------------------
@@ -253,7 +258,7 @@ def simple_run():
         f"[INFO] 构造模拟数据: learners={N_LEARNERS}, concepts={N_CONCEPTS}, targets={N_TARGETS}"
     )
     t0 = time.perf_counter()
-    learner_uids, learner_profiles, knowledge_concepts = build_mock_inputs(
+    learner_uids, data = build_mock_inputs(
         n_learners=N_LEARNERS,
         n_concepts=N_CONCEPTS,
         n_targets=N_TARGETS,
@@ -264,12 +269,11 @@ def simple_run():
     print("[INFO] 初始化 PartnerRecommendationPipeline...")
     pipeline = PartnerRecommendationPipeline()
 
-    print("[INFO] 调用 pipeline.analyze(...) ...")
+    print("[INFO] 调用 pipeline.analyze(learner_uids, data) ...")
     t2 = time.perf_counter()
     result = pipeline.analyze(
         learner_uids=learner_uids,
-        learner_profiles=learner_profiles,
-        knowledge_concepts=knowledge_concepts,
+        data=data,
     )
     t3 = time.perf_counter()
 

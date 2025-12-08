@@ -1,25 +1,61 @@
 # app/domain/partner/learning_partner_engine.py
 # -*- coding: utf-8 -*-
+from __future__ import annotations
+
 import logging
 import math
 from typing import Any, Dict, List, Optional, Tuple
 
-from app.domain.common.analyze_base_engine import AnalyzeBaseEngine
+from app.domain.common.base_engine import BaseEngine
 from app.core.settings import partner_settings, profiling_settings
 
 logger = logging.getLogger(__name__)
 
 
-class LearningPartnerMatchingEngine(AnalyzeBaseEngine):
+class LearningPartnerMatchingEngine(BaseEngine):
     """
     LearningPartnerMatchingEngine
 
-    在新的设计下，本 Engine：
+    基于「画像同质性 + 知识同质性 + 知识互补性」的学习伙伴匹配引擎。
 
-    - 输入：learner_uids + learner_profiles + knowledge_concepts（三个外部传入的结构）；
-    - 不再直接访问数据库，由上层负责从 Repository 构建好输入；
-    - 针对上万规模学习者，通过“全局能力排序 + 局部窗口采样”的方式限制
-      每个目标学习者的候选规模，避免 O(N^2) 的爆炸。
+    输入约定（通过 data 参数传入）
+    ------------------------------
+    data: Dict[str, Any] 结构大致为：
+
+    {
+      "<uid>": {
+        "learner_profile": { ... },       # 或 "learner_profiles"
+        "knowledge_concepts": { ... },    # 或 "knowledge_concept"
+        ...
+      },
+      ...
+    }
+
+    其中：
+    - learner_profile: 即你一开始描述的 11 维画像结构；
+    - knowledge_concepts: 即 KT 预测向量 { concept_uid: accuracy, ... }。
+
+    输出结构
+    --------
+    {
+      "engine_status": {...},
+      "results": {
+        uid: {
+          "partners": [
+            {
+              "uid": "...",
+              "score": float,
+              "profile_homophily": float,
+              "knowledge_homophily": float,
+              "knowledge_complementarity": float,
+              "explanation": "..."
+            },
+            ...
+          ]
+        },
+        ...
+      }
+    }
     """
 
     def __init__(self, device: Optional[str] = None) -> None:
@@ -28,24 +64,19 @@ class LearningPartnerMatchingEngine(AnalyzeBaseEngine):
 
         super().__init__(device=device, name="LearningPartnerMatchingEngine")
 
-        # 多视图融合权重
+        # 从配置中加载多视图融合权重
         score_weights = partner_settings.partner_score_weights
         self.alpha_profile: float = float(score_weights.get("alpha_profile", 0.4))
         self.beta_k_homo: float = float(score_weights.get("beta_k_homophily", 0.3))
-        self.gamma_k_comp: float = float(
-            score_weights.get("gamma_k_complementarity", 0.3)
-        )
+        self.gamma_k_comp: float = float(score_weights.get("gamma_k_complementarity", 0.3))
 
         # 知识互补阈值
         thresholds = partner_settings.partner_knowledge_thresholds
         self.low_threshold: float = float(thresholds.get("low", 0.6))
         self.high_threshold: float = float(thresholds.get("high", 0.85))
 
-        # 返回 top_k & 每个目标最多候选规模
+        # 默认 top_k（每个学习者的伙伴数）
         self._default_top_k: int = partner_settings.partner_default_top_k
-        self._max_candidates_per_target: int = (
-            partner_settings.partner_max_candidates_per_target
-        )
 
         # 画像子维度权重：配置使用 "dimension.sub_key" 形式，这里转为 (dim, sub_key)
         self.profile_feature_weights: Dict[Tuple[str, str], float] = {}
@@ -53,26 +84,29 @@ class LearningPartnerMatchingEngine(AnalyzeBaseEngine):
             try:
                 dim, sub_key = key.split(".", 1)
                 self.profile_feature_weights[(dim, sub_key)] = float(w)
-            except Exception:
+            except ValueError:
                 logger.warning("Invalid partner profile weight key: %s", key)
+            except Exception as exc:
+                logger.error("Error parsing partner profile weight (%s): %s", key, exc)
 
     # ------------------------------------------------------------------
-    # AnalyzeBaseEngine 接口实现
+    # BaseEngine 接口实现
     # ------------------------------------------------------------------
 
     def initialize(self) -> bool:
+        """
+        当前版本没有额外模型要加载，只需设置标志位。
+        """
         try:
-            # 当前没有重模型加载，只需标记初始化完成
             self.is_initialized = True
             logger.info(
-                "%s 初始化完成: alpha=%.3f, beta=%.3f, gamma=%.3f, low=%.2f, high=%.2f, max_candidates=%d",
+                "%s 初始化完成: alpha=%.3f, beta=%.3f, gamma=%.3f, low=%.2f, high=%.2f",
                 self.engine_name,
                 self.alpha_profile,
                 self.beta_k_homo,
                 self.gamma_k_comp,
                 self.low_threshold,
                 self.high_threshold,
-                self._max_candidates_per_target,
             )
             return True
         except Exception as exc:
@@ -83,74 +117,41 @@ class LearningPartnerMatchingEngine(AnalyzeBaseEngine):
     def analyze(
         self,
         learner_uids: List[str],
-        learner_profiles: Dict[str, Any],
-        knowledge_concepts: Dict[str, Any],
+        data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        多视图学习伙伴匹配（三参版接口）。
+        伙伴匹配主入口。
 
-        learner_profiles[uid] = 11 维画像字典
-        knowledge_concepts[uid] = {concept_uid: predicted_accuracy, ...}
+        learner_uids:
+            需要进行伙伴推荐的目标学习者 uid 列表；
+        data:
+            包含所有候选（包括目标学习者自身）画像与 KT 的大字典。
         """
         if not self.ensure_initialized():
-            return {
-                "engine_status": self.get_engine_status(),
-                "results": {},
-            }
+            return {"engine_status": self.get_engine_status(), "results": {}}
 
         if not learner_uids:
-            return {
-                "engine_status": self.get_engine_status(),
-                "results": {},
-            }
+            return {"engine_status": self.get_engine_status(), "results": {}}
 
-        # 轻量校验，方便发现数据质量问题
-        self.validate_inputs(learner_uids, learner_profiles, knowledge_concepts)
+        if not data:
+            logger.warning("LearningPartnerMatchingEngine.analyze called with empty data.")
+            return {"engine_status": self.get_engine_status(), "results": {}}
 
-        # 1）构建所有学习者的扁平画像视图 & 知识向量 & 全局能力指数
-        all_uids = sorted(
-            set(learner_profiles.keys()) | set(knowledge_concepts.keys())
-        )
-        profile_views: Dict[str, Dict[Tuple[str, str], str]] = {}
-        knowledge_views: Dict[str, Dict[str, float]] = {}
-        global_expertise: Dict[str, float] = {}
+        # 1. 为 data 中所有 uid 构建特征视图
+        features_map = self._build_feature_views_from_data(data)
 
-        for uid in all_uids:
-            profile_views[uid] = self._flatten_profile(
-                learner_profiles.get(uid) or {}
-            )
-            kv = self._sanitize_knowledge_vector(
-                knowledge_concepts.get(uid) or {}
-            )
-            knowledge_views[uid] = kv
-            global_expertise[uid] = self._calc_global_expertise(kv)
-
-        # 2）按全局能力排序，为后续“局部窗口候选采样”做准备
-        sorted_by_E: List[str] = sorted(
-            all_uids, key=lambda u: global_expertise.get(u, 0.0)
-        )
-        uid_index: Dict[str, int] = {
-            uid: idx for idx, uid in enumerate(sorted_by_E)
-        }
-
-        # 3）针对每个目标 uid 做匹配
+        # 2. 针对每个目标 uid 计算伙伴列表
         results: Dict[str, Any] = {}
         for uid in learner_uids:
-            if uid not in profile_views or uid not in knowledge_views:
+            target_feat = features_map.get(uid)
+            if not target_feat:
                 results[uid] = {"partners": []}
                 continue
 
-            candidate_uids = self._select_candidates_for_partner(
-                target_uid=uid,
-                sorted_uids=sorted_by_E,
-                uid_index=uid_index,
-            )
-
             partners = self._match_single_learner(
                 target_uid=uid,
-                candidate_uids=candidate_uids,
-                profile_views=profile_views,
-                knowledge_views=knowledge_views,
+                target_feat=target_feat,
+                all_features_map=features_map,
                 top_k=self._default_top_k,
             )
             results[uid] = {"partners": partners}
@@ -161,139 +162,103 @@ class LearningPartnerMatchingEngine(AnalyzeBaseEngine):
         }
 
     # ------------------------------------------------------------------
-    # 对外便捷接口
+    # 内部特征构建
     # ------------------------------------------------------------------
 
-    def find_partners_for_learner(
+    def _build_feature_views_from_data(
         self,
-        learner_uid: str,
-        learner_profiles: Dict[str, Any],
-        knowledge_concepts: Dict[str, Any],
-        top_k: Optional[int] = None,
-    ) -> Dict[str, Any]:
-        if top_k is None or top_k <= 0:
-            top_k = self._default_top_k
+        data: Dict[str, Any],
+    ) -> Dict[str, Dict[str, Any]]:
+        """
+        将 data 中的原始输入整理成统一的特征视图。
+        """
+        features: Dict[str, Dict[str, Any]] = {}
 
-        res = self.analyze(
-            learner_uids=[learner_uid],
-            learner_profiles=learner_profiles,
-            knowledge_concepts=knowledge_concepts,
-        )
-        learner_res = res.get("results", {}).get(learner_uid, {"partners": []})
-        learner_res["partners"] = learner_res.get("partners", [])[:top_k]
-        return {
-            "engine_status": res.get("engine_status", {}),
-            "learner_uid": learner_uid,
-            "partners": learner_res["partners"],
-        }
+        for uid, entry in data.items():
+            if not isinstance(entry, dict):
+                continue
 
-    # ------------------------------------------------------------------
-    # 内部核心逻辑（性能优化点重点在“候选采样”）
-    # ------------------------------------------------------------------
+            # 兼容 "learner_profile" / "learner_profiles" 两种写法
+            profile_obj = (
+                entry.get("learner_profile")
+                or entry.get("learner_profiles")
+                or {}
+            )
+            # 兼容 "knowledge_concepts" / "knowledge_concept"
+            kt_obj = (
+                entry.get("knowledge_concepts")
+                or entry.get("knowledge_concept")
+                or {}
+            )
+
+            kv = self._extract_knowledge_vector(kt_obj)
+            pf = self._extract_profile_categorical_features(profile_obj)
+
+            features[uid] = {
+                "uid": uid,
+                "knowledge_vector": kv,
+                "profile_categorical": pf,
+                "raw": entry,
+            }
+
+        return features
 
     @staticmethod
-    def _flatten_profile(
-        profile: Dict[str, Any]
+    def _extract_knowledge_vector(kt_obj: Dict[str, Any]) -> Dict[str, float]:
+        """
+        将 KT 对象转换为 { concept_uid: float_accuracy }。
+        """
+        vec: Dict[str, float] = {}
+        for k, v in (kt_obj or {}).items():
+            try:
+                vec[str(k)] = float(v)
+            except Exception:
+                continue
+        return vec
+
+    @staticmethod
+    def _extract_profile_categorical_features(
+        profile_obj: Dict[str, Any]
     ) -> Dict[Tuple[str, str], str]:
         """
-        将 11 维画像的嵌套结构展平成 (dimension, sub_key) -> str(value)。
+        将画像对象转换为 {(dimension, sub_key): label_str}。
         """
         features: Dict[Tuple[str, str], str] = {}
-        for dim_key, dim_content in profile.items():
+        profiles = profile_obj or {}
+
+        for dim_key, dim_content in profiles.items():
             if not isinstance(dim_content, dict):
                 continue
             for sub_key, sub_val in dim_content.items():
                 features[(str(dim_key), str(sub_key))] = str(sub_val)
+
         return features
 
-    @staticmethod
-    def _sanitize_knowledge_vector(raw: Dict[str, Any]) -> Dict[str, float]:
-        """
-        确保 KT 向量为 {str: float}，防御性过滤异常值。
-        """
-        kv: Dict[str, float] = {}
-        for k, v in raw.items():
-            try:
-                kv[str(k)] = float(v)
-            except Exception:
-                continue
-        return kv
-
-    @staticmethod
-    def _calc_global_expertise(kv: Dict[str, float]) -> float:
-        """
-        全局能力指数：知识点预测精度的简单平均，用于建立“一维能力轴”。
-        """
-        if not kv:
-            return 0.0
-        vals = [v for v in kv.values() if v is not None]
-        if not vals:
-            return 0.0
-        return float(sum(vals) / len(vals))
-
-    def _select_candidates_for_partner(
-        self,
-        target_uid: str,
-        sorted_uids: List[str],
-        uid_index: Dict[str, int],
-    ) -> List[str]:
-        """
-        使用“全局能力排序 + 局部窗口”策略选择候选学习者：
-
-        - 在能力轴上从 target 的位置向两边扩展；
-        - 最多取 partner_max_candidates_per_target 个；
-        - 避免对全部学习者 O(N^2) 逐对计算。
-        """
-        max_cands = self._max_candidates_per_target
-        if target_uid not in uid_index:
-            return [
-                u for u in sorted_uids
-                if u != target_uid
-            ][:max_cands or None]
-
-        n = len(sorted_uids)
-        idx = uid_index[target_uid]
-
-        if max_cands <= 0 or max_cands >= n:
-            # 不限候选，退化为全量
-            return [u for u in sorted_uids if u != target_uid]
-
-        candidates: List[str] = []
-        left = idx - 1
-        right = idx + 1
-        # 交替从左右两侧取，尽量保证“能力相近”的候选
-        while len(candidates) < max_cands and (left >= 0 or right < n):
-            if left >= 0:
-                u = sorted_uids[left]
-                if u != target_uid:
-                    candidates.append(u)
-                left -= 1
-                if len(candidates) >= max_cands:
-                    break
-            if right < n:
-                u = sorted_uids[right]
-                if u != target_uid:
-                    candidates.append(u)
-                right += 1
-
-        return candidates
+    # ------------------------------------------------------------------
+    # 核心匹配逻辑
+    # ------------------------------------------------------------------
 
     def _match_single_learner(
         self,
         target_uid: str,
-        candidate_uids: List[str],
-        profile_views: Dict[str, Dict[Tuple[str, str], str]],
-        knowledge_views: Dict[str, Dict[str, float]],
-        top_k: int,
+        target_feat: Dict[str, Any],
+        all_features_map: Dict[str, Dict[str, Any]],
+        top_k: int = 5,
     ) -> List[Dict[str, Any]]:
-        t_profile = profile_views.get(target_uid) or {}
-        t_kv = knowledge_views.get(target_uid) or {}
+        """
+        针对单个目标学习者，基于多视图相似度从全体特征中选出伙伴。
+        """
+        t_profile = target_feat["profile_categorical"]
+        t_kv = target_feat["knowledge_vector"]
 
-        scored: List[Dict[str, Any]] = []
+        scored_candidates: List[Tuple[str, Dict[str, Any]]] = []
 
-        for cand_uid in candidate_uids:
-            c_profile = profile_views.get(cand_uid) or {}
-            c_kv = knowledge_views.get(cand_uid) or {}
+        for cand_uid, cand_feat in all_features_map.items():
+            if cand_uid == target_uid:
+                continue
+
+            c_profile = cand_feat["profile_categorical"]
+            c_kv = cand_feat["knowledge_vector"]
 
             s_profile = self._calc_profile_homophily(t_profile, c_profile)
             s_k_homo = self._calc_knowledge_homophily(t_kv, c_kv)
@@ -305,21 +270,24 @@ class LearningPartnerMatchingEngine(AnalyzeBaseEngine):
                 + self.gamma_k_comp * s_k_comp
             )
 
-            scored.append(
-                {
-                    "uid": cand_uid,
-                    "score": score,
-                    "profile_homophily": s_profile,
-                    "knowledge_homophily": s_k_homo,
-                    "knowledge_complementarity": s_k_comp,
-                    "explanation": self._build_explanation(
-                        s_profile, s_k_homo, s_k_comp
-                    ),
-                }
+            scored_candidates.append(
+                (
+                    cand_uid,
+                    {
+                        "uid": cand_uid,
+                        "score": score,
+                        "profile_homophily": s_profile,
+                        "knowledge_homophily": s_k_homo,
+                        "knowledge_complementarity": s_k_comp,
+                        "explanation": self._build_explanation(
+                            s_profile, s_k_homo, s_k_comp
+                        ),
+                    },
+                )
             )
 
-        scored.sort(key=lambda x: x["score"], reverse=True)
-        return scored[:top_k]
+        scored_candidates.sort(key=lambda x: x[1]["score"], reverse=True)
+        return [item[1] for item in scored_candidates[:top_k]]
 
     # -------- 画像同质性 --------
 
@@ -370,6 +338,7 @@ class LearningPartnerMatchingEngine(AnalyzeBaseEngine):
 
         if norm_t <= 0 or norm_c <= 0:
             return 0.0
+
         return float(dot / (math.sqrt(norm_t) * math.sqrt(norm_c)))
 
     # -------- 知识互补性 --------
@@ -406,9 +375,10 @@ class LearningPartnerMatchingEngine(AnalyzeBaseEngine):
 
         if defined_count <= 0:
             return 0.0
+
         return complement_count / defined_count
 
-    # -------- 解释文本 --------
+    # -------- 文本解释 --------
 
     @staticmethod
     def _build_explanation(
