@@ -107,7 +107,7 @@ def run_single_existing_test(learner_uid: str) -> Dict[str, Any]:
 
     result = pipeline_analyze([learner_uid], is_new_learner=False)
 
-    print(result)
+    # print(result)
 
     summary = summarize_kt_result_for_learners(result, [learner_uid])
 

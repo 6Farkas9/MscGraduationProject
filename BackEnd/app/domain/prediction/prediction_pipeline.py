@@ -7,8 +7,8 @@
 
 职责：
 - 根据学习者是否已有 KT 结果，自动选择流程：
-    - 已有学习者：CD(模式1，使用历史KT) → KT(模式1)
-    - 新学习者：  HGC → CD(模式2，使用外部嵌入) → KT(模式2)
+    - 已有学习者：CD(模式1，使用历史KT) → KT(模式1, 必须能力融合)
+    - 新学习者：  HGC → CD(模式2，使用外部嵌入) → KT(模式2, 必须能力融合)
 - 支持混合场景：同一次调用中，部分 UID 走“已有”，部分 UID 走“新学习者”流程
 - 返回结构简化为：success / errors / results（以学习者 uid 为键）
 
@@ -22,6 +22,10 @@
                 "cpt_xxx": 0.83,
                 "cpt_yyy": 0.21
             },
+            "kt_history": [
+                {"step_index": 12, "concept_mastery": {...}},
+                {"step_index": 15, "concept_mastery": {...}}
+            ],
             "hgc": [0.1, 0.2, ...]  # 或 None
         },
         ...
@@ -30,11 +34,12 @@
 
 说明：
 - 内部仍然会区分 existing / new 流程，但对外不再暴露该维度。
-- CD / KT 的知识点集合理论上相同，这里通过统一 concept 顺序保证两者使用一致的顺序。
+- CD / KT 的知识点集合理论上相同，这里通过统一 concept 顺序保证两者使用一致顺序。
+- CD 只提供最终能力向量用于 KT 的 t0 能力初始化；KT 引擎内部会广播成常量轨迹。
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 import torch
 
@@ -134,7 +139,6 @@ class PredictionPipeline:
             len(existing),
             len(new),
         )
-
         return {"existing": existing, "new": new}
 
     def _build_hgc_embedding_tensors(
@@ -143,9 +147,7 @@ class PredictionPipeline:
         learner_uids: List[str],
         device: Optional[str] = None,
     ) -> List[torch.Tensor]:
-        """
-        将 HGC 引擎的嵌入结果转成按 learner_uids 顺序排列的 Tensor 列表
-        """
+        """将 HGC 引擎的嵌入结果转成按 learner_uids 顺序排列的 Tensor 列表"""
         if not hgc_result.get("success", False):
             raise RuntimeError(f"HGC 计算失败: {hgc_result.get('error', 'unknown error')}")
 
@@ -170,8 +172,8 @@ class PredictionPipeline:
     def _get_unified_concept_uid_order(self) -> List[str]:
         """
         构建一个统一的知识点 uid 顺序：
-        - 优先使用 CD 引擎的 concept_mapping（uid -> id），按 id 升序
-        - 再和 KT 引擎的 concept_uid_order 取交集
+        - 优先使用 CD concept_mapping（uid -> id），按 id 升序
+        - 再和 KT concept_uid_order 取交集
         - 若一侧缺失，则退化为另一侧
         """
         if self._unified_concept_uid_order is not None:
@@ -180,7 +182,7 @@ class PredictionPipeline:
         cd_mapping = getattr(self.cd_engine, "concept_mapping", None) or {}
         kt_uid_order = getattr(self.kt_engine, "concept_uid_order", None) or []
 
-        unified_order: List[str] = []
+        unified_order: List[str]
 
         if cd_mapping and kt_uid_order:
             kt_uid_set = set(kt_uid_order)
@@ -195,9 +197,87 @@ class PredictionPipeline:
             unified_order = []
 
         logger.info("统一 concept 顺序构建完成，知识点数量: %d", len(unified_order))
-
         self._unified_concept_uid_order = unified_order
         return unified_order
+
+    # ---------------------------------------------------------------
+    # CD -> KT 初始化能力（2D）
+    # ---------------------------------------------------------------
+    def _extract_cd_vectors_by_learner(
+        self,
+        cd_result: Optional[Dict[str, Any]],
+    ) -> Dict[str, List[float]]:
+        """
+        从 CD 引擎结果中抽取最后一步能力向量:
+            { learner_uid: concept_mastery_vector(list[float]), ... }
+        """
+        if not cd_result or not cd_result.get("success", False):
+            return {}
+
+        results_by_uid = cd_result.get("results", {}) or {}
+        vectors: Dict[str, List[float]] = {}
+
+        for uid, info in results_by_uid.items():
+            if not info:
+                continue
+            vec = info.get("concept_mastery_vector")
+            if isinstance(vec, list):
+                vectors[uid] = [float(x) for x in vec]
+
+        return vectors
+
+    def _align_cd_vector_to_concepts(
+        self,
+        cd_vector: List[float],
+        target_concepts: List[str],
+    ) -> List[float]:
+        """
+        将 CD 的能力向量（按 CD id 顺序）对齐到 target_concepts 的顺序。
+        若概念缺失则补 0。
+        """
+        if not cd_vector:
+            return [0.0 for _ in target_concepts]
+
+        id_to_concept = getattr(self.cd_engine, "id_to_concept", None) or {}
+        cd_dict: Dict[str, float] = {}
+        for idx, val in enumerate(cd_vector):
+            c_uid = id_to_concept.get(idx + 1)
+            if c_uid:
+                cd_dict[c_uid] = float(val)
+
+        aligned = [float(cd_dict.get(c_uid, 0.0)) for c_uid in target_concepts]
+        return aligned
+
+    def _build_cd_ability_2d(
+        self,
+        learner_uids: List[str],
+        cd_vectors_by_uid: Dict[str, List[float]],
+        target_concepts: List[str],
+        device: Optional[str] = None,
+    ) -> torch.Tensor:
+        """
+        构建 KT 所需的 cd_ability（2D 初始化向量）:
+            shape = [batch, concept_num]
+        """
+        concept_num = len(target_concepts)
+        if concept_num == 0:
+            concept_num = getattr(self.kt_engine, "concept_num", 0)
+            target_concepts = getattr(self.kt_engine, "concept_uid_order", []) or []
+
+        batch_vectors: List[List[float]] = []
+        for uid in learner_uids:
+            cd_vec = cd_vectors_by_uid.get(uid, [])
+            aligned = self._align_cd_vector_to_concepts(cd_vec, target_concepts)
+
+            if len(aligned) != concept_num:
+                if len(aligned) > concept_num:
+                    aligned = aligned[:concept_num]
+                else:
+                    aligned = aligned + [0.0] * (concept_num - len(aligned))
+
+            batch_vectors.append(aligned)
+
+        return torch.tensor(batch_vectors, dtype=torch.float32, device=device)
 
     # ---------------------------------------------------------------
     # 结果整理工具
@@ -206,14 +286,18 @@ class PredictionPipeline:
         self,
         kt_result: Optional[Dict[str, Any]],
         unified_concepts: List[str],
-    ) -> Dict[str, Dict[str, float]]:
+    ) -> Dict[str, Dict[str, Any]]:
         """
-        将 KT 引擎的返回整理为:
-            { learner_uid: {concept_uid: value, ...}, ... }
-
-        并且按 unified_concepts 的顺序插入，保证顺序一致。
+        将 KT 引擎返回整理为:
+            {
+              learner_uid: {
+                 "concept_mastery": {cpt_uid: v, ...},     # 最后有效时间步
+                 "concept_mastery_last_k": [ {...}, ... ]  # 最近K个有效时间步
+              }
+            }
+        并按 unified_concepts 对齐顺序。
         """
-        learner_kt: Dict[str, Dict[str, float]] = {}
+        learner_kt: Dict[str, Dict[str, Any]] = {}
 
         if not kt_result or not kt_result.get("success", False):
             return learner_kt
@@ -222,18 +306,41 @@ class PredictionPipeline:
             uid = item.get("learner_id")
             if not uid:
                 continue
-            concept_mastery = item.get("concept_mastery") or {}
 
-            ordered_dict: Dict[str, float] = {}
+            concept_mastery = item.get("concept_mastery") or {}
+            history_list = item.get("concept_mastery_last_k") or []
+
+            # 最后一步 mastery 对齐
+            ordered_last: Dict[str, float] = {}
             if unified_concepts:
                 for c_uid in unified_concepts:
                     if c_uid in concept_mastery:
-                        ordered_dict[c_uid] = float(concept_mastery[c_uid])
+                        ordered_last[c_uid] = float(concept_mastery[c_uid])
             else:
-                # 没有统一顺序时，直接使用原有顺序
-                ordered_dict = {k: float(v) for k, v in concept_mastery.items()}
+                ordered_last = {k: float(v) for k, v in concept_mastery.items()}
 
-            learner_kt[uid] = ordered_dict
+            # history 对齐
+            ordered_hist: List[Dict[str, Any]] = []
+            if isinstance(history_list, list):
+                for h in history_list:
+                    step_idx = (h or {}).get("step_index")
+                    cm = (h or {}).get("concept_mastery") or {}
+                    if unified_concepts:
+                        cm_ordered = {
+                            c_uid: float(cm[c_uid])
+                            for c_uid in unified_concepts
+                            if c_uid in cm
+                        }
+                    else:
+                        cm_ordered = {k: float(v) for k, v in cm.items()}
+                    ordered_hist.append(
+                        {"step_index": step_idx, "concept_mastery": cm_ordered}
+                    )
+
+            learner_kt[uid] = {
+                "concept_mastery": ordered_last,
+                "concept_mastery_last_k": ordered_hist,
+            }
 
         return learner_kt
 
@@ -241,12 +348,7 @@ class PredictionPipeline:
         self,
         hgc_result: Optional[Dict[str, Any]],
     ) -> Dict[str, Optional[list]]:
-        """
-        将 HGC 引擎的返回整理为:
-            { learner_uid: embedding_list, ... }
-
-        只保留嵌入表达本身（list），其余字段忽略。
-        """
+        """将 HGC 返回整理为 { learner_uid: embedding_list }"""
         if not hgc_result or not hgc_result.get("success", False):
             return {}
 
@@ -270,36 +372,17 @@ class PredictionPipeline:
         """
         统一对外接口
 
-        Args:
-            learner_uids: 学习者 UID 列表
-            is_new_learner:
-                - True  -> 强制走“新学习者”流程（HGC -> CD/KT embedding 模式）
-                - False -> 强制走“已有学习者”流程（CD/KT 普通模式）
-                - None  -> 自动：
-                    - 对有历史 KT 结果的学习者走“已有流程”
-                    - 对没有 KT 结果的学习者走“新学习者流程”
-
-        Returns:
-            Dict[str, Any]: 以 "学习者 uid 为键" 的综合结果结构，仅包含 kt / hgc 内容。
+        入参保持不变，返回值新增 kt_history 字段。
         """
         if not learner_uids:
-            return {
-                "success": True,
-                "errors": [],
-                "results": {},
-            }
+            return {"success": True, "errors": [], "results": {}}
 
         if not self._initialize_engines():
-            return {
-                "success": False,
-                "errors": ["引擎初始化失败"],
-                "results": {},
-            }
+            return {"success": False, "errors": ["引擎初始化失败"], "results": {}}
 
-        # 在引擎初始化之后获取统一的 concept 顺序，使 CD / KT 使用一致顺序
         unified_concepts = self._get_unified_concept_uid_order()
+        kt_concepts = getattr(self.kt_engine, "concept_uid_order", None) or unified_concepts
 
-        # 划分已有 / 新学习者（仅用于内部流程控制）
         split = self._split_learners_by_mode(learner_uids, is_new_learner=is_new_learner)
         existing_uids = split["existing"]
         new_uids = split["new"]
@@ -314,15 +397,16 @@ class PredictionPipeline:
         kt_result_existing: Optional[Dict[str, Any]] = None
         kt_result_new: Optional[Dict[str, Any]] = None
 
-        cd_result_existing: Optional[Dict[str, Any]] = None  # 仅内部使用
-        cd_result_new: Optional[Dict[str, Any]] = None       # 仅内部使用
+        cd_result_existing: Optional[Dict[str, Any]] = None
+        cd_result_new: Optional[Dict[str, Any]] = None
         hgc_result_new: Optional[Dict[str, Any]] = None
 
         overall_success = True
         errors: List[str] = []
 
-        # ----------------- 已有学习者路径：CD(模式1) → KT(模式1) -----------------
+        # ----------------- 已有学习者路径：CD(模式1) → KT(模式1, 传 cd_ability) -----------------
         if existing_uids:
+            cd_vectors_existing: Dict[str, List[float]] = {}
             try:
                 logger.info("PredictionPipeline: 已有学习者路径 -> CD.analyze")
                 cd_result_existing = self.cd_engine.analyze(existing_uids)
@@ -330,6 +414,7 @@ class PredictionPipeline:
                     overall_success = False
                     errors.append(f"CD existing 失败: {cd_result_existing.get('error', 'unknown')}")
                 else:
+                    cd_vectors_existing = self._extract_cd_vectors_by_learner(cd_result_existing)
                     logger.info(
                         "CD existing 完成: success_count=%s / total=%s",
                         cd_result_existing.get("success_count"),
@@ -340,34 +425,46 @@ class PredictionPipeline:
                 errors.append(f"CD existing 异常: {exc}")
                 logger.error("CD existing 异常: %s", exc, exc_info=True)
 
-            try:
-                logger.info("PredictionPipeline: 已有学习者路径 -> KT.analyze")
-                kt_result_existing = self.kt_engine.analyze(existing_uids)
-                if not kt_result_existing.get("success", False):
-                    overall_success = False
-                    errors.append(f"KT existing 失败: {kt_result_existing.get('error', 'unknown')}")
-                else:
-                    logger.info(
-                        "KT existing 完成: success_count=%s / total=%s",
-                        kt_result_existing.get("success_count"),
-                        kt_result_existing.get("total_count"),
+            if cd_vectors_existing:
+                try:
+                    cd_ability_existing = self._build_cd_ability_2d(
+                        existing_uids,
+                        cd_vectors_existing,
+                        target_concepts=kt_concepts,
+                        device=self.kt_engine.device,
                     )
-            except Exception as exc:
+                    logger.info("PredictionPipeline: 已有学习者路径 -> KT.analyze (with cd_ability 2D)")
+                    kt_result_existing = self.kt_engine.analyze(
+                        existing_uids,
+                        cd_ability=cd_ability_existing,
+                    )
+                    if not kt_result_existing.get("success", False):
+                        overall_success = False
+                        errors.append(f"KT existing 失败: {kt_result_existing.get('error', 'unknown')}")
+                    else:
+                        logger.info(
+                            "KT existing 完成: success_count=%s / total=%s",
+                            kt_result_existing.get("success_count"),
+                            kt_result_existing.get("total_count"),
+                        )
+                except Exception as exc:
+                    overall_success = False
+                    errors.append(f"KT existing 异常: {exc}")
+                    logger.error("KT existing 异常: %s", exc, exc_info=True)
+            else:
                 overall_success = False
-                errors.append(f"KT existing 异常: {exc}")
-                logger.error("KT existing 异常: %s", exc, exc_info=True)
+                errors.append("CD existing 无有效结果，无法初始化 KT")
 
-        # ----------------- 新学习者路径：HGC → CD(模式2) → KT(模式2) -----------------
+        # ----------------- 新学习者路径：HGC → CD(模式2) → KT(模式2, 传 cd_ability) -----------------
         embedding_tensors: List[torch.Tensor] = []
         if new_uids:
             try:
                 logger.info("PredictionPipeline: 新学习者路径 -> HGC.analyze")
                 hgc_result_new = self.hgc_engine.analyze(new_uids)
-                # 将结果转成 embedding tensor 列表（和 new_uids 对齐）
                 embedding_tensors = self._build_hgc_embedding_tensors(
                     hgc_result_new,
                     new_uids,
-                    device=self.kt_engine.device,  # 与 KT 引擎保持同一设备
+                    device=self.kt_engine.device,
                 )
             except Exception as exc:
                 overall_success = False
@@ -375,6 +472,7 @@ class PredictionPipeline:
                 logger.error("HGC new 异常: %s", exc, exc_info=True)
                 embedding_tensors = []
 
+            cd_vectors_new: Dict[str, List[float]] = {}
             if embedding_tensors:
                 try:
                     logger.info("PredictionPipeline: 新学习者路径 -> CD.compute_concept_mastery_with_embeddings")
@@ -386,6 +484,7 @@ class PredictionPipeline:
                         overall_success = False
                         errors.append(f"CD new 失败: {cd_result_new.get('error', 'unknown')}")
                     else:
+                        cd_vectors_new = self._extract_cd_vectors_by_learner(cd_result_new)
                         logger.info(
                             "CD new 完成: success_count=%s / total=%s",
                             cd_result_new.get("success_count"),
@@ -396,58 +495,63 @@ class PredictionPipeline:
                     errors.append(f"CD new 异常: {exc}")
                     logger.error("CD new 异常: %s", exc, exc_info=True)
 
-                try:
-                    logger.info("PredictionPipeline: 新学习者路径 -> KT.compute_concept_mastery_with_embeddings")
-                    kt_result_new = self.kt_engine.compute_concept_mastery_with_embeddings(
-                        learner_embeddings=embedding_tensors,
-                        learner_uids=new_uids,
-                    )
-                    if not kt_result_new.get("success", False):
-                        overall_success = False
-                        errors.append(f"KT new 失败: {kt_result_new.get('error', 'unknown')}")
-                    else:
-                        logger.info(
-                            "KT new 完成: success_count=%s / total=%s",
-                            kt_result_new.get("success_count"),
-                            kt_result_new.get("total_count"),
+                if cd_vectors_new:
+                    try:
+                        cd_ability_new = self._build_cd_ability_2d(
+                            new_uids,
+                            cd_vectors_new,
+                            target_concepts=kt_concepts,
+                            device=self.kt_engine.device,
                         )
-                except Exception as exc:
+                        logger.info("PredictionPipeline: 新学习者路径 -> KT.compute_concept_mastery_with_embeddings (with cd_ability 2D)")
+                        kt_result_new = self.kt_engine.compute_concept_mastery_with_embeddings(
+                            learner_embeddings=embedding_tensors,
+                            learner_uids=new_uids,
+                            cd_ability=cd_ability_new,
+                        )
+                        if not kt_result_new.get("success", False):
+                            overall_success = False
+                            errors.append(f"KT new 失败: {kt_result_new.get('error', 'unknown')}")
+                        else:
+                            logger.info(
+                                "KT new 完成: success_count=%s / total=%s",
+                                kt_result_new.get("success_count"),
+                                kt_result_new.get("total_count"),
+                            )
+                    except Exception as exc:
+                        overall_success = False
+                        errors.append(f"KT new 异常: {exc}")
+                        logger.error("KT new 异常: %s", exc, exc_info=True)
+                else:
                     overall_success = False
-                    errors.append(f"KT new 异常: {exc}")
-                    logger.error("KT new 异常: %s", exc, exc_info=True)
+                    errors.append("CD new 无有效结果，无法初始化 KT")
 
         # ----------------- 将 KT / HGC 结果整理为按 learner_uid 的形式 -----------------
-        kt_by_learner: Dict[str, Dict[str, float]] = {}
+        kt_by_learner: Dict[str, Dict[str, Any]] = {}
         if kt_result_existing:
-            kt_by_learner.update(
-                self._extract_kt_by_learner(kt_result_existing, unified_concepts)
-            )
+            kt_by_learner.update(self._extract_kt_by_learner(kt_result_existing, unified_concepts))
         if kt_result_new:
-            kt_by_learner.update(
-                self._extract_kt_by_learner(kt_result_new, unified_concepts)
-            )
+            kt_by_learner.update(self._extract_kt_by_learner(kt_result_new, unified_concepts))
 
         hgc_embedding_by_learner: Dict[str, Optional[list]] = {}
         if hgc_result_new:
-            hgc_embedding_by_learner.update(
-                self._extract_hgc_embedding_list_by_learner(hgc_result_new)
-            )
+            hgc_embedding_by_learner.update(self._extract_hgc_embedding_list_by_learner(hgc_result_new))
 
         # ----------------- 按学习者 uid 组装最终返回结构 -----------------
         final_results: Dict[str, Dict[str, Any]] = {}
         for uid in learner_uids:
+            kt_info = kt_by_learner.get(uid, {})
             final_results[uid] = {
-                "kt": kt_by_learner.get(uid, {}),
+                "kt": kt_info.get("concept_mastery", {}),
+                "kt_history": kt_info.get("concept_mastery_last_k", []),
                 "hgc": hgc_embedding_by_learner.get(uid),
             }
 
-        result: Dict[str, Any] = {
+        return {
             "success": overall_success,
             "errors": errors,
             "results": final_results,
         }
-
-        return result
 
 
 # ----------------------------------------------------------------------

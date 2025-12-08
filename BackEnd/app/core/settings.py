@@ -209,10 +209,25 @@ class LLMSettings:
         """
         cfg = self.get_provider(provider)
         return model or cfg.default_model
+    
+class KTSettings:
+    """
+    KT 推理相关配置：
 
+    - history_steps: 返回“最后 K 个有效时间步”的能力结果个数
+    - 默认值 10，可通过环境变量 KT_HISTORY_STEPS 覆盖
+    """
+
+    def __init__(self) -> None:
+        self._history_steps: int = int(os.getenv("KT_HISTORY_STEPS", "10"))
+
+    @property
+    def history_steps(self) -> int:
+        return self._history_steps
 
 # 全局配置实例（这里是“配置对象”，不会直接产生数据库连接）
 path_settings = PathSettings()
 db_settings = DatabaseSettings()
 orchestration_settings = OrchestrationSettings()
 llm_settings = LLMSettings()
+kt_settings = KTSettings()
