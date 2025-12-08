@@ -275,6 +275,219 @@ class ProfilingSettings:
     @property
     def max_batch_size(self) -> Optional[int]:
         return self._max_batch_size
+    
+class PartnerSettings:
+    """
+    学习伙伴 / 学习榜样等“社群编排（partnering & role modeling）”相关配置。
+
+    说明：
+    - 这里只放“可调参数”和“集合名”等环境无关常量；
+    - 具体算法逻辑由 domain 层的各个 Engine 决定；
+    - 针对上万规模学习者，新增 per-target 的候选上限配置，用来控制算法复杂度。
+    """
+
+    def __init__(self) -> None:
+        # LearnerProfile 集合名，可通过环境变量覆盖
+        self._learner_profile_collection: str = os.getenv(
+            "PARTNER_LEARNER_PROFILE_COLLECTION",
+            "LearnerProfile",
+        )
+
+        # ========================= 学习伙伴（learning partner） =========================
+
+        # 学习伙伴默认返回数量
+        self._partner_default_top_k: int = int(
+            os.getenv("PARTNER_DEFAULT_TOP_K", "5")
+        )
+
+        # 候选池规模上限（通常由上层使用 Repository 构建 learner_profiles 时控制）
+        self._partner_candidate_pool_limit: int = int(
+            os.getenv("PARTNER_CANDIDATE_POOL_LIMIT", "500")
+        )
+
+        # 在 Engine 内部，为每个目标学习者最多考虑多少个候选学习者做精细打分
+        # 这是应对“上万规模学习者”的关键参数，用于避免 N * 全量 的 O(N^2) 爆炸。
+        self._partner_max_candidates_per_target: int = int(
+            os.getenv("PARTNER_MAX_CANDIDATES_PER_TARGET", "300")
+        )
+
+        # 仅保留最近 N 天更新过画像 / KT 的用户，用于构建候选池；
+        # 若设置为 0 或负数，则不做时间过滤（由上层控制）。
+        try:
+            days = int(os.getenv("PARTNER_MIN_UPDATED_DAYS", "0"))
+        except ValueError:
+            days = 0
+        self._partner_min_updated_days: int = days
+
+        # 多视图融合的权重系数（可作为论文中的超参数）
+        # Score(i, j) = α * S_profile + β * S_K_homo + γ * S_K_comp
+        self._partner_score_weights: Dict[str, float] = {
+            "alpha_profile": float(os.getenv("PARTNER_ALPHA_PROFILE", "0.4")),
+            "beta_k_homophily": float(os.getenv("PARTNER_BETA_K_HOMO", "0.3")),
+            "gamma_k_complementarity": float(
+                os.getenv("PARTNER_GAMMA_K_COMP", "0.3")
+            ),
+        }
+
+        # “弱-强”互补阈值
+        self._partner_knowledge_thresholds: Dict[str, float] = {
+            "low": float(os.getenv("PARTNER_LOW_THRESHOLD", "0.6")),
+            "high": float(os.getenv("PARTNER_HIGH_THRESHOLD", "0.85")),
+        }
+
+        # 画像子维度权重（key 使用 "dimension.sub_key" 形式，Engine 会转换成 (dim, sub_key)）
+        base_weight = 1.0
+        self._partner_profile_feature_weights: Dict[str, float] = {
+            # 社会性学习取向 / 协作角色
+            "social_learning.role": 1.2 * base_weight,
+            "collaborative_role_contribution.role": 1.2 * base_weight,
+            "collaborative_role_contribution.contribution_type": 1.0 * base_weight,
+            # 自我调节 / 求助
+            "srl_helpseeking.level": 1.1 * base_weight,
+            # 参与与坚持
+            "engagement_persistence.level": 1.0 * base_weight,
+            # 反馈取向
+            "feedback_orientation.level": 0.9 * base_weight,
+            # 注意与任务效率
+            "attention_allocation.efficiency": 0.8 * base_weight,
+            "attention_allocation.style": 0.8 * base_weight,
+            "task_efficiency.level": 0.8 * base_weight,
+            # 探索
+            "exploration_orientation.level": 0.7 * base_weight,
+            # 交互风格
+            "interaction_style.style": 0.7 * base_weight,
+            # 反思 / 价值演化
+            "reflection_value_evolution.level": 0.6 * base_weight,
+        }
+
+        # ========================= 学习榜样（role model） =========================
+
+        # 学习榜样默认返回数量（通常比学习伙伴少）
+        self._role_model_default_top_k: int = int(
+            os.getenv("ROLE_MODEL_DEFAULT_TOP_K", "3")
+        )
+
+        # 学习榜样候选池规模（由上层在构建输入时控制）
+        self._role_model_candidate_pool_limit: int = int(
+            os.getenv("ROLE_MODEL_CANDIDATE_POOL_LIMIT", "800")
+        )
+
+        # 每个目标学习者最多考虑多少个候选榜样做精细打分
+        self._role_model_max_candidates_per_target: int = int(
+            os.getenv("ROLE_MODEL_MAX_CANDIDATES_PER_TARGET", "300")
+        )
+
+        # 只考虑最近 N 天有画像 / KT 更新的学习者作为候选榜样
+        try:
+            rm_days = int(os.getenv("ROLE_MODEL_MIN_UPDATED_DAYS", "0"))
+        except ValueError:
+            rm_days = 0
+        self._role_model_min_updated_days: int = rm_days
+
+        # 学习榜样匹配的多视图权重
+        # Score_rm(i, j) = α * S_profile + β * S_gap + γ * S_K_comp
+        self._role_model_score_weights: Dict[str, float] = {
+            "alpha_profile": float(os.getenv("ROLE_MODEL_ALPHA_PROFILE", "0.3")),
+            "beta_global_advancement": float(
+                os.getenv("ROLE_MODEL_BETA_GLOBAL_ADV", "0.4")
+            ),
+            "gamma_knowledge_complementarity": float(
+                os.getenv("ROLE_MODEL_GAMMA_K_COMP", "0.3")
+            ),
+        }
+
+        # “向上对标”时，理想的全局能力差距窗（单位：预测精度差值）
+        self._role_model_gap_window: Dict[str, float] = {
+            "min": float(os.getenv("ROLE_MODEL_GAP_MIN", "0.05")),
+            "max": float(os.getenv("ROLE_MODEL_GAP_MAX", "0.25")),
+        }
+
+        # 学习榜样场景下，对画像子维度的权重
+        rm_base_weight = 1.0
+        self._role_model_profile_feature_weights: Dict[str, float] = {
+            # 高投入与坚持
+            "engagement_persistence.level": 1.3 * rm_base_weight,
+            "engagement_persistence.pattern": 1.1 * rm_base_weight,
+            # 反思与价值演化
+            "reflection_value_evolution.level": 1.2 * rm_base_weight,
+            # 自我调节与求助
+            "srl_helpseeking.level": 1.1 * rm_base_weight,
+            # 反馈取向
+            "feedback_orientation.level": 1.0 * rm_base_weight,
+            # 社会性学习 / 组织角色
+            "social_learning.role": 1.1 * rm_base_weight,
+            "collaborative_role_contribution.role": 1.1 * rm_base_weight,
+            # 注意与任务效率
+            "attention_allocation.efficiency": 0.9 * rm_base_weight,
+            "task_efficiency.level": 0.9 * rm_base_weight,
+        }
+
+    # ----------------------- property 封装 -----------------------
+
+    @property
+    def learner_profile_collection(self) -> str:
+        return self._learner_profile_collection
+
+    # ----- partner -----
+
+    @property
+    def partner_default_top_k(self) -> int:
+        return self._partner_default_top_k
+
+    @property
+    def partner_candidate_pool_limit(self) -> int:
+        return self._partner_candidate_pool_limit
+
+    @property
+    def partner_max_candidates_per_target(self) -> int:
+        return self._partner_max_candidates_per_target
+
+    @property
+    def partner_min_updated_days(self) -> int:
+        return self._partner_min_updated_days
+
+    @property
+    def partner_score_weights(self) -> Dict[str, float]:
+        return dict(self._partner_score_weights)
+
+    @property
+    def partner_knowledge_thresholds(self) -> Dict[str, float]:
+        return dict(self._partner_knowledge_thresholds)
+
+    @property
+    def partner_profile_feature_weights(self) -> Dict[str, float]:
+        return dict(self._partner_profile_feature_weights)
+
+    # ----- role model -----
+
+    @property
+    def role_model_default_top_k(self) -> int:
+        return self._role_model_default_top_k
+
+    @property
+    def role_model_candidate_pool_limit(self) -> int:
+        return self._role_model_candidate_pool_limit
+
+    @property
+    def role_model_max_candidates_per_target(self) -> int:
+        return self._role_model_max_candidates_per_target
+
+    @property
+    def role_model_min_updated_days(self) -> int:
+        return self._role_model_min_updated_days
+
+    @property
+    def role_model_score_weights(self) -> Dict[str, float]:
+        return dict(self._role_model_score_weights)
+
+    @property
+    def role_model_gap_window(self) -> Dict[str, float]:
+        return dict(self._role_model_gap_window)
+
+    @property
+    def role_model_profile_feature_weights(self) -> Dict[str, float]:
+        return dict(self._role_model_profile_feature_weights)
+
 
 # 全局配置实例（这里是“配置对象”，不会直接产生数据库连接）
 path_settings = PathSettings()
@@ -283,3 +496,4 @@ orchestration_settings = OrchestrationSettings()
 llm_settings = LLMSettings()
 kt_settings = KTSettings()
 profiling_settings = ProfilingSettings()
+partner_settings = PartnerSettings()
