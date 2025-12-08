@@ -86,8 +86,47 @@ class DatabaseSettings:
                 f"@{cfg['host']}:{cfg['port']}/{cfg['database']}?authSource={cfg['auth_source']}"
             )
         return f"mongodb://{cfg['host']}:{cfg['port']}/{cfg['database']}"
+    
+class OrchestrationSettings:
+    """
+    资源编排 / 检索（HR-PRR）相关配置：
+
+    说明：
+    - 资源分段集合名 FRAGMENTS_COLLECTION 在 Repository 模块中硬编码
+    - 语义模型名称 SEM_MODEL_NAME 在 Engine 模块中硬编码
+    - 此处只保留便于调优的数值型参数
+    """
+
+    def __init__(self) -> None:
+        # 原脚本中的 DEFAULT_TOPK
+        self._default_top_k: int = 20
+
+        # 原脚本中的 MAX_CANDIDATES
+        self._max_candidates: int = 2000  # 每阶段最多拉这么多候选
+
+        # 原脚本中 score_overall 的默认权重 alpha/beta/gamma/delta
+        self._score_weights: Dict[str, float] = {
+            "alpha": 0.35,
+            "beta": 0.15,
+            "gamma": 0.25,
+            "delta": 0.25,
+        }
+
+    @property
+    def default_top_k(self) -> int:
+        return self._default_top_k
+
+    @property
+    def max_candidates(self) -> int:
+        return self._max_candidates
+
+    @property
+    def score_weights(self) -> Dict[str, float]:
+        # 返回副本，避免外部直接修改内部 dict
+        return dict(self._score_weights)
 
 
 # 全局配置实例（这里是“配置对象”，不会直接产生数据库连接）
 path_settings = PathSettings()
 db_settings = DatabaseSettings()
+orchestration_settings = OrchestrationSettings()
