@@ -1,7 +1,8 @@
 # BackEnd/app/core/settings.py
 import os
 import sys
-from typing import Dict, Any
+from dataclasses import dataclass
+from typing import Dict, Any, Optional
 
 
 class PathSettings:
@@ -124,9 +125,94 @@ class OrchestrationSettings:
     def score_weights(self) -> Dict[str, float]:
         # 返回副本，避免外部直接修改内部 dict
         return dict(self._score_weights)
+    
+@dataclass(frozen=True)
+class LLMProviderConfig:
+    """
+    单个 LLM Provider 配置（OpenAI 兼容 / Aizex 路由等）
+    """
+    base_url: str
+    api_key: str
+    default_model: str
+
+
+class LLMSettings:
+    """
+    支持“多 provider + 运行时选择 model”的通用大模型配置。
+
+    你可以用环境变量配置多个 provider，例如：
+      LLM_PROVIDER=aizex
+      LLM_AIZEX_BASE_URL=https://aizex.top/v1
+      LLM_AIZEX_API_KEY=sk-xxx
+      LLM_AIZEX_DEFAULT_MODEL=gpt-4.1-nano
+
+    如需第二个 provider：
+      LLM_PROVIDER=openai
+      LLM_OPENAI_BASE_URL=https://api.openai.com/v1
+      LLM_OPENAI_API_KEY=sk-yyy
+      LLM_OPENAI_DEFAULT_MODEL=gpt-4o-mini
+    """
+
+    def __init__(self) -> None:
+        self._default_provider: str = os.getenv("LLM_PROVIDER", "aizex").lower()
+
+        self._providers: Dict[str, LLMProviderConfig] = {
+            "aizex": LLMProviderConfig(
+                base_url=os.getenv("LLM_AIZEX_BASE_URL", "https://aizex.top/v1"),
+                api_key=os.getenv("LLM_AIZEX_API_KEY", os.getenv("LLM_API_KEY", "sk-TyyUwhwE1LpVBr24swMwKWhWq9oAdosQGYjI5qumbC6DsDoa")),
+                default_model=os.getenv("LLM_AIZEX_DEFAULT_MODEL", os.getenv("LLM_MODEL", "gpt-4.1-nano")),
+            )
+        }
+
+        # 通用推理参数
+        self._temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))
+        self._max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "2048"))
+        self._timeout_sec: int = int(os.getenv("LLM_TIMEOUT_SEC", "60"))
+
+        # 是否显式禁用代理（与你 test_llm_api.py 类似）
+        self._disable_proxies: bool = os.getenv("LLM_DISABLE_PROXIES", "1") == "1"
+
+    @property
+    def temperature(self) -> float:
+        return self._temperature
+
+    @property
+    def max_tokens(self) -> int:
+        return self._max_tokens
+
+    @property
+    def timeout_sec(self) -> int:
+        return self._timeout_sec
+
+    @property
+    def proxies(self) -> Optional[Dict[str, Optional[str]]]:
+        if self._disable_proxies:
+            return {"http": None, "https": None}
+        return None
+
+    def get_provider(self, provider: Optional[str] = None) -> LLMProviderConfig:
+        """
+        获取 provider 配置：
+        - provider=None -> 使用默认 provider
+        - provider 指定但不存在 -> 抛异常
+        """
+        name = (provider or self._default_provider).lower()
+        if name not in self._providers:
+            raise ValueError(f"未知 LLM provider: {name}, 可选: {list(self._providers.keys())}")
+        return self._providers[name]
+
+    def resolve_model(self, provider: Optional[str] = None, model: Optional[str] = None) -> str:
+        """
+        运行时模型选择：
+        - 若传入 model 则优先使用
+        - 否则用 provider.default_model
+        """
+        cfg = self.get_provider(provider)
+        return model or cfg.default_model
 
 
 # 全局配置实例（这里是“配置对象”，不会直接产生数据库连接）
 path_settings = PathSettings()
 db_settings = DatabaseSettings()
 orchestration_settings = OrchestrationSettings()
+llm_settings = LLMSettings()

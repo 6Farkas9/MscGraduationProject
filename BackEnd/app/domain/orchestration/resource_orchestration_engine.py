@@ -52,13 +52,12 @@ class ResourceOrchestrationEngine(BaseEngine):
 
     def __init__(
         self,
-        repository: ResourceOrchestrationRepository,
         device: str = "cpu",
     ) -> None:
         # BaseEngine 会记录 device / model / 初始化状态
         super().__init__(device=device)
 
-        self._repo = repository
+        self._repo = ResourceOrchestrationRepository()
         self._sem_model: Optional[SentenceTransformer] = None
 
         # 语义模型名硬编码
@@ -529,8 +528,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     # 1. 准备仓库和引擎
-    repo = ResourceOrchestrationRepository()
-    engine = ResourceOrchestrationEngine(repository=repo, device="cpu")
+    # repo = ResourceOrchestrationRepository()
+    engine = ResourceOrchestrationEngine(device="cpu")
 
     if not engine.initialize():
         print("Engine 初始化失败，无法继续测试。")
