@@ -2,7 +2,7 @@
 import os
 import sys
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 
 class PathSettings:
@@ -224,6 +224,57 @@ class KTSettings:
     @property
     def history_steps(self) -> int:
         return self._history_steps
+    
+class ProfilingSettings:
+    """
+    学习者画像流水线（Profiling Pipeline）相关配置。
+
+    当前配置项：
+    - enabled_dimensions: 启用的画像维度列表（按 DIMENSION_KEY 填写）；
+    - default_device: 各个画像 Engine 默认运行设备（如 "cpu" / "cuda"）；
+    - max_batch_size: 单次 analyze 推荐的最大 learner 数量，超过会打 warning，
+                      但不会强制报错。
+    """
+
+    def __init__(self) -> None:
+        # 默认启用的所有画像维度（需与各 Engine 的 DIMENSION_KEY 保持一致）
+        self._enabled_dimensions: List[str] = [
+            "attention_allocation",
+            "engagement_persistence",
+            "feedback_orientation",
+            "collaborative_role_contribution",
+            "contribution_reputation",
+            "interaction_style",
+            "reflection_value_evolution",
+            "social_learning",
+            "exploration_orientation",
+            "srl_helpseeking",
+            "task_efficiency",
+        ]
+
+        # 可通过环境变量覆盖，便于部署时切换到 "cuda" 等
+        self._default_device: str = os.getenv("PROFILING_DEVICE", "cpu")
+
+        # 单批建议最大 learner 数，可通过环境变量覆盖（为 0 或负数时视为不限制）
+        max_batch_env = os.getenv("PROFILING_MAX_BATCH_SIZE", "200")
+        try:
+            max_batch = int(max_batch_env)
+        except ValueError:
+            max_batch = 200
+        self._max_batch_size: Optional[int] = max_batch if max_batch > 0 else None
+
+    # ----------------------- property 封装 -----------------------
+    @property
+    def enabled_dimensions(self) -> List[str]:
+        return list(self._enabled_dimensions)
+
+    @property
+    def default_device(self) -> str:
+        return self._default_device
+
+    @property
+    def max_batch_size(self) -> Optional[int]:
+        return self._max_batch_size
 
 # 全局配置实例（这里是“配置对象”，不会直接产生数据库连接）
 path_settings = PathSettings()
@@ -231,3 +282,4 @@ db_settings = DatabaseSettings()
 orchestration_settings = OrchestrationSettings()
 llm_settings = LLMSettings()
 kt_settings = KTSettings()
+profiling_settings = ProfilingSettings()
