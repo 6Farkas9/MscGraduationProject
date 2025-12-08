@@ -1,6 +1,6 @@
 # BackEnd/app/tests/test_prediction_pipeline.py
 """
-PredictionPipeline 集成测试脚本
+PredictionPipeline 集成测试脚本（适配新版 PredictionPipeline 返回结构）
 
 测试内容：
 1. 已有单一学习者路径（不使用 HGC）:
@@ -12,11 +12,24 @@ PredictionPipeline 集成测试脚本
 4. 新多个学习者路径:
    analyze([uid1, uid2], is_new_learner=True)
 
+新版 PredictionPipeline.analyze 返回结构:
+{
+    "success": bool,
+    "errors": [str, ...],
+    "results": {
+        learner_uid: {
+            "kt": {concept_uid: value, ...},
+            "hgc": [float, ...] 或 None,
+        },
+        ...
+    },
+}
+
 说明：
 - 使用的 UID 为线上真实存在的学习者：
     - "lrn_51efbdbcf8844c478bbbb3ab7ad8e64e"
     - "lrn_004a9c3f5bf246faab3d390ce716e658"
-- 本脚本可以作为 pytest/ unittest 里的测试用例，也可以直接 python 执行。
+- 本脚本可以作为 pytest/unittest 里的测试用例，也可以直接 python 执行。
 """
 
 import os
@@ -47,27 +60,32 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def summarize_kt_result(kt_result: Dict[str, Any]) -> Dict[str, Any]:
+def summarize_kt_result_for_learners(
+    pipeline_result: Dict[str, Any],
+    learner_uids: List[str],
+) -> Dict[str, Any]:
     """
-    对 KT 结果做一个简单的统计摘要，便于快速观察执行效果
+    对新版 pipeline 返回中的 KT 结果做一个简单的统计摘要，便于快速观察执行效果
     """
-    if not kt_result or not kt_result.get("success", False):
+    if not pipeline_result:
         return {
-            "success": kt_result.get("success", False) if kt_result else False,
-            "total_count": kt_result.get("total_count", 0) if kt_result else 0,
-            "success_count": kt_result.get("success_count", 0) if kt_result else 0,
-            "message": kt_result.get("error", "no data") if kt_result else "no data",
+            "success": False,
+            "message": "no data",
         }
 
-    results = kt_result.get("results", [])
-    learner_count = len(results)
+    if not pipeline_result.get("success", False):
+        return {
+            "success": False,
+            "message": "; ".join(pipeline_result.get("errors", [])) or "pipeline failed",
+        }
 
-    # 统计每个学习者的非零能力数量
+    results_by_learner = pipeline_result.get("results", {}) or {}
+
     non_zero_stats = {}
-    for item in results:
-        uid = item.get("learner_id", "unknown")
-        concept_mastery = item.get("concept_mastery", {})
-        values = list(concept_mastery.values()) if concept_mastery else []
+    for uid in learner_uids:
+        learner_block = results_by_learner.get(uid) or {}
+        kt_dict = learner_block.get("kt") or {}
+        values = list(kt_dict.values())
         non_zero_count = sum(1 for v in values if abs(v) > 1e-3)
         non_zero_stats[uid] = {
             "concept_count": len(values),
@@ -76,8 +94,6 @@ def summarize_kt_result(kt_result: Dict[str, Any]) -> Dict[str, Any]:
 
     return {
         "success": True,
-        "total_count": kt_result.get("total_count", learner_count),
-        "success_count": kt_result.get("success_count", learner_count),
         "non_zero_stats": non_zero_stats,
     }
 
@@ -91,8 +107,9 @@ def run_single_existing_test(learner_uid: str) -> Dict[str, Any]:
 
     result = pipeline_analyze([learner_uid], is_new_learner=False)
 
-    kt_existing = result["kt_results"]["existing"]
-    summary = summarize_kt_result(kt_existing)
+    print(result)
+
+    summary = summarize_kt_result_for_learners(result, [learner_uid])
 
     logger.info("existing single KT 摘要: %s", summary)
     return {
@@ -110,8 +127,7 @@ def run_multiple_existing_test(learner_uids: List[str]) -> Dict[str, Any]:
 
     result = pipeline_analyze(learner_uids, is_new_learner=False)
 
-    kt_existing = result["kt_results"]["existing"]
-    summary = summarize_kt_result(kt_existing)
+    summary = summarize_kt_result_for_learners(result, learner_uids)
 
     logger.info("existing multiple KT 摘要: %s", summary)
     return {
@@ -132,8 +148,7 @@ def run_single_new_test(learner_uid: str) -> Dict[str, Any]:
 
     result = pipeline_analyze([learner_uid], is_new_learner=True)
 
-    kt_new = result["kt_results"]["new"]
-    summary = summarize_kt_result(kt_new)
+    summary = summarize_kt_result_for_learners(result, [learner_uid])
 
     logger.info("new single KT 摘要: %s", summary)
     return {
@@ -151,8 +166,7 @@ def run_multiple_new_test(learner_uids: List[str]) -> Dict[str, Any]:
 
     result = pipeline_analyze(learner_uids, is_new_learner=True)
 
-    kt_new = result["kt_results"]["new"]
-    summary = summarize_kt_result(kt_new)
+    summary = summarize_kt_result_for_learners(result, learner_uids)
 
     logger.info("new multiple KT 摘要: %s", summary)
     return {
@@ -167,7 +181,7 @@ def main() -> Dict[str, Any]:
     依次跑 4 条路径，并给出一个简单的总结。
     """
     print("\n" + "=" * 60)
-    print("PredictionPipeline 综合测试")
+    print("PredictionPipeline 综合测试（新版返回结构）")
     print("=" * 60)
     print("测试学习者: ", TEST_LEARNER_UIDS)
     print("=" * 60)
