@@ -2,51 +2,38 @@
 # -*- coding: utf-8 -*-
 
 """
-测试 OrchestrationPipeline 的端到端脚本（虚拟学习者 + 真实知识点/关系 + 随机学习状态/得分）。
-
-运行前：
-1) 确保 MySQL 可连接：
-   - host=127.0.0.1, port=3306
-   - user=root, password=123456
-   - database=mls
-2) 确保大模型环境变量已配置（至少 key/base_url/provider）：
-   - 例如使用 Aizex：
-       export LLM_PROVIDER=aizex
-       export LLM_AIZEX_BASE_URL=https://aizex.top/v1
-       export LLM_AIZEX_API_KEY=sk-xxxx
-       export LLM_AIZEX_DEFAULT_MODEL=gpt-4.1-nano
-3) 确保工程 import 路径正确（能 import app.xxx）
-
-注意：
-- 本脚本的重点是“pipeline 编排能跑通”，不是评测质量。
+简单测试脚本：
+- 不依赖 pytest；
+- 不引用 mysql_base_repository；
+- 直接连接本地 MySQL（mls.Concepts）获取真实知识点；
+- 使用 profiles_labels 生成真实画像标签；
+- 调用 OrchestrationPipeline.analyze 并打印结果摘要。
 """
 
 from __future__ import annotations
-
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Dict, Any, List
 
 import pymysql
 
 from app.domain.orchestration.orchestration_pipeline import OrchestrationPipeline
-from app.shared.models.profiles_labels import PROFILE_LABELS, get_label  # :contentReference[oaicite:1]{index=1}
+from app.shared.models.profiles_labels import PROFILE_LABELS, get_label
 
 
-# ----------------------------
-# MySQL 读取：Concepts 与 Concept_Concept
-# ----------------------------
-def fetch_concepts_and_relations(
-    host: str = "127.0.0.1",
+# -------------------------------------------------------------
+# 1. 从本地 MySQL mls.Concepts 表读取真实知识点
+# -------------------------------------------------------------
+def fetch_real_concepts_from_mysql(
+    host: str = "localhost",
     port: int = 3306,
     user: str = "root",
     password: str = "123456",
     database: str = "mls",
-) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, List[str]], Dict[str, List[str]]]:
+    limit: int = 10,
+) -> List[Dict[str, Any]]:
     """
-    返回：
-      - concepts_by_uid: uid -> {"uid","name","explanation"}
-      - predecessors_map: uid -> [pre_uid,...]
-      - successors_map: uid -> [aft_uid,...]
+    直接通过 pymysql 从本地 mls.Concepts 读取真实知识点。
+    不使用 mysql_base_repository。
     """
     conn = pymysql.connect(
         host=host,
@@ -59,160 +46,153 @@ def fetch_concepts_and_relations(
     )
 
     try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT uid, name, explanation FROM Concepts")
-            rows = cur.fetchall()
-
-            concepts_by_uid: Dict[str, Dict[str, Any]] = {}
-            for r in rows:
-                uid = r["uid"]
-                concepts_by_uid[uid] = {
-                    "concept_uid": uid,
-                    "concept_name": r["name"],
-                    "explanation": r.get("explanation"),
-                }
-
-            cur.execute("SELECT pre_uid, aft_uid FROM Concept_Concept")
-            edges = cur.fetchall()
-
-            predecessors_map: Dict[str, List[str]] = {}
-            successors_map: Dict[str, List[str]] = {}
-
-            for e in edges:
-                pre = e["pre_uid"]
-                aft = e["aft_uid"]
-                if not pre or not aft:
-                    continue
-
-                # 仅保留在 concepts 表中存在的 uid
-                if pre not in concepts_by_uid or aft not in concepts_by_uid:
-                    continue
-
-                successors_map.setdefault(pre, []).append(aft)
-                predecessors_map.setdefault(aft, []).append(pre)
-
-        return concepts_by_uid, predecessors_map, successors_map
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT uid, name FROM Concepts LIMIT %s", (limit,))
+            rows = cursor.fetchall()
     finally:
         conn.close()
 
+    return rows
 
-# ----------------------------
-# 随机生成学习者画像（转成文本标签）
-# ----------------------------
-def random_profile_labels() -> Dict[str, Any]:
+
+# -------------------------------------------------------------
+# 2. 构造模拟 KT：使用真实 concept_uid，概率随机
+# -------------------------------------------------------------
+def build_mock_kt(learner_uids: List[str], concepts: List[Dict[str, Any]]) -> Dict[str, Dict[str, float]]:
     """
-    从 PROFILE_LABELS 随机抽样，生成一个“文本化的画像标签结构”。
-
-    输出结构示例：
-    {
-      "attention_allocation": {"efficiency": "...", "style": "..."},
-      "social_learning": {"role": "..."},
-      ...
-    }
+    为每个学习者构造 KT：
+    { learner_uid: { concept_uid: prob, ... } }
+    概率在 [0.4, 0.95] 之间随机。
     """
-    profile: Dict[str, Any] = {}
+    kt: Dict[str, Dict[str, float]] = {}
 
-    for dimension, dim_cfg in PROFILE_LABELS.items():
-        profile[dimension] = {}
-        for category, mapping in dim_cfg.items():
-            codes = list(mapping.keys())
-            code = random.choice(codes)
-            profile[dimension][category] = get_label(dimension, category, code)
+    concept_uids = [c["uid"] for c in concepts if c.get("uid")]
 
-    return profile
+    for uid in learner_uids:
+        cur_kt: Dict[str, float] = {}
+        # 随机选取若干个知识点（例如 5 个以内）
+        chosen = random.sample(concept_uids, min(len(concept_uids), 5))
+        for cid in chosen:
+            prob = round(random.uniform(0.4, 0.95), 3)
+            cur_kt[cid] = prob
+        kt[uid] = cur_kt
+
+    return kt
 
 
-# ----------------------------
-# 构建 knowledge_concepts（真实概念 + 随机学习状态/得分）
-# ----------------------------
-def build_knowledge_concepts(
-    concepts_by_uid: Dict[str, Dict[str, Any]],
-    predecessors_map: Dict[str, List[str]],
-    successors_map: Dict[str, List[str]],
-    learned_ratio: float = 0.35,
-) -> List[Dict[str, Any]]:
+# -------------------------------------------------------------
+# 3. 构造模拟 Profile：使用 profiles_labels 的真实标签
+# -------------------------------------------------------------
+def build_mock_profile(learner_uids: List[str]) -> Dict[str, Dict[str, Any]]:
     """
-    将数据库真实概念与关系转换为 pipeline/LLM 输入结构：
-      - concept_uid, concept_name
-      - status: learned / not_learned
-      - predicted_accuracy: learned 才给 [0,1] 随机；not_learned -> None（或不传）
-      - predecessors/successors: 真实关系
+    为每个学习者构造画像：
+    { learner_uid: { dimension: { category: label_text, ... }, ... } }
+
+    - dimension / category 使用 PROFILE_LABELS 的真实配置；
+    - code 随机选一个有效 code，通过 get_label 转成文本描述；
+    - 与用户之前给的示例格式一致（直接使用中文描述文本）。
     """
-    knowledge_concepts: List[Dict[str, Any]] = []
+    profiles: Dict[str, Dict[str, Any]] = {}
 
-    for uid, base in concepts_by_uid.items():
-        status = "learned" if random.random() < learned_ratio else "not_learned"
+    for uid in learner_uids:
+        profile_for_learner: Dict[str, Any] = {}
 
-        item = {
-            "concept_uid": base["concept_uid"],
-            "concept_name": base["concept_name"],
-            "status": status,
-            "predecessors": predecessors_map.get(uid, []),
-            "successors": successors_map.get(uid, []),
-        }
+        for dim, cat_dict in PROFILE_LABELS.items():
+            dim_entry: Dict[str, Any] = {}
+            for category, code_to_label in cat_dict.items():
+                codes = list(code_to_label.keys())
+                if not codes:
+                    continue
+                code = random.choice(codes)
+                label_text = get_label(dim, category, code)
+                if label_text is not None:
+                    dim_entry[category] = label_text
+            if dim_entry:
+                profile_for_learner[dim] = dim_entry
 
-        if status == "learned":
-            # learned 才给预测分
-            item["predicted_accuracy"] = round(random.uniform(0.15, 0.98), 4)
-        else:
-            # not_learned 不需要 -1；可不给，也可置 None
-            item["predicted_accuracy"] = None
+        profiles[uid] = profile_for_learner
 
-        knowledge_concepts.append(item)
-
-    return knowledge_concepts
+    return profiles
 
 
-def main() -> None:
-    # 1) 读取真实知识点与关系
-    concepts_by_uid, predecessors_map, successors_map = fetch_concepts_and_relations()
+# -------------------------------------------------------------
+# 4. 主测试流程
+# -------------------------------------------------------------
+def main():
+    # 为了在测试输出中稳定一点，固定随机种子（如果你想每次都不同，可以注释掉）
+    random.seed(42)
 
-    # 2) 构建虚拟学习者
-    learner_uid = "lrn_51efbdbcf8844c478bbbb3ab7ad8e64e"
-    learner_profile = random_profile_labels()
+    # 4.1 准备学习者 UID
+    learner_uids = ["learner_001", "learner_002"]
 
-    # 3) 构建知识状态（真实概念 + 随机学习状态）
-    knowledge_concepts = build_knowledge_concepts(
-        concepts_by_uid,
-        predecessors_map,
-        successors_map,
-        learned_ratio=0.35,
-    )
+    # 4.2 从 MySQL 读取真实概念
+    concepts = fetch_real_concepts_from_mysql(limit=10)
+    if not concepts:
+        print("从数据库 mls.Concepts 中没有读取到任何知识点，请检查数据库配置。")
+        return
 
-    # 4) 运行 pipeline
-    pipeline = OrchestrationPipeline(llm_provider=None, device="cpu")
+    print(f"从数据库中读取到 {len(concepts)} 个知识点示例：")
+    for row in concepts:
+        print(f"  uid={row['uid']}, name={row['name']}")
 
+    # 4.3 构造 KT 和 Profile
+    kt = build_mock_kt(learner_uids, concepts)
+    profile = build_mock_profile(learner_uids)
+
+    print("\n模拟 KT 输入示例（仅展示第一个学习者）：")
+    first_uid = learner_uids[0]
+    print(f"  learner={first_uid}, KT={kt[first_uid]}")
+
+    print("\n模拟 Profile 输入示例（仅展示第一个学习者的一部分）：")
+    first_profile_dim_sample = dict(list(profile[first_uid].items())[:2])  # 截两项维度示例
+    for dim, cat in first_profile_dim_sample.items():
+        print(f"  [{dim}] -> {cat}")
+
+    # 4.4 调用 OrchestrationPipeline
+    pipeline = OrchestrationPipeline()
     result = pipeline.analyze(
-        learner_uid=learner_uid,
-        learner_profile=learner_profile,
-        knowledge_concepts=knowledge_concepts,
-        # 允许测试时手动切换模型（可填 None 用默认）
-        llm1_model=None,
-        llm2_model=None,
-        top_k=20,
-        constraints={
-            "max_total_time": 60,   # 例：希望总时长不超过 60 分钟（第二次LLM可参考）
-            "max_steps": 8,         # 例：最多 8 步
-        },
+        learner_uids=learner_uids,
+        kt=kt,
+        profile=profile,
     )
 
-    # 5) 打印关键结果（避免输出过大）
-    print("\n=== SUMMARY ===")
-    summary = result.get("summary", {})
-    print("Targets (count):", len(summary.get("target_concepts", [])))
-    print("Top resources:", len(summary.get("recommended_resources_top10", [])))
-    print("Steps:", len(summary.get("learning_steps", [])))
-    print("Overview:", summary.get("path_overview"))
+    # 4.5 打印结果摘要
+    print("\n=== Pipeline Engine Status ===")
+    for k, v in result.get("engine_status", {}).items():
+        print(f"- {k}: {v}")
 
-    # 如果你想看每步理由：
-    print("\n=== STEP REASONS ===")
-    for s in summary.get("learning_steps", []):
-        print(f"- Step {s.get('step_index')} | goal={s.get('goal')} | time={s.get('time_estimate')}min")
-        print("  resource_uids:", s.get("resource_uids"))
-        print("  why:", s.get("why"))
-        print()
+    print("\n=== Pipeline Results (per learner) ===")
+    for uid in learner_uids:
+        r = result["results"].get(uid)
+        if not r:
+            print(f"\n[ {uid} ] 无结果")
+            continue
 
-    # 如果你想看原始输出（可能很大），可自行 print(result)
+        print(f"\n[ {uid} ]")
+        # 只打印规划的一小部分和资源数量，避免输出过长
+        planning = r.get("planning") or {}
+        orchestration = r.get("orchestration") or {}
+        learning_path_text = r.get("learning_path")
+
+        print("  - Planning (keys):", list(planning.keys()))
+        print("  - Orchestration candidate_count:",
+              orchestration.get("candidate_count"),
+              "top_k:", orchestration.get("top_k"),
+              "used_relaxation_level:", orchestration.get("used_relaxation_level"))
+
+        resources = orchestration.get("resources") or []
+        print("  - Orchestration first resource (if any):")
+        if resources:
+            print("    ", resources[0])
+        else:
+            print("    无资源匹配到。")
+
+        print("  - Learning Path (first 400 chars)：")
+        if isinstance(learning_path_text, str):
+            preview = learning_path_text[:400]
+            print("    ", preview.replace("\n", "\\n"))
+        else:
+            print("    无学习路线文本。")
 
 
 if __name__ == "__main__":

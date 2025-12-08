@@ -167,7 +167,7 @@ class LLMSettings:
         # 通用推理参数
         self._temperature: float = float(os.getenv("LLM_TEMPERATURE", "0.2"))
         self._max_tokens: int = int(os.getenv("LLM_MAX_TOKENS", "2048"))
-        self._timeout_sec: int = int(os.getenv("LLM_TIMEOUT_SEC", "60"))
+        self._timeout_sec: int = int(os.getenv("LLM_TIMEOUT_SEC", "300"))
 
         # 是否显式禁用代理（与你 test_llm_api.py 类似）
         self._disable_proxies: bool = os.getenv("LLM_DISABLE_PROXIES", "1") == "1"
