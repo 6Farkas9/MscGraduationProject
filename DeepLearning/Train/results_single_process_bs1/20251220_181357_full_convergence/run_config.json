@@ -1,0 +1,13 @@
+{
+  "exp_name": "full_convergence",
+  "mode": "full",
+  "epochs": 20,
+  "out_root": "results_single_process_bs1",
+  "seed": 2025,
+  "full_epochs": 20,
+  "ablation_epochs": 15,
+  "train_batch_size": 1,
+  "eval_batch_size": 1,
+  "max_batch_size": 1,
+  "const_value": 0.5
+}

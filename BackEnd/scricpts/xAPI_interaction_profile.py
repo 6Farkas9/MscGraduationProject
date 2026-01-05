@@ -14,13 +14,16 @@
 """
 
 import pymysql
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING
 from tqdm import tqdm
 from collections import defaultdict
 from datetime import datetime, timedelta
 import random
 
 # ===================== 配置区域 =====================
+
+# MySQL Interaction 表主键，用作会话 ID（bigint）
+INTERACTION_PK_FIELD = "id"
 
 MYSQL_CONFIG = {
     "host": "localhost",
@@ -37,46 +40,55 @@ MONGO_CONFIG = {
     "port": 27017,
     "db_name": "MLS",
     "profile_collection": "LearnerProfile",
-    "xapi_collection": "Interaction",  # MongoDB 中存细粒度 xAPI 行为的集合名
+    "xapi_collection": "Interaction",
 }
 
-# —— 批量写入参数（防内存暴涨） ——
+# 批量写入大小
 PROFILE_BATCH_SIZE = 1000
 XAPI_BATCH_SIZE = 50000
 
-# —— 学习者数据量阈值（防止某个学习者数据巨多卡死） ——
+# 学习者粗粒度交互数量阈值
 MAX_INTERACTIONS_SOFT = 50000   # 超过此值开始抽样
 MAX_INTERACTIONS_HARD = 200000  # 超过此值直接舍弃该学习者
 
-# —— 单条记录时长裁剪上限（秒），默认 8 小时 ——
+# 单条记录时长裁剪上限（秒）
 MAX_DURATION_SECONDS = 8 * 3600
 
-# xAPI 常量
+# xAPI 常量（使用最终版语义体系）
 VERB_BASE = "https://legend-meta.com/xapi/verb/"
 ACTIVITY_TYPE_BASE = "https://legend-meta.com/xapi/activity-type/"
 
 VERBS = {
+    # 任务与结果行为
     "experienced": VERB_BASE + "experienced",
     "initialized": VERB_BASE + "initialized",
     "completed": VERB_BASE + "completed",
     "answered": VERB_BASE + "answered",
     "passed": VERB_BASE + "passed",
     "failed": VERB_BASE + "failed",
-    "focused_on_resource": VERB_BASE + "focused-on-resource",
+
+    # 空间行为
     "navigated_to_space": VERB_BASE + "navigated-to-space",
     "teleported_to_space": VERB_BASE + "teleported-to-space",
+
+    # 对象操作行为
     "manipulated_object": VERB_BASE + "manipulated-object",
     "performed_procedure_step": VERB_BASE + "performed-procedure-step",
-    "requested_support": VERB_BASE + "requested-support",
-    "reviewed_feedback": VERB_BASE + "reviewed-feedback",
-    "explored_extension": VERB_BASE + "explored-extension",
-    "collaborated_on_activity": VERB_BASE + "collaborated-on-activity",
-    "co_edited_artifact": VERB_BASE + "co-edited-artifact",
     "contributed_resource": VERB_BASE + "contributed-resource",
     "exchanged_value": VERB_BASE + "exchanged-value",
+
+    # 注意、状态与认知加工行为
+    "focused_on_resource": VERB_BASE + "focused-on-resource",
+    "reviewed_feedback": VERB_BASE + "reviewed-feedback",
+    "explored_extension": VERB_BASE + "explored-extension",
     "reflected_on_activity": VERB_BASE + "reflected-on-activity",
-    "observed_peer": VERB_BASE + "observed-peer",
     "remained_idle": VERB_BASE + "remained-idle",
+
+    # 协作与社会交互行为
+    "collaborated_on_activity": VERB_BASE + "collaborated-on-activity",
+    "co_edited_artifact": VERB_BASE + "co-edited-artifact",
+    "observed_peer": VERB_BASE + "observed-peer",
+    "requested_support": VERB_BASE + "requested-support",
 }
 
 UNIT_ACTIVITY_TYPES = {
@@ -112,25 +124,21 @@ PROFILE_DIMENSIONS = [
 # ===================== 工具函数 =====================
 
 def get_mysql_connection():
-    """获取 MySQL 连接"""
     return pymysql.connect(**MYSQL_CONFIG)
 
 
 def get_mongo_db():
-    """获取 MongoDB 数据库对象"""
     client = MongoClient(MONGO_CONFIG["host"], MONGO_CONFIG["port"])
     return client[MONGO_CONFIG["db_name"]]
 
 
-def ratio_safe(numerator, denominator):
-    """安全计算比例，避免除零"""
-    if denominator is None or denominator == 0:
+def ratio_safe(n, d):
+    if not d:
         return 0.0
-    return float(numerator) / float(denominator)
+    return float(n) / float(d)
 
 
 def categorize_score(r):
-    """将 0~1 的得分映射到 low/medium/high"""
     if r < 0.4:
         return "low"
     elif r < 0.7:
@@ -140,10 +148,7 @@ def categorize_score(r):
 
 
 def split_duration(total_seconds, n_parts):
-    """
-    将总时长拆分为 n_parts 份，使用固定比例，避免强随机。
-    返回一个长度为 n_parts 的列表（单位秒）。
-    """
+    """用固定权重拆时长，避免强随机。"""
     if total_seconds is None or total_seconds <= 0 or n_parts <= 0:
         return [0] * n_parts
 
@@ -167,27 +172,17 @@ def split_duration(total_seconds, n_parts):
     parts = [total_seconds * w for w in weights]
     parts = [int(round(p)) for p in parts]
     diff = int(total_seconds) - sum(parts)
-    if diff != 0 and len(parts) > 0:
+    if diff != 0 and parts:
         parts[0] += diff
     return parts
 
 
 def get_rng_for_learner(lrn_uid):
-    """
-    为每个学习者生成一个固定 seed 的随机数发生器，
-    确保每次运行结果一致。
-    """
     seed = abs(hash(lrn_uid)) % (2 ** 32)
     return random.Random(seed)
 
 
 def sanitize_duration(value, max_seconds=MAX_DURATION_SECONDS):
-    """
-    对单条记录的时长字段进行清洗：
-    - None / 非数字 -> 0
-    - 负数 -> 0
-    - 过大 -> 截断到 max_seconds
-    """
     if value is None:
         return 0.0
     try:
@@ -202,12 +197,6 @@ def sanitize_duration(value, max_seconds=MAX_DURATION_SECONDS):
 
 
 def sanitize_attempt_index(value, min_attempt=1, max_attempt=20):
-    """
-    对题目尝试次数进行清洗：
-    - None / 非数字 -> 1
-    - < min_attempt -> min_attempt
-    - > max_attempt -> max_attempt
-    """
     if value is None:
         return min_attempt
     try:
@@ -225,7 +214,14 @@ def sanitize_attempt_index(value, min_attempt=1, max_attempt=20):
 
 def load_basic_data(conn):
     """
-    从 MySQL 加载所有需要的表数据，并进行基础关联处理。
+    加载：
+      - BasicLearners
+      - Units
+      - Questions
+      - Courses
+      - Course_Unit
+      - Interaction
+    并建立必要映射。
     """
     with conn.cursor() as cursor:
         cursor.execute("SELECT * FROM BasicLearners")
@@ -286,13 +282,6 @@ def load_basic_data(conn):
 # ===================== 粗粒度统计 =====================
 
 def build_stats_from_interactions(interactions, units_by_uid, question_to_course, unit_to_course):
-    """
-    从粗粒度交互构建统计数据，用于倒推画像维度。
-    返回：
-    - stats_per_learner_course: (lrn_uid, crs_uid) -> 统计
-    - interactions_by_learner: lrn_uid -> [interaction rows]
-    - learner_course_units: (lrn_uid, crs_uid) -> set(unit_uids)
-    """
     stats_per_learner_course = defaultdict(lambda: {
         "video_total_len": 0.0,
         "video_watch": 0.0,
@@ -344,7 +333,6 @@ def build_stats_from_interactions(interactions, units_by_uid, question_to_course
             learner_course_units[(lrn_uid, crs_uid)].add(unt_uid)
             stats["unit_counts"][utype] += 1
 
-            # 时长字段清洗
             dur1 = sanitize_duration(add1)
             dur2 = sanitize_duration(add2)
 
@@ -364,10 +352,8 @@ def build_stats_from_interactions(interactions, units_by_uid, question_to_course
                 stats["cooperate_total"] += dur1
                 stats["cooperate_effective"] += min(dur2, dur1)
         else:
-            # 题目：additioninfo1=第几次作答，additioninfo2=是否正确
             attempt_idx = sanitize_attempt_index(add1)
             stats["question_attempts"] += 1
-            # 这里仍然用 add2>0 判断是否正确
             if add2 and add2 > 0:
                 stats["question_correct"] += 1
             else:
@@ -375,7 +361,7 @@ def build_stats_from_interactions(interactions, units_by_uid, question_to_course
 
             question_records[(lrn_uid, unt_uid)].append((ctime, attempt_idx, add2))
 
-    # 计算“错后重做”的题目数
+    # 处理 wrong -> later correct
     for (lrn_uid, q_uid), recs in question_records.items():
         recs_sorted = sorted(recs, key=lambda x: x[0])
         had_wrong = False
@@ -397,11 +383,6 @@ def build_stats_from_interactions(interactions, units_by_uid, question_to_course
 # ===================== 人设推断 =====================
 
 def infer_persona_for_course(stats, rng):
-    """
-    根据某个学习者在某门课程的粗粒度统计，推断该课程窗口的人设。
-    可倒推出的维度尽量用 stats，其余维度使用 rng 预设。
-    """
-    # ---- 可倒推部分 ----
     interact_ratio = ratio_safe(stats["interact_correct"], stats["interact_total"])
     vr_ratio = ratio_safe(stats["vr_focus"], stats["vr_total"])
     ar_ratio = ratio_safe(stats["ar_focus"], stats["ar_total"])
@@ -534,7 +515,6 @@ def infer_persona_for_course(stats, rng):
 
 
 def aggregate_global_profile(course_profiles):
-    """将多门课程的人设聚合为全局人设"""
     if not course_profiles:
         return {}
 
@@ -644,6 +624,7 @@ def generate_xapi_for_video(row, unit, course_uid, persona_course):
 
     events = []
 
+    # experienced
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["experienced"], "display": {"en": "experienced"}},
@@ -653,6 +634,7 @@ def generate_xapi_for_video(row, unit, course_uid, persona_course):
         "result": {}
     })
 
+    # initialized
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["initialized"], "display": {"en": "initialized"}},
@@ -662,6 +644,7 @@ def generate_xapi_for_video(row, unit, course_uid, persona_course):
         "result": {}
     })
 
+    # remained_idle（低注意力 + 有明显空闲）
     attention_score = persona_course.get("attention_allocation", {}).get("score", 0.5)
     idle_time = max(total_len - watch_len, 0.0)
     if idle_time > 5 and attention_score < 0.4:
@@ -678,6 +661,7 @@ def generate_xapi_for_video(row, unit, course_uid, persona_course):
             }
         })
 
+    # focused_on_resource（分段聚焦 AOI）
     n_focus = 3
     parts = split_duration(watch_len, n_focus)
     aoi_ids = ["main-screen", "subtitle-area", "diagram-area"]
@@ -704,6 +688,7 @@ def generate_xapi_for_video(row, unit, course_uid, persona_course):
             }
         })
 
+    # completed
     ctx_completed = make_context(course_uid, "video")
     ctx_completed["extensions"]["https://legend-meta.com/xapi/ext/video-total-length"] = total_len
     events.append({
@@ -738,6 +723,7 @@ def generate_xapi_for_vr_ar(row, unit, course_uid, persona_course, unit_type):
 
     events = []
 
+    # experienced
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["experienced"], "display": {"en": "experienced"}},
@@ -747,6 +733,7 @@ def generate_xapi_for_vr_ar(row, unit, course_uid, persona_course, unit_type):
         "result": {}
     })
 
+    # initialized
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["initialized"], "display": {"en": "initialized"}},
@@ -756,6 +743,7 @@ def generate_xapi_for_vr_ar(row, unit, course_uid, persona_course, unit_type):
         "result": {}
     })
 
+    # 探索倾向决定是否使用 teleported-to-space
     exp_score = persona_course.get("exploration_orientation", {}).get("score", 0.5)
     n_spaces = 2 if exp_score < 0.5 else 3
     space_ids = [f"{unit_type}-space-{i+1}" for i in range(n_spaces)]
@@ -769,16 +757,27 @@ def generate_xapi_for_vr_ar(row, unit, course_uid, persona_course, unit_type):
         cursor_time = end_time
         ctx_nav = make_context(course_uid, unit_type)
         ctx_nav["extensions"]["https://legend-meta.com/xapi/ext/space-id"] = sid
-        ctx_nav["extensions"]["https://legend-meta.com/xapi/ext/navigation-mode"] = "walk"
+
+        # ★ 新逻辑：高探索倾向时，第一个空间跳转采用 teleported-to-space
+        if exp_score >= 0.5 and i == 0:
+            verb_id = VERBS["teleported_to_space"]
+            display = {"en": "teleported to"}
+            ctx_nav["extensions"]["https://legend-meta.com/xapi/ext/navigation-mode"] = "teleport"
+        else:
+            verb_id = VERBS["navigated_to_space"]
+            display = {"en": "navigated to"}
+            ctx_nav["extensions"]["https://legend-meta.com/xapi/ext/navigation-mode"] = "walk"
+
         events.append({
             "actor": actor,
-            "verb": {"id": VERBS["navigated_to_space"], "display": {"en": "navigated to"}},
+            "verb": {"id": verb_id, "display": display},
             "object": activity,
             "context": ctx_nav,
             "timestamp": end_time.isoformat(),
             "result": {}
         })
 
+    # focused_on_resource
     n_focus = 3
     parts_focus = split_duration(focus, n_focus)
     cursor_time = base_time - timedelta(seconds=int(total))
@@ -802,6 +801,7 @@ def generate_xapi_for_vr_ar(row, unit, course_uid, persona_course, unit_type):
             }
         })
 
+    # completed
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["completed"], "display": {"en": "completed"}},
@@ -834,6 +834,7 @@ def generate_xapi_for_interact(row, unit, course_uid, persona_course):
 
     events = []
 
+    # experienced
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["experienced"], "display": {"en": "experienced"}},
@@ -842,6 +843,7 @@ def generate_xapi_for_interact(row, unit, course_uid, persona_course):
         "timestamp": (base_time - timedelta(seconds=int(total) + 20)).isoformat(),
         "result": {}
     })
+    # initialized
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["initialized"], "display": {"en": "initialized"}},
@@ -929,6 +931,7 @@ def generate_xapi_for_cooperate(row, unit, course_uid, persona_course):
 
     events = []
 
+    # experienced
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["experienced"], "display": {"en": "experienced"}},
@@ -937,6 +940,7 @@ def generate_xapi_for_cooperate(row, unit, course_uid, persona_course):
         "timestamp": (base_time - timedelta(seconds=int(total) + 20)).isoformat(),
         "result": {}
     })
+    # initialized
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["initialized"], "display": {"en": "initialized"}},
@@ -948,18 +952,41 @@ def generate_xapi_for_cooperate(row, unit, course_uid, persona_course):
 
     coll_score = persona_course.get("collaboration", {}).get("score", 0.5)
 
+    # collaborated_on_activity
     ctx_collab = make_context(course_uid, "cooperate")
+    collab_time = base_time - timedelta(seconds=int(total) // 2)
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["collaborated_on_activity"], "display": {"en": "collaborated on"}},
         "object": activity,
         "context": ctx_collab,
-        "timestamp": (base_time - timedelta(seconds=int(total) // 2)).isoformat(),
+        "timestamp": collab_time.isoformat(),
         "result": {
             "duration": f"PT{int(effective)}S"
         }
     })
 
+    # ★ 新逻辑：高协作 / 社会学习 / 贡献倾向时，补 co-edited-artifact
+    co_edit_score = max(
+        coll_score,
+        persona_course.get("social_learning", {}).get("score", 0.5),
+        persona_course.get("value_contribution", {}).get("score", 0.5),
+    )
+    if co_edit_score >= 0.5:
+        ctx_edit = make_context(course_uid, "cooperate")
+        ctx_edit["extensions"]["https://legend-meta.com/xapi/ext/artifact-id"] = "shared-artifact-1"
+        ctx_edit["extensions"]["https://legend-meta.com/xapi/ext/artifact-type"] = "co-edited-document"
+        events.append({
+            "actor": actor,
+            "verb": {"id": VERBS["co_edited_artifact"], "display": {"en": "co-edited artifact"}},
+            "object": activity,
+            "context": ctx_edit,
+            # 共同编辑通常发生在协作过程稍后
+            "timestamp": (collab_time + timedelta(seconds=10)).isoformat(),
+            "result": {}
+        })
+
+    # remained_idle
     idle = total - effective
     if idle > 10 and coll_score < 0.6:
         ctx_idle = make_context(course_uid, "cooperate")
@@ -975,6 +1002,7 @@ def generate_xapi_for_cooperate(row, unit, course_uid, persona_course):
             }
         })
 
+    # completed
     events.append({
         "actor": actor,
         "verb": {"id": VERBS["completed"], "display": {"en": "completed"}},
@@ -1004,6 +1032,7 @@ def generate_xapi_for_question(row, course_uid, persona_course):
 
     events = []
 
+    # 首次尝试前的 experienced & initialized（只在 attempt_index==1）
     if attempt_index == 1:
         events.append({
             "actor": actor,
@@ -1022,6 +1051,7 @@ def generate_xapi_for_question(row, course_uid, persona_course):
             "result": {}
         })
 
+    # answered
     response_str = "correct" if is_correct else "incorrect"
     events.append({
         "actor": actor,
@@ -1035,6 +1065,38 @@ def generate_xapi_for_question(row, course_uid, persona_course):
         }
     })
 
+    # ★ 新逻辑：根据答题结果，补 passed / failed
+    perseverance_score = persona_course.get("perseverance", {}).get("score", 0.5)
+    assess_ctx = make_context(course_uid)
+    assess_ctx["extensions"]["https://legend-meta.com/xapi/ext/attempt-index"] = attempt_index
+    assess_ctx["extensions"]["https://legend-meta.com/xapi/ext/perseverance-score"] = perseverance_score
+
+    if is_correct:
+        events.append({
+            "actor": actor,
+            "verb": {"id": VERBS["passed"], "display": {"en": "passed"}},
+            "object": activity,
+            "context": assess_ctx,
+            "timestamp": (base_time + timedelta(seconds=2)).isoformat(),
+            "result": {
+                "success": True,
+                "score": {"scaled": 1.0}
+            }
+        })
+    else:
+        events.append({
+            "actor": actor,
+            "verb": {"id": VERBS["failed"], "display": {"en": "failed"}},
+            "object": activity,
+            "context": assess_ctx,
+            "timestamp": (base_time + timedelta(seconds=2)).isoformat(),
+            "result": {
+                "success": False,
+                "score": {"scaled": 0.0}
+            }
+        })
+
+    # 请求帮助 + 查看反馈（原有逻辑）
     perseverance_score = persona_course.get("perseverance", {}).get("score", 0.5)
     feedback_score = persona_course.get("feedback_orientation", {}).get("score", 0.5)
     if not is_correct and (perseverance_score + feedback_score) / 2.0 >= 0.5:
@@ -1164,10 +1226,8 @@ def generate_persona_driven_extra_events(
     if ref_score >= 0.4:
         ctx_ref = make_context(course_uid)
         ctx_ref["extensions"]["https://legend-meta.com/xapi/ext/reflection-format"] = "text"
-
         base_words = 20 + int(ref_score * 30)
         text = " ".join(["reflection"] * base_words)
-
         events.append({
             "actor": actor,
             "verb": {"id": VERBS["reflected_on_activity"], "display": {"en": "reflected on"}},
@@ -1201,6 +1261,15 @@ def main():
     question_to_course = data["question_to_course"]
     interactions = data["interactions"]
 
+    # 计算已有粗粒度交互主键的最大值，用于为课程级虚拟会话分配不冲突的会话ID
+    existing_ids = [
+        row.get(INTERACTION_PK_FIELD)
+        for row in interactions
+        if row.get(INTERACTION_PK_FIELD) is not None
+    ]
+    max_session_id = max(existing_ids) if existing_ids else 0
+    next_persona_session_id = max_session_id + 1
+
     print("根据粗粒度行为构建统计数据...")
     stats_per_learner_course, interactions_by_learner, learner_course_units = build_stats_from_interactions(
         interactions, units_by_uid, question_to_course, unit_to_course
@@ -1215,38 +1284,53 @@ def main():
     mongo_db.drop_collection(MONGO_CONFIG["profile_collection"])
     mongo_db.drop_collection(MONGO_CONFIG["xapi_collection"])
 
-        # ================== 新建集合并建立索引 ==================
+    # ================== 新建集合并建立索引 ==================
     print("创建 LearnerProfile 和 Interaction 集合，并建立索引...")
 
-    # 使用集合句柄（若集合不存在，第一次使用时会自动创建）
     profile_col = mongo_db[MONGO_CONFIG["profile_collection"]]
     xapi_col = mongo_db[MONGO_CONFIG["xapi_collection"]]
 
-    # ---- LearnerProfile 集合索引 ----
-    # 1) 按 learner_uid 查询/对比人设时会频繁使用
-    #    unique=True 确保一个学习者只有一条人设文档
+    # LearnerProfile 索引
     profile_col.create_index(
-        [("learner_uid", 1)],
+        [("learner_uid", ASCENDING)],
         name="idx_learner_uid",
-        unique=True
+        unique=True,
     )
 
-    # ---- Interaction 集合索引 ----
-    # 画像分析脚本的典型查询模式：
-    #   { "_lrn_uid": { $in: [...] },
-    #     "verb.id": { $in: [若干动词] } }
-    # 然后按 _course_uid 在内存中做聚合统计。
-    #
-    # 因此建立一个三字段联合索引：
-    #   _lrn_uid -> verb.id -> _course_uid
-    # 可以同时支持：
-    #   - 按学习者 + 动词进行过滤（索引前两段）
-    #   - 拿到课程信息用于后续分组（第三段不参与过滤，也不影响使用）
-    #
-    # 注意：索引在集合还为空时创建，成本很小，之后插入数据时会自动维护这个索引。
+    # Interaction 索引（整合 rebuild 中的 3 个 + 会话相关 2 个）
+    print("[index] create idx_lrn_verb_course")
     xapi_col.create_index(
-        [("_lrn_uid", 1), ("verb.id", 1), ("_course_uid", 1)],
-        name="idx_lrn_verb_course"
+        [("_lrn_uid", ASCENDING), ("verb.id", ASCENDING), ("_course_uid", ASCENDING)],
+        name="idx_lrn_verb_course",
+        background=False,
+    )
+
+    print("[index] create idx_course_verb_lrn")
+    xapi_col.create_index(
+        [("_course_uid", ASCENDING), ("verb.id", ASCENDING), ("_lrn_uid", ASCENDING)],
+        name="idx_course_verb_lrn",
+        background=False,
+    )
+
+    print("[index] create idx_course_lrn")
+    xapi_col.create_index(
+        [("_course_uid", ASCENDING), ("_lrn_uid", ASCENDING)],
+        name="idx_course_lrn",
+        background=False,
+    )
+
+    print("[index] create idx_lrn_session_time")
+    xapi_col.create_index(
+        [("_lrn_uid", ASCENDING), ("_session_id", ASCENDING), ("timestamp", ASCENDING)],
+        name="idx_lrn_session_time",
+        background=False,
+    )
+
+    print("[index] create idx_session_id")
+    xapi_col.create_index(
+        [("_session_id", ASCENDING)],
+        name="idx_session_id",
+        background=False,
     )
 
     print("集合与索引创建完成。继续生成细粒度行为数据...")
@@ -1254,12 +1338,10 @@ def main():
     learner_profiles_docs = []
     xapi_docs = []
 
-    # 统计每个学习者的粗粒度交互数量，决定补救/舍弃策略
     interactions_count_per_learner = {
         lrn_uid: len(rows) for lrn_uid, rows in interactions_by_learner.items()
     }
 
-    # 硬舍弃（数据太大）
     hard_discard_learners = {
         lrn_uid for lrn_uid, cnt in interactions_count_per_learner.items()
         if cnt > MAX_INTERACTIONS_HARD
@@ -1271,17 +1353,15 @@ def main():
     print("开始为每个学习者生成画像和细粒度 xAPI 行为...")
 
     for lrn_uid in tqdm(all_learners):
-        # ------ 情况 1：数据问题太大，直接舍弃 ------
         if lrn_uid in hard_discard_learners:
-            # 完全跳过，不生成画像也不生成 xAPI
             continue
 
         rng = get_rng_for_learner(lrn_uid)
 
-        # 构建该学习者的课程窗口人设
         course_profiles = []
         persona_by_course = {}
 
+        # 构建课程级 persona
         for (key_lrn, crs_uid), stats in stats_per_learner_course.items():
             if key_lrn != lrn_uid:
                 continue
@@ -1304,29 +1384,23 @@ def main():
         }
         learner_profiles_docs.append(learner_doc)
 
-        # 批量写入画像，避免堆积
         if len(learner_profiles_docs) >= PROFILE_BATCH_SIZE:
             profile_col.insert_many(learner_profiles_docs)
             learner_profiles_docs = []
 
-        # 细粒度行为生成
         learner_interactions_full = sorted(
             interactions_by_learner[lrn_uid],
             key=lambda r: r["create_time"] or datetime.utcnow()
         )
 
         total_cnt = len(learner_interactions_full)
-
-        # ------ 情况 2：数据量比较大但还有补救余地 -> 抽样 ------
         if total_cnt > MAX_INTERACTIONS_SOFT:
-            # 简单的等间隔抽样
             step = max(total_cnt // MAX_INTERACTIONS_SOFT, 1)
             learner_interactions = learner_interactions_full[::step]
         else:
             learner_interactions = learner_interactions_full
 
-        courses_touched = set()
-
+        # 生成单元/题目级会话
         for row in learner_interactions:
             unt_uid = row["unt_uid"]
             is_unit = unt_uid in units_by_uid
@@ -1343,7 +1417,6 @@ def main():
             if not crs_uid:
                 continue
 
-            courses_touched.add(crs_uid)
             persona_course = persona_by_course.get(crs_uid)
             if not persona_course:
                 stats_dummy = {
@@ -1384,23 +1457,29 @@ def main():
             else:
                 events = generate_xapi_for_question(row, crs_uid, persona_course)
 
+            session_id = row.get(INTERACTION_PK_FIELD)
+
             for ev in events:
+                ev["_session_id"] = session_id
                 ev["_lrn_uid"] = lrn_uid
                 ev["_unt_uid"] = unt_uid
                 ev["_course_uid"] = crs_uid
                 ev["_type"] = utype
                 xapi_docs.append(ev)
 
-                # 批量写入 xAPI，避免堆积到最后
                 if len(xapi_docs) >= XAPI_BATCH_SIZE:
                     xapi_col.insert_many(xapi_docs)
                     xapi_docs = []
 
-        # 人设驱动补充行为
+        # 课程级 persona 补充会话
         for crs_uid, persona_course in persona_by_course.items():
             course = courses_by_uid.get(crs_uid, {})
             course_name = course.get("name", crs_uid)
             unit_uids = learner_course_units.get((lrn_uid, crs_uid), set())
+
+            persona_session_id = next_persona_session_id
+            next_persona_session_id += 1
+
             extra_events = generate_persona_driven_extra_events(
                 lrn_uid,
                 crs_uid,
@@ -1409,6 +1488,7 @@ def main():
                 unit_uids
             )
             for ev in extra_events:
+                ev["_session_id"] = persona_session_id
                 ev["_lrn_uid"] = lrn_uid
                 ev["_unt_uid"] = None
                 ev["_course_uid"] = crs_uid
@@ -1418,7 +1498,6 @@ def main():
                     xapi_col.insert_many(xapi_docs)
                     xapi_docs = []
 
-    # 写入剩余的画像和 xAPI
     if learner_profiles_docs:
         profile_col.insert_many(learner_profiles_docs)
     if xapi_docs:

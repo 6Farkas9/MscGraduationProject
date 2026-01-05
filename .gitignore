@@ -2,5 +2,6 @@ BackEnd/.vs/
 BackEnd/libs/
 BackEnd/build/
 *.pyc
-FrontEnd
+FrontEnd/
 BackEnd_opt/
+*.csv
