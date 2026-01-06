@@ -1,0 +1,44 @@
+<div class="flex items-start justify-between gap-3">
+  <div>
+    <div class="text-xs text-slate-500">新增结果</div>
+    <div class="text-lg font-semibold">{{ title }}</div>
+    <div class="text-xs text-slate-500 mt-1">资源编号：<span class="font-mono">{{ rid }}</span> · 时间：{{ created_at }}</div>
+  </div>
+  <span class="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs">已生成</span>
+</div>
+
+<div class="mt-4 rounded-xl border border-slate-200 p-4 bg-slate-50">
+  <div class="text-sm font-semibold">结构化标签</div>
+  <div class="mt-2 flex flex-wrap gap-2">
+    <span class="chip"><span>类型：{{ resource_type }}</span></span>
+    <span class="chip"><span>难度：{{ difficulty_level }}</span></span>
+    <span class="chip"><span>用时：{{ time_estimate }} 分钟</span></span>
+    <span class="chip"><span>教学功能：{{ pedagogical_function }}</span></span>
+    <span class="chip"><span>交互：{{ interaction_level }}</span></span>
+    <span class="chip"><span>协作：{{ collaboration_mode }}</span></span>
+  </div>
+</div>
+
+<div class="mt-4 rounded-xl border border-slate-200 p-4">
+  <div class="text-sm font-semibold">关联知识点（{{ concepts|length }}）</div>
+  <div class="mt-2 flex flex-wrap gap-2">
+    {% for c in concepts %}
+      <span class="chip"><span>{{ c.name }}</span></span>
+    {% endfor %}
+    {% if concepts|length == 0 %}
+      <div class="text-sm text-slate-500">未关联知识点</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="mt-4 rounded-xl border border-slate-200 p-4">
+  <div class="text-sm font-semibold">自定义标签（{{ tags|length }}）</div>
+  <div class="mt-2 flex flex-wrap gap-2">
+    {% for t in tags %}
+      <span class="chip"><span>{{ t }}</span></span>
+    {% endfor %}
+    {% if tags|length == 0 %}
+      <div class="text-sm text-slate-500">未添加自定义标签</div>
+    {% endif %}
+  </div>
+</div>

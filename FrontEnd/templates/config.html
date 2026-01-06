@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>服务调节状态分析</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+
+  <style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: block; }
+    .row-selected { background: rgb(241 245 249); }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">服务调节状态分析</h1>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <form method="post" action="/api/config/run"
+            class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+            hx-post="/api/config/run"
+            hx-target="#result"
+            hx-swap="innerHTML"
+            hx-indicator="#loading">
+        <div class="md:col-span-6">
+          <input id="learner_uid" name="learner_uid" type="hidden"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                 placeholder="例如：lrn_..."
+                 required />
+        </div>
+
+        <div class="md:col-span-4">
+          <label class="block text-sm font-medium text-slate-700">运行设备（可选）</label>
+          <input id="device" name="device"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                 placeholder="留空=默认；例如 cpu / cuda" />
+        </div>
+
+        <div class="md:col-span-2">
+          <input type="hidden" name="run_mode" id="run_mode_hidden" value="demo"/>
+<button type="submit"
+                  class="w-full rounded-lg bg-slate-900 text-white px-4 py-2 hover:bg-slate-800">
+            开始分析
+          </button>
+        </div>
+      </form>
+
+      <div id="loading" class="htmx-indicator mt-3 text-sm text-slate-500">
+        正在分析中（该过程可能需要较长时间，请勿关闭页面）…
+      </div>
+    </div>
+
+    <div id="result" class="mt-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-slate-600">
+        请点击 <span class="font-medium text-slate-900">开始分析</span>。
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  function renderAllCharts(root){
+    const nodes = (root || document).querySelectorAll("[data-metric-series]");
+    nodes.forEach(el => {
+      const series = JSON.parse(el.getAttribute("data-metric-series") || "[]");
+      const yTitle = el.getAttribute("data-y-title") || "";
+      const x = series.map(p => p.idx);
+      const y = series.map(p => p.value);
+      const hover = series.map(p => p.hover);
+
+      const trace = {x, y, type: "bar", hovertext: hover, hovertemplate: "课程UID=%{hovertext}<br>值=%{y}<extra></extra>"};
+      const layout = {
+        margin: {l: 45, r: 10, t: 10, b: 40},
+        xaxis: {title: "课程序号"},
+        yaxis: {title: yTitle},
+        height: 320
+      };
+      Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});
+    });
+  }
+
+  document.body.addEventListener("htmx:afterSwap", function(evt){
+    renderAllCharts(evt.target);
+  });
+
+  renderAllCharts(document);
+})();
+</script>
+
+<script>
+(function(){
+  const uid = localStorage.getItem("learner_uid");
+  if (!uid){
+    // If opened directly, force login
+    window.location.href = "/ui/login";
+    return;
+  }
+  const inp = document.getElementById("learner_uid_input") || document.querySelector('input[name="learner_uid"]');
+  if (inp){ inp.value = uid; }
+})();
+</script>
+
+
+<style>
+  .demoToggleBox {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+    z-index: 9999;
+  }
+  .demoToggleBox:hover {
+    opacity: 1;
+  }
+  .demoToggleInner {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 14px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    backdrop-filter: blur(8px);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    color: rgb(51 65 85);
+  }
+</style>
+
+<div class="demoToggleBox" title="悬停显示：切换演示/真实模式">
+  <div class="demoToggleInner">
+    <span>模式</span>
+    <label class="flex items-center gap-2 cursor-pointer select-none">
+      <input id="demoToggle" type="checkbox" class="rounded" />
+      <span id="demoToggleLabel">演示模式</span>
+    </label>
+  </div>
+</div>
+
+<script>
+(function(){
+  function getModeEl(){
+    return document.querySelector('[name="run_mode"]') || document.getElementById("run_mode_hidden");
+  }
+  const modeEl = getModeEl();
+  const cb = document.getElementById("demoToggle");
+  const label = document.getElementById("demoToggleLabel");
+  if (!modeEl || !cb || !label) return;
+
+  // Default: demo (checkbox checked means demo)
+  cb.checked = (modeEl.value || "demo") === "demo";
+  label.textContent = cb.checked ? "演示模式" : "真实模式";
+
+  cb.addEventListener("change", function(){
+    modeEl.value = cb.checked ? "demo" : "real";
+    label.textContent = cb.checked ? "演示模式" : "真实模式";
+  });
+})();
+</script>
+
+</body>
+</html>

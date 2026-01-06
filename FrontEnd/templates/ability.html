@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>能力状态分析</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">能力状态分析</h1>
+        <p class="text-sm text-slate-600 mt-1">
+          展示学习者对各知识点的预测正确率（KT mastery）及最近变化趋势。
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <form class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+            hx-post="/api/ability/run"
+            hx-target="#result"
+            hx-swap="innerHTML">
+        <div class="md:col-span-5">
+          <label class="hidden">学习者 UID</label>
+          <input name="learner_uid" type="hidden" id="learner_uid_input"  id="learner_uid_input"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                 placeholder="例如：717c8ae0-63af-4b4d-a337-5f610f973190"
+                 required />
+        </div>
+
+        <div class="md:col-span-3">
+          <label class="block text-sm font-medium text-slate-700">模式</label>
+          <select name="mode" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+            <option value="auto" selected>自动判断</option>
+            <option value="existing">老学习者</option>
+            <option value="new">新学习者</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-2">
+          <button type="submit"
+                  class="w-full rounded-lg bg-slate-900 text-white px-4 py-2 hover:bg-slate-800">
+            开始分析
+          </button>
+        </div>
+
+        <div class="md:col-span-2">
+          <button type="button"
+                  class="w-full rounded-lg border border-slate-300 px-4 py-2 hover:bg-slate-100"
+                  onclick="document.querySelector('input[name=learner_uid]').value='';">
+            清空
+          </button>
+        </div>
+      </form>
+
+    </div>
+
+    <div id="result" class="mt-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-slate-600">
+        请点击 <span class="font-medium text-slate-900">开始分析</span>。
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const uid = localStorage.getItem("learner_uid");
+  if (!uid){
+    // If opened directly, force login
+    window.location.href = "/ui/login";
+    return;
+  }
+  const inp = document.getElementById("learner_uid_input") || document.querySelector('input[name="learner_uid"]');
+  if (inp){ inp.value = uid; }
+})();
+</script>
+
+</body>
+</html>

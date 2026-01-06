@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>资源服务</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: block; }
+    .markdown h3 { font-size: 1.05rem; font-weight: 600; margin-top: 0.75rem; }
+    .markdown ul { list-style: disc; padding-left: 1.25rem; }
+    .markdown ol { list-style: decimal; padding-left: 1.25rem; }
+    .markdown li { margin-top: 0.25rem; }
+    .markdown p { margin-top: 0.4rem; }
+    .markdown strong { font-weight: 600; }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">资源服务</h1>
+        <p class="text-sm text-slate-600 mt-1">
+          以“三段式”方式展示：原因与建议 → 匹配资源 → 学习路径。
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <form class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+            hx-post="/api/resource/run"
+            hx-target="#result"
+            hx-swap="innerHTML"
+            hx-indicator="#loading">
+
+        <div class="md:col-span-4">
+          <button type="button"
+                class="rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-100 text-xs"
+                onclick="fetch('/api/resource/ping').then(r=>r.json()).then(console.log);">
+            测试连接（控制台查看）
+          </button>
+        </div>
+
+        <div class="md:col-span-6">
+          <input name="learner_uid" type="hidden" id="learner_uid_input"  id="learner_uid_input"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                 placeholder="例如：learner_001"
+                 required />
+        </div>
+
+        <div class="md:col-span-2">
+          <button type="submit" class="w-full rounded-lg bg-slate-900 text-white px-4 py-2 hover:bg-slate-800">
+            生成服务结果
+          </button>
+        </div>
+      </form>
+
+      <div id="loading" class="htmx-indicator mt-3 text-sm text-slate-500">
+        正在生成中（可能需要一定时间）…
+      </div>
+    </div>
+
+    <div id="result" class="mt-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-slate-600">
+        请输入学习者 UID，然后点击 <span class="font-medium text-slate-900">生成服务结果</span>。
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  function renderCharts(root){
+    const el = (root || document).querySelector("[data-resource-series]");
+    if(!el) return;
+    const series = JSON.parse(el.getAttribute("data-resource-series") || "[]");
+    const x = series.map(p => p.idx);
+    const y = series.map(p => p.score);
+    const t = series.map(p => p.time);
+
+    const trace = {x, y, type:"bar", name:"匹配得分"};
+    const layout = {margin:{l:50,r:10,t:10,b:40}, xaxis:{title:"资源序号"}, yaxis:{title:"匹配得分(0-1)"}, height:260};
+    Plotly.newPlot(el, [trace], layout, {displayModeBar:false, responsive:true});
+
+    const el2 = (root || document).querySelector("[data-resource-time]");
+    if(el2){
+      const trace2 = {x, y:t, type:"bar", name:"预计用时(分钟)"};
+      const layout2 = {margin:{l:50,r:10,t:10,b:40}, xaxis:{title:"资源序号"}, yaxis:{title:"预计用时(分钟)"}, height:260};
+      Plotly.newPlot(el2, [trace2], layout2, {displayModeBar:false, responsive:true});
+    }
+  }
+
+  function renderMarkdown(root){
+    const mdEl = (root || document).querySelector("[data-learning-path-md]");
+    if(!mdEl) return;
+    const raw = mdEl.getAttribute("data-learning-path-md") || "";
+    mdEl.innerHTML = marked.parse(raw);
+  }
+
+  document.body.addEventListener("htmx:afterSwap", function(evt){
+    renderCharts(evt.target);
+    renderMarkdown(evt.target);
+  });
+})();
+</script>
+
+<script>
+(function(){
+  const uid = localStorage.getItem("learner_uid");
+  if (!uid){
+    // If opened directly, force login
+    window.location.href = "/ui/login";
+    return;
+  }
+  const inp = document.getElementById("learner_uid_input") || document.querySelector('input[name="learner_uid"]');
+  if (inp){ inp.value = uid; }
+})();
+</script>
+
+
+<style>
+  .demoToggleBox {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+    z-index: 9999;
+  }
+  .demoToggleBox:hover {
+    opacity: 1;
+  }
+  .demoToggleInner {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 14px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    backdrop-filter: blur(8px);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    color: rgb(51 65 85);
+  }
+</style>
+
+<div class="demoToggleBox" title="悬停显示：切换演示/真实模式">
+  <div class="demoToggleInner">
+    <span>模式</span>
+    <label class="flex items-center gap-2 cursor-pointer select-none">
+      <input id="demoToggle" type="checkbox" class="rounded" />
+      <span id="demoToggleLabel">演示模式</span>
+    </label>
+  </div>
+</div>
+
+<script>
+(function(){
+  function getModeEl(){
+    return document.querySelector('[name="run_mode"]') || document.getElementById("run_mode_hidden");
+  }
+  const modeEl = getModeEl();
+  const cb = document.getElementById("demoToggle");
+  const label = document.getElementById("demoToggleLabel");
+  if (!modeEl || !cb || !label) return;
+
+  // Default: demo (checkbox checked means demo)
+  cb.checked = (modeEl.value || "demo") === "demo";
+  label.textContent = cb.checked ? "演示模式" : "真实模式";
+
+  cb.addEventListener("change", function(){
+    modeEl.value = cb.checked ? "demo" : "real";
+    label.textContent = cb.checked ? "演示模式" : "真实模式";
+  });
+})();
+</script>
+
+</body>
+</html>

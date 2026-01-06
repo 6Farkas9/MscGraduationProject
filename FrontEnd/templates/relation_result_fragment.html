@@ -1,0 +1,64 @@
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-xs text-slate-500">学习者</div>
+      <div class="text-lg font-semibold">{{ learner_name }}</div>
+      <div class="font-mono text-xs text-slate-500">{{ learner_uid }}</div>
+    </div>
+    <div class="text-xs text-slate-500">
+      用时：{{ elapsed_sec }}s · 候选：{{ n_candidates }}
+    </div>
+  </div>
+
+  <div class="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="rounded-xl border border-slate-200 p-4 bg-slate-50">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold">一起学的伙伴</h2>
+        <span class="text-xs text-slate-500">{{ partners|length }} 人</span>
+      </div>
+
+      <div class="mt-3 space-y-3">
+        {% for p in partners %}
+        <div class="rounded-xl bg-white border border-slate-200 p-4">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="font-semibold">{{ p["name"] }}</div>
+              <div class="font-mono text-xs text-slate-500">{{ p["uid"] }}</div>
+            </div>
+            <span class="rounded-full bg-emerald-100 text-emerald-700 px-3 py-1 text-xs">伙伴</span>
+          </div>
+          <div class="mt-2 text-sm text-slate-700 leading-relaxed">{{ p["reason"] }}</div>
+        </div>
+        {% endfor %}
+        {% if partners|length == 0 %}
+        <div class="text-sm text-slate-500">暂无推荐结果（可尝试增大候选人数）。</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-slate-200 p-4 bg-slate-50">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold">可跟随学习的榜样</h2>
+        <span class="text-xs text-slate-500">{{ role_models|length }} 人</span>
+      </div>
+
+      <div class="mt-3 space-y-3">
+        {% for r in role_models %}
+        <div class="rounded-xl bg-white border border-slate-200 p-4">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="font-semibold">{{ r["name"] }}</div>
+              <div class="font-mono text-xs text-slate-500">{{ r["uid"] }}</div>
+            </div>
+            <span class="rounded-full bg-indigo-100 text-indigo-700 px-3 py-1 text-xs">榜样</span>
+          </div>
+          <div class="mt-2 text-sm text-slate-700 leading-relaxed">{{ r["reason"] }}</div>
+        </div>
+        {% endfor %}
+        {% if role_models|length == 0 %}
+        <div class="text-sm text-slate-500">暂无推荐结果（可尝试增大候选人数）。</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

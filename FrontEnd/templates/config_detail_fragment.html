@@ -1,0 +1,112 @@
+{% if detail["insufficient"] %}
+  <div class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+    <div class="font-medium">该维度数据不足</div>
+    <div class="mt-1">原因：{{ detail.get("reason") }}</div>
+  </div>
+{% else %}
+  <div class="flex flex-col gap-3">
+    <div class="rounded-lg border border-slate-200 bg-white p-3">
+      <div class="flex flex-col gap-2">
+        <div class="text-xs text-slate-500">当前查看</div>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="rounded-lg border border-slate-200 px-3 py-2 bg-slate-50">
+            <div class="text-xs text-slate-500">维度</div>
+            <div class="font-mono font-medium text-slate-900">{{ detail["dimension"] }}</div>
+          </div>
+          <div class="rounded-lg border border-slate-200 px-3 py-2 bg-slate-50">
+            <div class="text-xs text-slate-500">子维度</div>
+            <div class="font-mono font-medium text-slate-900">{{ detail["category"] }}</div>
+          </div>
+          <div class="rounded-lg border border-slate-200 px-3 py-2 bg-slate-50">
+            <div class="text-xs text-slate-500">涉及课程数</div>
+            <div class="font-medium text-slate-900">{{ detail["course_count"] }}</div>
+          </div>
+          {% if detail["final_code"] is not none %}
+          <div class="rounded-lg border border-slate-200 px-3 py-2 bg-slate-50">
+            <div class="text-xs text-slate-500">最终 code</div>
+            <div class="font-medium text-slate-900">{{ detail["final_code"] }}</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="mt-2">
+          <div class="text-xs text-slate-500">调节方向</div>
+          <div class="mt-1 rounded-lg border border-slate-200 bg-white px-3 py-2 leading-relaxed whitespace-normal break-words">
+            {% if detail["label_text"] %}{{ detail["label_text"] }}{% else %}<span class="text-slate-500">（暂无/未定义）</span>{% endif %}
+          </div>
+        </div>
+
+        {% if detail["code_chips"] and detail["code_chips"]|length > 0 %}
+          <div class="mt-2">
+            <div class="text-xs text-slate-500">各课程 code 分布</div>
+            <div class="mt-1 flex flex-wrap gap-2">
+              {% for chip in detail["code_chips"] %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-50 border border-slate-200 px-3 py-1 text-sm">
+                  <span class="font-medium text-slate-900">code {{ chip["code"] }}</span>
+                  <span class="text-xs text-slate-500">×{{ chip["count"] }}</span>
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if detail["overall_metrics"] and detail["overall_metrics"]|length > 0 %}
+      <div class="mt-4">
+        <div class="text-sm font-medium text-slate-700">整体数值指标（跨课程汇总）</div>
+        <div class="mt-2 grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+          {% for k, v in detail["overall_metrics"].items() %}
+            <div class="rounded-lg bg-slate-50 p-2 border border-slate-200">
+              <div class="text-slate-500 text-xs">{{ k }}</div>
+              <div class="font-medium">{{ "%.4f"|format(v) if v is number else v }}</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="rounded-lg border border-slate-200 bg-white p-3">
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-medium text-slate-700">课程明细</div>
+        <div class="text-xs text-slate-500">共 {{ detail["rows"]|length }} 行</div>
+      </div>
+
+      {% if detail["primary_metric"] and detail["series"] and detail["series"]|length > 0 %}
+      <div class="mt-3">
+        <div class="text-xs text-slate-500">柱状图：按课程序号展示 {{ detail["primary_metric"] }}（悬停可查看课程UID）</div>
+        <div class="mt-2"
+             data-metric-series='{{ detail["series"] | tojson }}'
+             data-y-title='{{ detail["primary_metric"] }}'></div>
+      </div>
+      {% endif %}
+
+      <div class="mt-3 overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="text-left text-slate-500 border-b border-slate-200">
+              <th class="py-2 pr-4 w-16">序号</th>
+              <th class="py-2 pr-4">课程 UID</th>
+              <th class="py-2 pr-4 w-20">code</th>
+              {% for k in detail["metric_keys"] %}
+                <th class="py-2 pr-4">{{ k }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in detail["rows"] %}
+              <tr class="border-b border-slate-100 hover:bg-slate-50">
+                <td class="py-2 pr-4 text-slate-700">{{ r["idx"] }}</td>
+                <td class="py-2 pr-4 font-mono text-slate-900">{{ r["course_uid"] }}</td>
+                <td class="py-2 pr-4">{{ r["code"] }}</td>
+                {% for k in detail["metric_keys"] %}
+                  <td class="py-2 pr-4">{{ r.get(k) }}</td>
+                {% endfor %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+{% endif %}

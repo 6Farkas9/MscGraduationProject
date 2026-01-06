@@ -1,0 +1,134 @@
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
+
+  <div class="xl:col-span-12 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-xs text-slate-500">学习者</div>
+        <div class="font-mono font-medium">{{ learner_uid }}</div>
+      </div>
+      <div class="text-xs text-slate-500">用时：{{ elapsed_sec }}s · 模式：{{ "演示" if run_mode=="demo" else "真实" }}</div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div class="rounded-xl border border-slate-200 p-4 bg-slate-50">
+        <div class="text-sm font-semibold">① 资源建议</div>
+        <div class="mt-2 text-sm text-slate-700 leading-relaxed">
+          {{ narrative["reason_text"] }}
+        </div>
+
+        {% if narrative["weak_concepts"] and narrative["weak_concepts"]|length>0 %}
+        <div class="mt-3">
+          <div class="text-xs text-slate-500">优先关注知识点</div>
+          <div class="mt-1 flex flex-wrap gap-2">
+            {% for c in narrative["weak_concepts"] %}
+              <span class="rounded-full bg-white border border-slate-200 px-3 py-1 text-sm">{{ c }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="rounded-xl border border-slate-200 p-4 bg-white">
+        <div class="text-sm font-semibold">资源规划建议</div>
+        <div class="mt-2 text-sm text-slate-700 leading-relaxed">
+          {{ narrative["suggest_text"] }}
+        </div>
+
+        {% if narrative["constraints_phrases"] and narrative["constraints_phrases"]|length>0 %}
+        <div class="mt-3">
+          <div class="text-xs text-slate-500">匹配偏好</div>
+          <div class="mt-1 flex flex-wrap gap-2">
+            {% for p in narrative["constraints_phrases"] %}
+              <span class="rounded-full bg-slate-50 border border-slate-200 px-3 py-1 text-sm">{{ p }}</span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="rounded-xl border border-slate-200 p-4 bg-white">
+        <div class="text-sm font-semibold">匹配概览</div>
+        <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
+          <div class="rounded-lg bg-slate-50 border border-slate-200 p-2">
+            <div class="text-xs text-slate-500">候选数</div>
+            <div class="font-semibold">{{ resources["candidate_count"] }}</div>
+          </div>
+          <div class="rounded-lg bg-slate-50 border border-slate-200 p-2">
+            <div class="text-xs text-slate-500">放宽层级</div>
+            <div class="font-semibold">{{ resources["used_relaxation_level"] }}</div>
+          </div>
+          <div class="rounded-lg bg-slate-50 border border-slate-200 p-2">
+            <div class="text-xs text-slate-500">展示数量</div>
+            <div class="font-semibold">{{ resources["cards"]|length }}</div>
+          </div>
+        </div>
+
+        <div class="mt-3 text-xs text-slate-500">
+          注：放宽层级来自“渐进放宽匹配”策略，层级越小约束越严格。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="xl:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold">② 向你推荐最符合你当前需要的资源</h2>
+      <div class="text-xs text-slate-500">按匹配得分排序</div>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+      {% for r in resources["cards"] %}
+      <div class="rounded-xl border border-slate-200 p-4 hover:bg-slate-50">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <div class="text-xs text-slate-500">资源 #{{ r["idx"] }}</div>
+            <div class="font-mono font-medium text-slate-900">{{ r["uid"] }}</div>
+          </div>
+          <span class="rounded-full bg-slate-900 text-white px-3 py-1 text-xs">{{ r["type"] }}</span>
+        </div>
+
+        <div class="mt-3">
+          <div class="flex items-center justify-between text-xs text-slate-500">
+            <span>匹配得分</span><span>{{ "%.3f"|format(r["score"] or 0) }}</span>
+          </div>
+          <div class="mt-1 h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+            <div class="h-2 bg-emerald-500" style="width: {{ ((r['score'] or 0) * 100) | round(0) }}%;"></div>
+          </div>
+        </div>
+
+        <div class="mt-3 flex flex-wrap gap-2 text-sm">
+          {% for c in r["concepts"] %}
+            <span class="rounded-full bg-white border border-slate-200 px-3 py-1">{{ c }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+          <div>难度：<span class="font-medium text-slate-900">{{ r["difficulty_level"] }}</span></div>
+          <div>用时：<span class="font-medium text-slate-900">{{ r["time_estimate"] }} 分钟</span></div>
+          <div>教学功能：<span class="font-medium text-slate-900">{{ r["pedagogical_function"] }}</span></div>
+          <div>交互/协作：<span class="font-medium text-slate-900">{{ r["interaction_level"] }}/{{ r["collaboration_mode"] }}</span></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div class="text-sm font-medium text-slate-700">匹配得分分布</div>
+      <div class="mt-2" data-resource-series='{{ resources["series"] | tojson }}'></div>
+    </div>
+
+    <div class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+      <div class="text-sm font-medium text-slate-700">预计用时分布</div>
+      <div class="mt-2" data-resource-time='{{ resources["series"] | tojson }}'></div>
+    </div>
+  </div>
+
+  <div class="xl:col-span-5 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+    <h2 class="text-lg font-semibold">③ 建议参考下述路径进行学习</h2>
+
+    <div class="mt-3 rounded-lg border border-slate-200 bg-white p-4 markdown"
+         data-learning-path-md="{{ (learning_path_md or '') | e }}">
+    </div>
+  </div>
+
+</div>

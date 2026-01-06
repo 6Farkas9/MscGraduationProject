@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>学习资源管理</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  <style>
+    .htmx-indicator{display:none}
+    .htmx-request .htmx-indicator{display:block}
+    .chip{display:inline-flex;align-items:center;gap:.5rem;border:1px solid #e2e8f0;background:#fff;border-radius:9999px;padding:.25rem .75rem}
+    .chip button{font-size:.8rem;color:#64748b}
+    .dropzone.dragover{border-color:#0f172a;background:#f8fafc}
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">学习资源管理</h1>
+      </div>
+    </div>
+
+    <div class="mt-6 grid grid-cols-1 xl:grid-cols-12 gap-4">
+      <div class="xl:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-semibold">新增学习资源</h2>
+        </div>
+
+        <form id="createForm"
+              class="mt-4 space-y-4"
+              hx-post="/api/manage/create"
+              hx-target="#result"
+              hx-swap="innerHTML"
+              hx-indicator="#loading">
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">资源标题</label>
+            <input name="title" required
+                   class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                   placeholder="例如：虚拟现实中的空间几何入门（10分钟）" />
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-slate-700">资源类型</label>
+              <select name="resource_type" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                <option value="video">视频</option>
+                <option value="vr">VR</option>
+                <option value="ar">AR</option>
+                <option value="doc">文档</option>
+                <option value="interactive">交互练习</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700">难度等级</label>
+              <select name="difficulty_level" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                <option value="easy">入门</option>
+                <option value="medium">基础</option>
+                <option value="hard">进阶</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-slate-700">预计用时（分钟）</label>
+              <input name="time_estimate" type="number" min="1" max="240" value="10"
+                     class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700">教学功能</label>
+              <select name="pedagogical_function" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                <option value="explain">讲解/导学</option>
+                <option value="demo">演示示例</option>
+                <option value="practice">练习巩固</option>
+                <option value="assessment">测评诊断</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-700">交互强度</label>
+              <select name="interaction_level" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+                <option value="low">低</option>
+                <option value="medium">中</option>
+                <option value="high">高</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-700">协作模式</label>
+            <select name="collaboration_mode" class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2">
+              <option value="solo">独立学习</option>
+              <option value="pair">两人协作</option>
+              <option value="group">小组协作</option>
+            </select>
+          </div>
+
+          <!-- Upload (fake) -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700">资源文件</label>
+            <div id="dropzone" class="dropzone mt-1 rounded-xl border-2 border-dashed border-slate-300 p-5 bg-slate-50">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <div class="text-sm font-medium">拖拽文件到此处，或点击选择文件</div>
+                </div>
+                <button type="button" class="rounded-lg bg-slate-900 text-white px-4 py-2 hover:bg-slate-800"
+                        onclick="document.getElementById('fileInput').click();">选择文件</button>
+              </div>
+              <input id="fileInput" type="file" class="hidden" multiple />
+              <div id="fileList" class="mt-3 flex flex-wrap gap-2"></div>
+            </div>
+          </div>
+
+          <!-- Concepts -->
+          <div class="rounded-xl border border-slate-200 p-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-sm font-semibold">关联知识点</div>
+                <div class="text-xs text-slate-500 mt-1">输入关键词搜索知识点名称，点击添加为标签。</div>
+              </div>
+              <div class="text-xs text-slate-500">来自数据库</div>
+            </div>
+
+            <div class="mt-3">
+              <input id="conceptQuery"
+                     class="w-full rounded-lg border border-slate-300 px-3 py-2"
+                     placeholder="输入知识点名称进行搜索…"
+                     hx-get="/api/manage/concepts"
+                     hx-trigger="keyup changed delay:250ms"
+                     hx-target="#conceptSuggest"
+                     hx-swap="innerHTML"
+                     name="q" />
+              <div id="conceptSuggest" class="mt-2"></div>
+            </div>
+
+            <div class="mt-3">
+              <div class="text-xs text-slate-500">已选知识点</div>
+              <div id="conceptChips" class="mt-2 flex flex-wrap gap-2"></div>
+            </div>
+
+            <input type="hidden" name="concept_uids" id="conceptUids" value="" />
+            <input type="hidden" name="concept_names" id="conceptNames" value="" />
+          </div>
+
+          <!-- Extra tags -->
+          <div class="rounded-xl border border-slate-200 p-4">
+            <div class="text-sm font-semibold">自定义标签</div>
+            <div class="text-xs text-slate-500 mt-1">以“逗号分隔”输入，例如：空间几何,VR实验,可视化</div>
+            <input name="extra_tags" class="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2"
+                   placeholder="输入标签，用逗号分隔" />
+          </div>
+
+          <div id="loading" class="htmx-indicator text-sm text-slate-500">正在生成结果…</div>
+
+          <div class="flex gap-2">
+            <button type="submit" class="rounded-lg bg-slate-900 text-white px-5 py-2 hover:bg-slate-800">
+              生成新增结果
+            </button>
+            <button type="button" class="rounded-lg border border-slate-300 px-5 py-2 hover:bg-slate-100"
+                    onclick="resetAll();">
+              清空
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="xl:col-span-5">
+        <div id="result" class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div class="text-slate-600">填写左侧表单并提交后，将在此处展示“新增资源”的演示结果。</div>
+        </div>
+
+        <div class="mt-4 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+          <div class="text-sm font-semibold">展示说明</div>
+          <ul class="mt-2 text-sm text-slate-700 list-disc pl-5 space-y-1">
+            <li>资源标签包含“资源类型/难度/用时/教学功能/交互强度/协作模式”等结构化标签，以及自定义标签。</li>
+            <li>知识点标签来自数据库，展示名称，并可随时移除。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // --- fake upload UI ---
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileList = document.getElementById('fileList');
+
+  function renderFiles(files){
+    fileList.innerHTML = "";
+    Array.from(files || []).forEach(f=>{
+      const el = document.createElement('span');
+      el.className = "chip";
+      el.innerHTML = `<span class="text-sm">${f.name}</span><span class="text-xs text-slate-500">${Math.round(f.size/1024)}KB</span>`;
+      fileList.appendChild(el);
+    });
+  }
+
+  dropzone.addEventListener('click', ()=>fileInput.click());
+  fileInput.addEventListener('change', ()=>renderFiles(fileInput.files));
+
+  dropzone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', ()=>dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    fileInput.files = e.dataTransfer.files;
+    renderFiles(fileInput.files);
+  });
+
+  // --- concepts chips ---
+  const conceptChips = document.getElementById('conceptChips');
+  const conceptUids = document.getElementById('conceptUids');
+  const conceptNames = document.getElementById('conceptNames');
+
+  function getArr(input){ return (input.value||"").split(",").filter(x=>x.trim().length>0); }
+  function setArr(input, arr){ input.value = arr.join(","); }
+
+  function addConcept(uid, name){
+    const uids = getArr(conceptUids);
+    const names = getArr(conceptNames);
+    if (uids.includes(uid)) return;
+    uids.push(uid); names.push(name);
+    setArr(conceptUids, uids); setArr(conceptNames, names);
+    renderConceptChips();
+  }
+
+  function removeConcept(uid){
+    let uids = getArr(conceptUids);
+    let names = getArr(conceptNames);
+    const idx = uids.indexOf(uid);
+    if (idx >= 0){
+      uids.splice(idx, 1);
+      names.splice(idx, 1);
+      setArr(conceptUids, uids); setArr(conceptNames, names);
+    }
+    renderConceptChips();
+  }
+
+  function renderConceptChips(){
+    const uids = getArr(conceptUids);
+    const names = getArr(conceptNames);
+    conceptChips.innerHTML = "";
+    uids.forEach((uid, i)=>{
+      const name = names[i] || uid;
+      const el = document.createElement('span');
+      el.className = "chip";
+      el.innerHTML = `<span class="text-sm">${name}</span>
+                      <button type="button" onclick="removeConcept('${uid.replace(/'/g,"")}')">✕</button>`;
+      conceptChips.appendChild(el);
+    });
+  }
+
+  function resetAll(){
+    document.getElementById('createForm').reset();
+    conceptUids.value = "";
+    conceptNames.value = "";
+    conceptChips.innerHTML = "";
+    fileList.innerHTML = "";
+    document.getElementById('result').innerHTML = '<div class="text-slate-600">已清空。填写左侧表单并提交后，将在此处展示“新增资源”的演示结果。</div>';
+    document.getElementById('conceptSuggest').innerHTML = "";
+  }
+
+  // HTMX hook: suggestions will call window.addConcept(uid,name)
+</script>
+</body>
+</html>

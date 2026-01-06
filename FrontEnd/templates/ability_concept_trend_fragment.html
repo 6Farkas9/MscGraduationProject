@@ -1,0 +1,39 @@
+{% set s = trend.series %}
+<div class="rounded-lg border border-slate-200 bg-white p-3">
+  <div class="flex items-center justify-between">
+    <div class="text-sm">
+      <div class="text-slate-500">Concept UID</div>
+      <div class="font-mono font-medium text-slate-900">{{ trend.concept_uid }}</div>
+    </div>
+    <div class="text-xs text-slate-500">
+      Points: {{ s|length }}
+    </div>
+  </div>
+
+  <div id="conceptTrend" class="mt-2"></div>
+
+  <script>
+    (function(){
+      const series = {{ s | tojson }};
+      if (!series || series.length === 0) {
+        document.getElementById("conceptTrend").innerHTML =
+          '<div class="text-sm text-slate-500">No history for this concept.</div>';
+        return;
+      }
+      const trace = {
+        x: series.map(p => p.step),
+        y: series.map(p => p.mastery),
+        type: "scatter",
+        mode: "lines+markers",
+        name: "mastery"
+      };
+      const layout = {
+        margin: {l: 40, r: 10, t: 10, b: 30},
+        xaxis: {title: "Step"},
+        yaxis: {title: "Mastery", range:[0,1]},
+        height: 260
+      };
+      Plotly.newPlot("conceptTrend", [trace], layout, {displayModeBar:false, responsive:true});
+    })();
+  </script>
+</div>

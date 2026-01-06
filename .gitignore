@@ -2,6 +2,7 @@ BackEnd/.vs/
 BackEnd/libs/
 BackEnd/build/
 *.pyc
-FrontEnd/
+FrontEnd/backup/
 BackEnd_opt/
 *.csv
+*.zip

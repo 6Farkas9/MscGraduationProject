@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>元宇宙教育学习者个性化服务系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+  <div class="min-h-screen flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 p-4">
+      <div class="text-lg font-semibold mb-4">系统导航</div>
+      <nav class="space-y-2">
+        <a href="/ui/learner" class="block rounded-lg px-3 py-2 hover:bg-slate-100 {% if active=='learner' %}bg-slate-100 font-medium{% endif %}">
+          学习者服务
+        </a>
+        <a href="/ui/manage" class="block rounded-lg px-3 py-2 hover:bg-slate-100 {% if active=='manage' %}bg-slate-100 font-medium{% endif %}">
+          学习资源管理
+        </a>
+      </nav>
+      <div class="mt-8 text-xs text-slate-500">
+        <div>当前学习者：<span id="sidebar_uid" class="font-medium text-slate-700">未登录</span></div>
+        <button id="logoutBtn" class="mt-2 text-slate-600 hover:text-slate-900 underline">退出登录</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-4">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+<script>
+(function(){
+  const uid = localStorage.getItem("learner_uid");
+  const el = document.getElementById("sidebar_uid");
+  if (el) el.textContent = uid ? uid : "未登录";
+
+  const logoutBtn = document.getElementById("logoutBtn");
+  if (logoutBtn){
+    logoutBtn.addEventListener("click", function(){
+      localStorage.removeItem("learner_uid");
+      window.location.href = "/ui/login";
+    });
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>关系服务</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  <style>
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: block; }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-semibold">关系服务</h1>
+        <p class="text-sm text-slate-600 mt-1">
+          展示两类推荐：一起学的伙伴、可跟随学习的榜样。
+        </p>
+      </div>
+    </div>
+
+    <div class="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <form class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end"
+            hx-post="/api/relation/run"
+            hx-target="#result"
+            hx-swap="innerHTML"
+            hx-indicator="#loading">
+
+        <div class="md:col-span-3">
+          <button type="button"
+            class="rounded-lg border border-slate-300 px-3 py-1.5 hover:bg-slate-100 text-xs"
+            onclick="fetch('/api/relation/ping').then(r=>r.json()).then(console.log);">
+            测试连接（控制台查看）
+          </button>
+        </div>
+            
+        <div class="md:col-span-6">
+          <input name="learner_uid" type="hidden" id="learner_uid_input"  id="learner_uid_input"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
+                 placeholder="例如：lrn_xxx"
+                 required />
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-slate-700">候选人数</label>
+          <input name="n_candidates" type="number" min="20" max="300" value="80"
+                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2" />
+          <div class="text-xs text-slate-500 mt-1">系统会将候选分成两类：伙伴池 / 榜样池（无重叠）。</div>
+        </div>
+
+        <div class="md:col-span-1">
+          <button type="submit" class="w-full rounded-lg bg-slate-900 text-white px-4 py-2 hover:bg-slate-800">
+            开始推荐
+          </button>
+        </div>
+      </form>
+
+      <div id="loading" class="htmx-indicator mt-3 text-sm text-slate-500">
+        正在生成中（可能需要一定时间）…
+      </div>
+    </div>
+
+    <div id="result" class="mt-6">
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-slate-600">
+        请点击 <span class="font-medium text-slate-900">开始推荐</span>。
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  const uid = localStorage.getItem("learner_uid");
+  if (!uid){
+    // If opened directly, force login
+    window.location.href = "/ui/login";
+    return;
+  }
+  const inp = document.getElementById("learner_uid_input") || document.querySelector('input[name="learner_uid"]');
+  if (inp){ inp.value = uid; }
+})();
+</script>
+
+
+<style>
+  .demoToggleBox {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    opacity: 0;
+    transition: opacity 0.15s ease-in-out;
+    z-index: 9999;
+  }
+  .demoToggleBox:hover {
+    opacity: 1;
+  }
+  .demoToggleInner {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgb(226 232 240);
+    border-radius: 14px;
+    padding: 10px 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    backdrop-filter: blur(8px);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-size: 12px;
+    color: rgb(51 65 85);
+  }
+</style>
+
+<div class="demoToggleBox" title="悬停显示：切换演示/真实模式">
+  <div class="demoToggleInner">
+    <span>模式</span>
+    <label class="flex items-center gap-2 cursor-pointer select-none">
+      <input id="demoToggle" type="checkbox" class="rounded" />
+      <span id="demoToggleLabel">演示模式</span>
+    </label>
+  </div>
+</div>
+
+<script>
+(function(){
+  function getModeEl(){
+    return document.querySelector('[name="run_mode"]') || document.getElementById("run_mode_hidden");
+  }
+  const modeEl = getModeEl();
+  const cb = document.getElementById("demoToggle");
+  const label = document.getElementById("demoToggleLabel");
+  if (!modeEl || !cb || !label) return;
+
+  // Default: demo (checkbox checked means demo)
+  cb.checked = (modeEl.value || "demo") === "demo";
+  label.textContent = cb.checked ? "演示模式" : "真实模式";
+
+  cb.addEventListener("change", function(){
+    modeEl.value = cb.checked ? "demo" : "real";
+    label.textContent = cb.checked ? "演示模式" : "真实模式";
+  });
+})();
+</script>
+
+</body>
+</html>
